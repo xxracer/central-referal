@@ -27,76 +27,97 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
   const resolvedParams = await searchParams;
   const showPortal = resolvedParams.portal === 'true';
 
-  // Show landing page if it's the default agency or if the agency is on a FREE plan (unsubscribed)
-  // UNLESS the 'portal' query param is set to true.
-  if (!showPortal && (agencyId === 'default' || subscription.plan === 'FREE')) {
+  // Show main product landing page only if it's the root domain (default agency)
+  // UNLESS the 'portal' query param is set to true (for testing/preview).
+  if (!showPortal && agencyId === 'default') {
     return <LandingPage />;
   }
 
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
 
   return (
-    <div className="flex flex-col min-h-dvh">
+    <div className="flex flex-col min-h-dvh bg-gradient-to-b from-background to-muted/20">
       <SiteHeader logoUrl={profile.logoUrl} companyName={profile.name} />
-      <main className="flex-1">
-        <section className="relative w-full py-20 md:py-32 lg:py-40">
+      <main className="flex-1 relative overflow-hidden">
+        {/* Decorative background elements for "WOW" factor */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] -z-10" />
+
+        <section className="relative w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
-            <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-              <div className="flex flex-col items-start justify-center space-y-6">
-                <div className="space-y-4">
-                  <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-                    {profile.name || "ReferralFlow Central"}
-                  </h1>
-                  <p className="max-w-[600px] text-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+              <div className="flex flex-col items-start justify-center space-y-8">
+                <div className="space-y-6">
+                  {profile.logoUrl && (
+                    <div className="mb-4 inline-block p-2 bg-white rounded-xl shadow-sm border border-primary/10">
+                      <Image
+                        src={profile.logoUrl}
+                        alt={`${profile.name} Logo`}
+                        width={120}
+                        height={60}
+                        className="h-12 w-auto object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    <h2 className="text-primary font-black uppercase tracking-[0.2em] text-sm">Official Referral Portal</h2>
+                    <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl">
+                      {profile.name || "ReferralFlow Central"}
+                    </h1>
+                  </div>
+                  <p className="max-w-[550px] text-foreground/80 text-lg md:text-xl leading-relaxed">
                     {agencyId === 'default'
                       ? "Streamlining medical referrals with an intelligent, easy-to-use platform. Submit and track your patient referrals seamlessly."
-                      : `Connecting ${profile.name} with providers for seamless, intelligent patient referral intake and tracking.`}
+                      : `Connecting ${profile.name} with healthcare partners for secure, efficient patient referral intake and real-time status tracking.`}
                   </p>
                 </div>
-                <div className="flex flex-col gap-4 min-[400px]:flex-row">
-                  <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <div className="flex flex-col gap-4 w-full sm:flex-row">
+                  <Button asChild size="lg" className="h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full transition-all hover:scale-105 active:scale-95">
                     <Link href="/refer" prefetch={false}>
-                      Submit a Referral
+                      Start New Referral
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
-                  <Button asChild variant="secondary" size="lg">
+                  <Button asChild variant="outline" size="lg" className="h-14 px-8 border-primary/20 hover:bg-primary/5 rounded-full transition-all hover:scale-105 active:scale-95">
                     <Link href="/status" prefetch={false}>
-                      Check Referral Status
+                      Track Status
                     </Link>
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                {heroImage && (
-                  <Image
-                    alt={profile.name || heroImage.description}
-                    className="mx-auto aspect-[4/3] overflow-hidden rounded-xl object-cover"
-                    src={profile.logoUrl || heroImage.imageUrl}
-                    width={600}
-                    height={450}
-                    data-ai-hint={heroImage.imageHint}
-                  />
-                )}
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative">
+                  {heroImage && (
+                    <Image
+                      alt={profile.name || heroImage.description}
+                      className="mx-auto aspect-[4/3] overflow-hidden rounded-2xl object-cover shadow-2xl"
+                      src={heroImage.imageUrl}
+                      width={600}
+                      height={450}
+                      priority
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
             {profile.homeInsurances && profile.homeInsurances.length > 0 && (
-              <div className="mt-20 w-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-                <Card className="relative border-primary/10 bg-gradient-to-br from-card to-background shadow-xl overflow-hidden rounded-[2rem]">
-                  <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
-                  <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
-                    <div className="flex-shrink-0 text-center md:text-left space-y-1">
-                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary/60">Coverage Partners</h3>
-                      <p className="text-3xl font-headline font-bold text-foreground whitespace-nowrap">We Proudly Accept</p>
+              <div className="mt-20 w-full animate-in fade-in slide-in-from-bottom-5 duration-1000">
+                <Card className="relative border-primary/10 bg-white/60 backdrop-blur-md shadow-2xl overflow-hidden rounded-[2.5rem]">
+                  <div className="absolute inset-0 bg-grid-primary/[0.02] bg-[size:30px_30px]" />
+                  <div className="relative p-10 md:p-12 flex flex-col md:flex-row items-center gap-10">
+                    <div className="flex-shrink-0 text-center md:text-left space-y-2">
+                      <h3 className="text-xs font-black uppercase tracking-[0.25em] text-primary/60">Coverage Network</h3>
+                      <p className="text-3xl font-headline font-bold text-foreground">Insurances Accepted</p>
                     </div>
-                    <div className="hidden md:block w-px h-16 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
-                    <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                    <div className="hidden md:block w-px h-20 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
+                    <div className="flex flex-wrap justify-center md:justify-start gap-4">
                       {profile.homeInsurances.map(ins => (
                         <Badge
                           key={ins}
-                          variant="outline"
-                          className="bg-background/80 hover:bg-primary/10 hover:border-primary/40 border-primary/20 text-foreground px-5 py-2 rounded-full text-sm font-semibold shadow-sm transition-all duration-300 hover:-translate-y-1 cursor-default"
+                          variant="secondary"
+                          className="bg-primary/5 hover:bg-primary/15 border-transparent text-primary px-6 py-2.5 rounded-full text-sm font-bold shadow-sm transition-all duration-300 hover:-translate-y-1 cursor-default"
                         >
                           {ins}
                         </Badge>
@@ -109,8 +130,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
           </div>
         </section>
       </main>
-      <footer className="flex items-center justify-center py-6 border-t">
-        <p className="text-sm text-foreground/60">&copy; {new Date().getFullYear()} {profile.name || "ReferralFlow Central"}. All rights reserved.</p>
+      <footer className="flex items-center justify-center py-8 border-t bg-background/50 backdrop-blur-sm">
+        <p className="text-sm text-foreground/50 tracking-wide">&copy; {new Date().getFullYear()} {profile.name || "ReferralFlow Central"}. Excellence in care coordination.</p>
       </footer>
     </div>
   );

@@ -19,7 +19,13 @@ export default async function middleware(req: NextRequest) {
 
     // Allowed domains list (including localhost)
     // In production, you'd add your root domain here
-    const allowedDomains = ["localhost:3000", "actiniumholdings.com", "referral-app.vercel.app"];
+    const allowedDomains = [
+        "localhost:3000",
+        "actiniumholdings.com",
+        "referral-app.vercel.app",
+        "referralflow.health",
+        "www.referralflow.health"
+    ];
 
     // Verify uniqueness of hostname to determine if it's a subdomain
     // logic: if hostname is NOT in allowedDomains, treat as subdomain/custom domain
