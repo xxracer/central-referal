@@ -48,6 +48,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: `https://onboard-panel-gx822.firebaseapp.com/__/auth/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -57,15 +57,25 @@ export default function LoginPage() {
                     </div>
                     <CardTitle className="text-2xl">Staff Portal Login</CardTitle>
                     <CardDescription>Inicia sesión para gestionar los referidos.</CardDescription>
+                    {isLoading && (
+                        <div className="mt-2 text-xs text-secondary animate-pulse px-2 py-1 bg-secondary/10 rounded-md">
+                            Check for a separate window. If nothing happens, ensure popups are allowed.
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Button onClick={handleGoogleSignIn} disabled={isLoading} className="w-full" variant="outline">
                         {isLoading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Connecting to Google...
+                            </>
                         ) : (
-                            <GoogleIcon className="mr-2" />
+                            <>
+                                <GoogleIcon className="mr-2" />
+                                Iniciar sesión con Google
+                            </>
                         )}
-                        Iniciar sesión con Google
                     </Button>
                 </CardContent>
             </Card>

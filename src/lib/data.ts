@@ -33,11 +33,29 @@ function convertTimestampsToDates(obj: any): any {
 
 export async function getReferrals(): Promise<Referral[]> {
     const firestore = getDb();
-    const snapshot = await firestore.collection('referrals').orderBy('createdAt', 'desc').get();
+    const snapshot = await firestore.collection('referrals')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
     if (snapshot.empty) {
         return [];
     }
-    return snapshot.docs.map(d => convertTimestampsToDates(d.data()) as Referral);
+    return snapshot.docs.map(d => {
+        const data = convertTimestampsToDates(d.data());
+        // Migration logic for old notes
+        if (data.internalNotes) {
+            data.internalNotes = data.internalNotes.map((n: any) => {
+                if (typeof n.author === 'string') {
+                    return { ...n, author: { name: n.author, email: '', role: 'STAFF' } };
+                }
+                return n;
+            });
+        }
+        // Migration logic for agencyId
+        if (!data.agencyId) data.agencyId = 'default';
+
+        return data as Referral;
+    });
 }
 
 export async function getReferralById(id: string): Promise<Referral | undefined> {
@@ -50,7 +68,19 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
         return undefined;
     }
 
-    return convertTimestampsToDates(docSnap.data()) as Referral;
+    const data = convertTimestampsToDates(docSnap.data());
+    // Migration logic
+    if (data.internalNotes) {
+        data.internalNotes = data.internalNotes.map((n: any) => {
+            if (typeof n.author === 'string') {
+                return { ...n, author: { name: n.author, email: '', role: 'STAFF' } };
+            }
+            return n;
+        });
+    }
+    if (!data.agencyId) data.agencyId = 'default';
+
+    return data as Referral;
 }
 
 export async function saveReferral(referral: Referral): Promise<Referral> {
@@ -70,9 +100,13 @@ export async function saveReferral(referral: Referral): Promise<Referral> {
             ...n,
             createdAt: Timestamp.fromDate(n.createdAt),
         })),
+        externalNotes: (referral.externalNotes || []).map(n => ({
+            ...n,
+            createdAt: Timestamp.fromDate(n.createdAt),
+        })),
     };
 
-    if (dataToSave.surgeryDate && dataToSave.surgeryDate.trim() !== '') {
+    if (dataToSave.surgeryDate && typeof dataToSave.surgeryDate === 'string' && dataToSave.surgeryDate.trim() !== '') {
         dataToSave.surgeryDate = Timestamp.fromDate(new Date(dataToSave.surgeryDate));
     } else {
         // Explicitly delete if empty or invalid to avoid sending bad data to Firestore
@@ -83,14 +117,24 @@ export async function saveReferral(referral: Referral): Promise<Referral> {
     return referral;
 }
 
-export async function findReferral(id: string, dob: string): Promise<Referral | undefined> {
+export async function findReferral(id: string): Promise<Referral | undefined> {
     const firestore = getDb();
-    if (!id || !dob) return undefined;
+    if (!id) return undefined;
     const docRef = firestore.collection('referrals').doc(id);
     const docSnap = await docRef.get();
 
-    if (docSnap.exists && docSnap.data()?.patientDOB === dob) {
-        return convertTimestampsToDates(docSnap.data()) as Referral;
+    if (docSnap.exists) {
+        const data = convertTimestampsToDates(docSnap.data());
+        if (data.internalNotes) {
+            data.internalNotes = data.internalNotes.map((n: any) => {
+                if (typeof n.author === 'string') {
+                    return { ...n, author: { name: n.author, email: '', role: 'STAFF' } };
+                }
+                return n;
+            });
+        }
+        if (!data.agencyId) data.agencyId = 'default';
+        return data as Referral;
     }
 
     return undefined;

@@ -1,9 +1,9 @@
-export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'REJECTED';
+export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'NEED_MORE_INFO' | 'REJECTED';
 
 export type Document = {
   id: string;
   name: string;
-  url: string; 
+  url: string;
   size: number;
 };
 
@@ -13,11 +13,16 @@ export type StatusHistory = {
   notes?: string;
 };
 
-export type InternalNote = {
+export type Note = {
   id: string;
   content: string;
-  author: string; 
+  author: {
+    name: string;
+    email: string;
+    role: 'ADMIN' | 'STAFF' | 'SYSTEM';
+  };
   createdAt: Date;
+  isExternal?: boolean; // If true, visible to referrer
 };
 
 export type AISummary = {
@@ -25,8 +30,44 @@ export type AISummary = {
   reasoning: string;
 }
 
+export type AgencySettings = {
+  id: string; // usually the subdomain
+  slug?: string; // custom subdomain slug
+  companyProfile: {
+    name: string;
+    phone: string;
+    fax: string;
+    email: string;
+    logoUrl?: string;
+    homeInsurances?: string[]; // Insurances shown on the landing/home page
+  };
+  branding: {
+    logoUrl?: string; // Redundant but keeping structure clean if we want more branding later
+  };
+  notifications: {
+    emailRecipients: string[];
+  };
+  configuration: {
+    acceptedInsurances: string[];
+    offeredServices: string[];
+  };
+  userAccess: {
+    authorizedDomains: string[];
+    authorizedEmails: string[];
+  };
+  subscription: {
+    plan: 'FREE' | 'BASIC' | 'PRO';
+    status: 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'SUSPENDED';
+    startDate?: Date;
+    endDate?: Date;
+    customerId?: string; // Stripe Customer ID placeholder
+  };
+};
+
 export type Referral = {
   id: string;
+  agencyId: string; // Multi-tenancy isolation
+
   // Referrer Info
   referrerName: string;
   providerNpi: string;
@@ -37,15 +78,13 @@ export type Referral = {
 
   // Patient Info
   patientName: string;
-  patientDOB: string; 
+  patientDOB: string;
   patientContact: string;
   patientAddress: string;
   patientZipCode: string;
-  pcpName?: string;
-  pcpPhone?: string;
-  surgeryDate?: string;
-  covidStatus?: string;
-  
+  isFaxingPaperwork?: boolean;
+
+
   // Insurance Info
   patientInsurance: string;
   memberId: string;
@@ -54,7 +93,7 @@ export type Referral = {
   planNumber?: string;
   groupNumber?: string;
   authorizationNumber?: string;
-  
+
   // Exam & Service Info
   servicesNeeded: string[];
   examRequested: string;
@@ -63,7 +102,11 @@ export type Referral = {
   priority?: string;
   contrast?: string;
   reasonForExam?: string;
-  
+  surgeryDate?: Date;
+  pcpName?: string;
+  pcpPhone?: string;
+  covidStatus?: string;
+
   // Old fields that need to be handled
   patientId?: string;
   referrerRelation?: string;
@@ -71,7 +114,17 @@ export type Referral = {
   documents: Document[];
   status: ReferralStatus;
   statusHistory: StatusHistory[];
-  internalNotes: InternalNote[];
+
+  internalNotes: Note[]; // Renamed but keeping key backward compat if possible with careful casting, or data migration. 
+  // Actually, let's keep 'internalNotes' as key but use the new Note type which is a superset if we map old data.
+  // Old InternalNote: { id, content, author: string, createdAt }
+  // New Note: { id, content, author: { name, email, role }, createdAt, isExternal }
+  // We will need a getter that migrates on the fly or data migration script. 
+  // For simplicity now, let's keep the key 'internalNotes' but strictly it contains both types if we filter by isExternal? 
+  // No, separate them for clarity.
+
+  externalNotes: Note[]; // Visible to referrer
+
   aiSummary?: AISummary;
   createdAt: Date;
   updatedAt: Date;

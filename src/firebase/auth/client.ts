@@ -8,28 +8,7 @@ export async function signInWithGoogle(): Promise<User | null> {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        // **This is the new logic to check the user's email**
-        if (user && user.email) {
-            const allowedEmail = "maijelcancines2@gmail.com";
-            const allowedDomain = "@actiniumholdings.com";
-
-            if (user.email === allowedEmail || user.email.endsWith(allowedDomain)) {
-                // If the email is allowed, return the user object
-                return user;
-            } else {
-                // If the email is not allowed, sign the user out immediately
-                await firebaseSignOut(auth);
-                // And prevent the application from proceeding with the login
-                throw new Error("User is not authorized.");
-            }
-        }
-
-        // If there is no user or email, something went wrong, so sign out
-        await firebaseSignOut(auth);
-        return null;
-
+        return result.user;
     } catch (error) {
         console.error("Error during Google sign-in:", error);
         throw error;

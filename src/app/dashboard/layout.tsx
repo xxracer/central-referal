@@ -67,18 +67,18 @@ export default function DashboardLayout({
   if (!user) {
     return null; // or a loading skeleton
   }
-  
+
   if (!isAuthorized(user.email)) {
     return (
-        <div className="flex flex-col h-screen items-center justify-center text-center">
-            <h1 className="text-2xl font-bold">Acceso Denegado</h1>
-            <p className="text-muted-foreground">
-                No tienes permiso para acceder a este portal.
-            </p>
-            <Button onClick={() => signOut().then(() => router.push('/'))} className="mt-4">
-                Cerrar Sesión
-            </Button>
-        </div>
+      <div className="flex flex-col h-screen items-center justify-center text-center">
+        <h1 className="text-2xl font-bold">Acceso Denegado</h1>
+        <p className="text-muted-foreground">
+          No tienes permiso para acceder a este portal.
+        </p>
+        <Button onClick={() => signOut().then(() => router.push('/'))} className="mt-4">
+          Cerrar Sesión
+        </Button>
+      </div>
     )
   }
 
@@ -104,15 +104,19 @@ export default function DashboardLayout({
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/dashboard" tooltip="Dashboard">
-                <Home />
-                <span>Dashboard</span>
+              <SidebarMenuButton asChild tooltip="Dashboard">
+                <Link href="/dashboard">
+                  <Home />
+                  <span>Dashboard</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/refer" tooltip="New Referral">
-                <FilePlus />
-                <span>New Referral</span>
+              <SidebarMenuButton asChild tooltip="New Referral">
+                <Link href="/refer">
+                  <FilePlus />
+                  <span>New Referral</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -120,9 +124,11 @@ export default function DashboardLayout({
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip="Settings">
-                <Settings />
-                <span>Settings</span>
+              <SidebarMenuButton asChild tooltip="Settings">
+                <Link href="/dashboard/settings">
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -147,7 +153,9 @@ export default function DashboardLayout({
               <DropdownMenuLabel>{user.displayName || 'Staff Account'}</DropdownMenuLabel>
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings">Settings</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => signOut().then(() => router.push('/login'))}>
@@ -157,7 +165,7 @@ export default function DashboardLayout({
           </DropdownMenu>
         </header>
         <main className="flex-1 p-4 sm:p-6 bg-muted/40">
-            {children}
+          {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
