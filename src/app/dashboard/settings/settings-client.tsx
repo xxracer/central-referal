@@ -764,7 +764,17 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
             <div className="space-y-2">
                 <Label>Authorized Domains</Label>
                 <div className="flex gap-2">
-                    <Input value={newDomain} onChange={e => setNewDomain(e.target.value)} placeholder="example.com" />
+                    <Input
+                        value={newDomain}
+                        onChange={e => setNewDomain(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addDomain();
+                            }
+                        }}
+                        placeholder="example.com"
+                    />
                     <Button onClick={addDomain} type="button" size="icon"><Plus className="h-4 w-4" /></Button>
                 </div>
             </div>
@@ -794,7 +804,16 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
                     </div>
                 </div>
             )}
-            <Button onClick={() => onSave(access)} disabled={isPending}>Save Access Settings</Button>
+            <Button onClick={() => {
+                let finalAccess = access;
+                // Auto-add pending domain if user forgot to click plus
+                if (newDomain && !access.authorizedDomains.includes(newDomain)) {
+                    finalAccess = { ...access, authorizedDomains: [...access.authorizedDomains, newDomain] };
+                    setAccess(finalAccess);
+                    setNewDomain('');
+                }
+                onSave(finalAccess);
+            }} disabled={isPending}>Save Access Settings</Button>
         </div>
     );
 };
