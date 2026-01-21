@@ -33,26 +33,18 @@ function convertTimestampsToDates(obj: any): any {
 
 export async function getReferrals(agencyId: string, filters?: { search?: string; startDate?: Date; endDate?: Date; isArchived?: boolean }): Promise<Referral[]> {
     const firestore = getDb();
-
-    // Security: Filter by Agency ID at the query level
-    // Note: We need a composite index for 'agencyId' + 'createdAt' to order by createdAt properly.
-    // If index is missing, we can filter in memory for now but 'where' is essential.
     let snapshot;
     try {
+        // PERF: Removed orderBy('createdAt') to bypass composite index requirement (Error 9)
+        // We will sort in memory instead. This works fine for limit(500).
         snapshot = await firestore.collection('referrals')
             .where('agencyId', '==', agencyId)
-            .orderBy('createdAt', 'desc')
+            // .orderBy('createdAt', 'desc') // Removed to fix FAILED_PRECONDITION
             .limit(500)
             .get();
     } catch (error: any) {
-        console.error('[getReferrals] Failed to fetch referrals. Likely missing index:', error);
-        // If index is missing, we can try a fallback query without ordering to at least show something
-        // OR just return empty to prevent crash
-        if (error.code === 9) { // FAILED_PRECONDITION
-            console.warn('[getReferrals] Index building or missing. Returning empty list temporarily.');
-            return [];
-        }
-        throw error;
+        console.error('[getReferrals] Failed to fetch referrals:', error);
+        return [];
     }
 
     if (snapshot.empty) {
@@ -81,6 +73,9 @@ export async function getReferrals(agencyId: string, filters?: { search?: string
 
         return { ...data, id: d.id } as Referral;
     });
+
+    // Sort in memory (Newest first)
+    referrals.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     // 1. Archive Filter (Handles legacy data where isArchived is undefined)
     if (filters?.isArchived !== undefined) {
