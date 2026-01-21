@@ -37,11 +37,23 @@ export async function getReferrals(agencyId: string, filters?: { search?: string
     // Security: Filter by Agency ID at the query level
     // Note: We need a composite index for 'agencyId' + 'createdAt' to order by createdAt properly.
     // If index is missing, we can filter in memory for now but 'where' is essential.
-    const snapshot = await firestore.collection('referrals')
-        .where('agencyId', '==', agencyId)
-        .orderBy('createdAt', 'desc')
-        .limit(500)
-        .get();
+    let snapshot;
+    try {
+        snapshot = await firestore.collection('referrals')
+            .where('agencyId', '==', agencyId)
+            .orderBy('createdAt', 'desc')
+            .limit(500)
+            .get();
+    } catch (error: any) {
+        console.error('[getReferrals] Failed to fetch referrals. Likely missing index:', error);
+        // If index is missing, we can try a fallback query without ordering to at least show something
+        // OR just return empty to prevent crash
+        if (error.code === 9) { // FAILED_PRECONDITION
+            console.warn('[getReferrals] Index building or missing. Returning empty list temporarily.');
+            return [];
+        }
+        throw error;
+    }
 
     if (snapshot.empty) {
         return [];
