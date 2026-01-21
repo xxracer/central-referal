@@ -31,31 +31,74 @@ function convertTimestampsToDates(obj: any): any {
 }
 
 
-export async function getReferrals(): Promise<Referral[]> {
+export async function getReferrals(agencyId: string, filters?: { search?: string; startDate?: Date; endDate?: Date; isArchived?: boolean }): Promise<Referral[]> {
     const firestore = getDb();
+
+    // Security: Filter by Agency ID at the query level
+    // Note: We need a composite index for 'agencyId' + 'createdAt' to order by createdAt properly.
+    // If index is missing, we can filter in memory for now but 'where' is essential.
     const snapshot = await firestore.collection('referrals')
+        .where('agencyId', '==', agencyId)
         .orderBy('createdAt', 'desc')
-        .limit(50)
+        .limit(500)
         .get();
+
     if (snapshot.empty) {
         return [];
     }
-    return snapshot.docs.map(d => {
+
+    let referrals = snapshot.docs.map((d: any) => {
         const data = convertTimestampsToDates(d.data());
         // Migration logic for old notes
         if (data.internalNotes) {
             data.internalNotes = data.internalNotes.map((n: any) => {
-                if (typeof n.author === 'string') {
-                    return { ...n, author: { name: n.author, email: '', role: 'STAFF' } };
+                const note = { ...n };
+                if (typeof note.author === 'string') {
+                    note.author = { name: note.author, email: '', role: 'STAFF' };
                 }
-                return n;
+                note.createdAt = note.createdAt instanceof Date ? note.createdAt : new Date(note.createdAt);
+                return note;
             });
         }
-        // Migration logic for agencyId
-        if (!data.agencyId) data.agencyId = 'default';
+        if (data.externalNotes) {
+            data.externalNotes = data.externalNotes.map((n: any) => ({
+                ...n,
+                createdAt: n.createdAt instanceof Date ? n.createdAt : new Date(n.createdAt)
+            }));
+        }
 
-        return data as Referral;
+        return { ...data, id: d.id } as Referral;
     });
+
+    // 1. Archive Filter (Handles legacy data where isArchived is undefined)
+    if (filters?.isArchived !== undefined) {
+        referrals = referrals.filter(r => (r.isArchived || false) === filters.isArchived);
+    } else {
+        // Default to showing only non-archived (including legacy docs)
+        referrals = referrals.filter(r => !r.isArchived);
+    }
+
+    // 2. Date Filters
+    if (filters?.startDate) {
+        const start = filters.startDate;
+        referrals = referrals.filter(r => r.createdAt >= start);
+    }
+    if (filters?.endDate) {
+        const end = filters.endDate;
+        referrals = referrals.filter(r => r.createdAt <= end);
+    }
+
+    // 3. Search
+    if (filters?.search) {
+        const q = filters.search.toLowerCase();
+        referrals = referrals.filter(r =>
+            r.patientName.toLowerCase().includes(q) ||
+            r.id.toLowerCase().includes(q) ||
+            r.referrerName.toLowerCase().includes(q)
+        );
+    }
+
+    return referrals;
 }
 
 export async function getReferralById(id: string): Promise<Referral | undefined> {
@@ -138,4 +181,51 @@ export async function findReferral(id: string): Promise<Referral | undefined> {
     }
 
     return undefined;
+}
+
+export async function toggleArchiveReferral(id: string, isArchived: boolean): Promise<boolean> {
+    const firestore = getDb();
+    try {
+        await firestore.collection('referrals').doc(id).update({
+            isArchived,
+            updatedAt: Timestamp.now()
+        });
+        return true;
+    } catch (e) {
+        console.error("Error toggling archive:", e);
+        return false;
+    }
+}
+
+export async function markReferralAsSeen(id: string): Promise<void> {
+    const firestore = getDb();
+    try {
+        await firestore.collection('referrals').doc(id).update({
+            isSeen: true
+        });
+    } catch (e) {
+        console.error("Error marking as seen:", e);
+    }
+}
+
+export async function getUnseenReferralCount(agencyId: string): Promise<number> {
+    const firestore = getDb();
+    try {
+        // Query for potentially unseen items for specific agency
+        const snapshot = await firestore.collection('referrals')
+            .where('agencyId', '==', agencyId)
+            .where('isSeen', '==', false)
+            .get();
+
+        // Filter in memory for isArchived just to be safe about composite indexes again
+        const count = snapshot.docs.filter(d => {
+            const data = d.data();
+            return data.isArchived !== true;
+        }).length;
+
+        return count;
+    } catch (e) {
+        console.error("Error counting unseen referrals:", e);
+        return 0;
+    }
 }

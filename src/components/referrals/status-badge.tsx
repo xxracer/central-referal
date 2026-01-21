@@ -15,6 +15,7 @@ export default function StatusBadge({ status, className, size = 'md' }: StatusBa
     ACCEPTED: "bg-green-100 text-green-800 border-green-200",
     REJECTED: "bg-red-100 text-red-800 border-red-200",
     NEED_MORE_INFO: "bg-orange-100 text-orange-800 border-orange-200",
+    COMPLETED: "bg-purple-100 text-purple-800 border-purple-200",
   };
 
   const sizeStyles = {

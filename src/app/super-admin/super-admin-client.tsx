@@ -20,7 +20,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import {
-    Shield, Power, Calendar, Building2, ExternalLink, Edit2, Loader2
+    Shield, Power, Calendar, Building2, ExternalLink, Edit2, Loader2, Trash2
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -149,10 +149,15 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-foreground">{agency.companyProfile?.name || 'Unnamed Agency'}</span>
                                                     <span className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-                                                        {agency.id.includes('.') ? 'Custom Domain' : agency.id}
+                                                        {agency.slug || agency.id}
                                                         <span className="text-[10px] bg-muted px-1 rounded uppercase tracking-tighter">
-                                                            {agency.id.includes('.') ? 'Live' : 'Sub'}
+                                                            {(agency.slug || agency.id).includes('.') ? 'Live' : 'Sub'}
                                                         </span>
+                                                        {agency.slug && agency.slug !== agency.id && (
+                                                            <span title={`Original ID: ${agency.id}`} className="text-[9px] opacity-50 cursor-help ml-1">
+                                                                (ID: {agency.id})
+                                                            </span>
+                                                        )}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -178,7 +183,7 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                        <a href={getAgencyUrl(agency.id)} target="_blank" rel="noopener noreferrer">
+                                                        <a href={getAgencyUrl(agency.slug || agency.id)} target="_blank" rel="noopener noreferrer">
                                                             <ExternalLink className="w-4 h-4" />
                                                         </a>
                                                     </Button>
@@ -193,10 +198,29 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                                     <Button
                                                         variant={isSuspended ? "default" : "outline"}
                                                         size="sm"
-                                                        className={isSuspended ? "h-8 bg-green-600 hover:bg-green-700" : "h-8 text-destructive hover:bg-destructive/10 border-destructive/20"}
+                                                        className={isSuspended ? "h-8 bg-green-600 hover:bg-green-700" : "h-8 text-secondary-foreground hover:bg-secondary/80 border-secondary/20"}
                                                         onClick={() => handleToggleStatus(agency.id, sub.status)}
                                                     >
                                                         <Power className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-destructive hover:bg-red-100 hover:text-red-700"
+                                                        onClick={async () => {
+                                                            if (confirm(`Are you sure you want to PERMANENTLY DELETE ${agency.companyProfile?.name}? This cannot be undone.`)) {
+                                                                const { deleteAgency } = await import('./actions');
+                                                                const result = await deleteAgency(agency.id);
+                                                                if (result.success) {
+                                                                    setAgencies(prev => prev.filter(a => a.id !== agency.id));
+                                                                    toast({ title: "Deleted", description: "Agency removed successfully." });
+                                                                } else {
+                                                                    toast({ title: "Error", description: result.message, variant: "destructive" });
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
                                                     </Button>
                                                 </div>
                                             </TableCell>

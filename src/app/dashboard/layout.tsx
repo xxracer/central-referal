@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, FilePlus, Settings, LogOut } from 'lucide-react';
+import { Home, FilePlus, Settings, LogOut, Archive, Globe } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -14,6 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
+import { SidebarMenuWithBadge } from '@/components/dashboard/sidebar-menu-with-badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -103,19 +104,28 @@ export default function DashboardLayout({
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Dashboard">
-                <Link href="/dashboard">
-                  <Home />
-                  <span>Dashboard</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <SidebarMenuWithBadge />
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="New Referral">
                 <Link href="/refer">
                   <FilePlus />
                   <span>New Referral</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Archived Referrals">
+                <Link href="/dashboard/archived">
+                  <Archive />
+                  <span>Archived Referrals</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Referral Portal (Public)">
+                <Link href="/" target="_blank" rel="noopener noreferrer">
+                  <Globe />
+                  <span>Referral Portal</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

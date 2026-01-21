@@ -5,12 +5,13 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { referralSchema } from './schemas';
-import { saveReferral, findReferral, getReferralById } from './data';
+import { saveReferral, findReferral, getReferralById, toggleArchiveReferral, markReferralAsSeen, getUnseenReferralCount } from './data';
 import { adminStorage } from '@/lib/firebase-admin';
 
 import type { Referral, ReferralStatus, Document, Note, StatusHistory } from './types';
 import { categorizeReferral } from '@/ai/flows/smart-categorization';
 import { generateReferralPdf } from '@/ai/flows/generate-referral-pdf';
+import { sendReferralNotification } from './email';
 
 export type FormState = {
     message: string;
@@ -20,14 +21,14 @@ export type FormState = {
     isSubmitting?: boolean;
 };
 
-async function uploadFiles(files: File[], referralId: string): Promise<Document[]> {
+async function uploadFiles(files: File[], referralId: string, agencyId: string): Promise<Document[]> {
     const bucket = adminStorage.bucket();
 
     const uploadPromises = files.map(async (file) => {
         if (!file || file.size === 0) return null;
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = `referrals/${referralId}/${file.name}`;
+        const filename = `companies/${agencyId}/referrals/${referralId}/${file.name}`;
         const fileRef = bucket.file(filename);
 
         await fileRef.save(buffer, {
@@ -85,9 +86,8 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         email: rest.email || '',
         patientFullName: rest.patientFullName || '',
         patientDOB: rest.patientDOB || '',
-        patientAddress: rest.patientAddress || '',
         patientZipCode: rest.patientZipCode || '',
-        primaryInsurance: rest.primaryInsurance, // Required now
+        primaryInsurance: rest.primaryInsurance === 'Other' && rest.otherInsurance ? rest.otherInsurance : rest.primaryInsurance,
         memberId: rest.memberId || '',
         insuranceType: rest.insuranceType || '',
         planName: rest.planName || '',
@@ -98,20 +98,23 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         isFaxingPaperwork: !!rest.isFaxingPaperwork,
     };
 
-    // Generate a unique ID to prevent collisions (User reported old referrals disappearing)
-    // Using full timestamp + random 4-digit number
-    const referralId = `TX-REF-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
+    // Get Agency ID from headers (set by middleware)
+    const headersList = await headers();
+    const agencyId = headersList.get('x-agency-id') || 'default';
+
+    // Simplified referral code: REF-XXXX (4 character random hex)
+    const referralId = `REF-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
     let allUploadedDocuments: Document[] = [];
 
     try {
         // 1. Upload user-provided documents from both fields
         if (referralDocuments) {
             const validDocs = referralDocuments.filter((d): d is File => d !== undefined);
-            if (validDocs.length > 0) allUploadedDocuments.push(...await uploadFiles(validDocs, referralId));
+            if (validDocs.length > 0) allUploadedDocuments.push(...await uploadFiles(validDocs, referralId, agencyId));
         }
         if (progressNotes) {
             const validNotes = progressNotes.filter((d): d is File => d !== undefined);
-            if (validNotes.length > 0) allUploadedDocuments.push(...await uploadFiles(validNotes, referralId));
+            if (validNotes.length > 0) allUploadedDocuments.push(...await uploadFiles(validNotes, referralId, agencyId));
         }
 
         // 2. Generate PDF from form data using AI flow (only passing serializable data)
@@ -119,7 +122,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         const pdfName = `Referral-Summary-${referralId}.pdf`;
 
         const bucket = adminStorage.bucket();
-        const pdfPath = `referrals/${referralId}/${pdfName}`;
+        const pdfPath = `companies/${agencyId}/referrals/${referralId}/${pdfName}`;
         const pdfFile = bucket.file(pdfPath);
 
         // pdfBytes is a Uint8Array, convert to Buffer
@@ -147,14 +150,10 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     const now = new Date();
     const {
         organizationName, contactName, phone, email,
-        patientFullName, patientDOB, patientAddress, patientZipCode, isFaxingPaperwork,
-        primaryInsurance, memberId, insuranceType, planName, planNumber, groupNumber,
+        patientFullName, patientDOB, patientZipCode, isFaxingPaperwork,
+        primaryInsurance, otherInsurance, memberId, insuranceType, planName, planNumber, groupNumber,
         diagnosis
     } = validatedFields.data;
-
-    // Get Agency ID from headers (set by middleware)
-    const headersList = await headers();
-    const agencyId = headersList.get('x-agency-id') || 'default';
 
     const newReferral: Referral = {
         id: referralId,
@@ -165,11 +164,11 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         confirmationEmail: email || '',
         patientName: patientFullName || '',
         patientDOB: patientDOB || '',
-        patientAddress: patientAddress || '',
+        patientAddress: '', // Removed from form
         patientZipCode: patientZipCode || '',
         isFaxingPaperwork: !!isFaxingPaperwork,
         patientContact: '', // Not in form
-        patientInsurance: primaryInsurance || '', // Should be required but schema might say optional string
+        patientInsurance: primaryInsurance === 'Other' && otherInsurance ? otherInsurance : (primaryInsurance || ''),
         memberId: memberId || '',
         insuranceType: insuranceType || '',
         planName: planName || '',
@@ -187,10 +186,32 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         statusHistory: [{ status: 'RECEIVED', changedAt: now }],
         internalNotes: [],
         externalNotes: [],
+        isArchived: false,
     };
 
     try {
         await saveReferral(newReferral);
+
+        // 4. Send Email Notifications (New Logic)
+        if (agencyId) {
+            // 4a. Internal Notification (To Agency)
+            sendReferralNotification(agencyId, 'NEW_REFERRAL_INTERNAL', {
+                referralId,
+                referrerName: organizationName || contactName || 'Unknown',
+                dateTime: now.toLocaleString(),
+                referralLink: `https://referralflow.health/dashboard/referrals/${referralId}` // fallback if env missing
+            }).catch(err => console.error("Failed to send internal notification:", err));
+
+            // 4b. Confirmation to Referrer (To Submitter)
+            if (newReferral.confirmationEmail) {
+                sendReferralNotification(agencyId, 'REFERRAL_SUBMISSION_CONFIRMATION', {
+                    referralId,
+                    referrerName: contactName || organizationName || 'Partner',
+                    dateTime: now.toLocaleString(),
+                    statusLink: `https://referralflow.health/status?id=${referralId}`
+                }, newReferral.confirmationEmail).catch(err => console.error("Failed to send confirmation email:", err));
+            }
+        }
     } catch (e) {
         return { message: 'Database error: Failed to save referral.', success: false, isSubmitting: false };
     }
@@ -222,6 +243,15 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
         });
         referral.updatedAt = now;
         await saveReferral(referral);
+
+        // Notify staff of new external message (Template 5)
+        sendReferralNotification(referral.agencyId, 'NEW_EXTERNAL_MESSAGE_INTERNAL', {
+            referralId: referral.id,
+            referrerName: 'Referrer/Patient', // Could improve if we knew who checked status
+            messageSnippet: optionalNote,
+            referralLink: `https://referralflow.health/dashboard/referrals/${referral.id}`
+        }).catch(err => console.error("Failed to send notification email:", err));
+
         noteAdded = true;
         revalidatePath(`/dashboard/referrals/${referral.id}`);
     }
@@ -265,6 +295,13 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
 
     await saveReferral(referral);
 
+    // Notify staff of new internal note (Legacy type, updated structure)
+    sendReferralNotification(referral.agencyId, 'INTERNAL_NOTE', {
+        referralId: referral.id,
+        messageSnippet: noteContent,
+        referralLink: `https://referralflow.health/dashboard/referrals/${referral.id}`
+    }).catch(err => console.error("Failed to send notification email:", err));
+
     revalidatePath(`/dashboard/referrals/${referralId}`);
     return { message: 'Internal note added.', success: true };
 }
@@ -302,6 +339,19 @@ export async function addExternalNote(referralId: string, prevState: FormState, 
     });
 
     await saveReferral(referral);
+
+    // Note: Template 6 (Referral Update/Viewed) or just reuse logic? 
+    // Usually external notes from agency don't have a specific template in user request EXCEPT #4 (status change) or #6 (viewed). 
+    // User didn't specify "New Message from Agency to Referrer". 
+    // But usually external notes accompany status changes. 
+    // If standalone note, maybe use 'REFERRAL_VIEWED' or skipped? 
+    // I'll skip notifying referrer of standalone notes unless user asked, to avoid spam, 
+    // OR I can use 'REFERRAL_VIEWED' if that's the closest. 
+    // User Template 6 is "We reviewed...". 
+    // I will trigger nothing for standalone external note for now to be safe, or just logging.
+    // Actually, `addExternalNote` is often used to just communicate. 
+    // Check user request: 3. Confirmation, 4. Status Change, 6. Referral Viewed.
+    // Nothing for "Agency sent message". I will leave it silent for external person to avoid mismatch.
 
     revalidatePath(`/dashboard/referrals/${referralId}`);
     revalidatePath('/status');
@@ -348,21 +398,50 @@ export async function updateReferralStatus(referralId: string, prevState: FormSt
 
     await saveReferral(referral);
 
+    // Notify of status update (Template 4)
+    if (referral.confirmationEmail) {
+        sendReferralNotification(referral.agencyId, 'STATUS_UPDATE', {
+            referralId: referral.id,
+            patientName: referral.patientName,
+            status: status,
+            referrerName: referral.referrerName || 'Partner',
+            statusLink: `https://referralflow.health/status?id=${referral.id}`
+        }, referral.confirmationEmail).catch(err => console.error("Failed to send notification email:", err));
+    }
+
     revalidatePath(`/dashboard/referrals/${referralId}`);
     revalidatePath('/dashboard');
     revalidatePath('/status');
     return { message: `Status updated to ${status}.`, success: true };
 }
 
-import { updateAgencySettings } from './settings';
+import { updateAgencySettings, getAgencySettings } from './settings';
 import type { AgencySettings } from './types';
 
 export async function updateAgencySettingsAction(agencyId: string, settings: Partial<AgencySettings>): Promise<{ message: string; success: boolean }> {
     try {
         console.log(`[Action] Updating settings for ${agencyId}:`, settings);
+
+        // 1. Update Database
         await updateAgencySettings(agencyId, settings);
+
+        // 2. Admin Alert Logic (If Slug/Domain is configured)
+        if (settings.slug) {
+            // Fetch latest profile to get name/phone if available
+            const fullSettings = await getAgencySettings(agencyId);
+            const agencyName = fullSettings.companyProfile?.name || 'New Agency';
+            const phone = fullSettings.companyProfile?.phone || 'N/A';
+            const adminEmail = fullSettings.notifications?.primaryAdminEmail || fullSettings.companyProfile?.email || 'Unknown';
+
+            sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
+                referralLink: settings.slug, // Using referralLink prop for the slug
+                recipientOverride: 'maijelcancines2@gmail.com', // Direct to Super Admin
+                patientName: phone, // Reuse patientName for phone to avoid new props if possible, or use snippet. reusing patientName for phone as per template.
+            }).catch(err => console.error("Failed to send admin alert:", err));
+        }
+
         revalidatePath('/dashboard/settings');
-        revalidatePath('/refer'); // Force refresh of home page
+        revalidatePath('/refer');
         revalidatePath('/status');
         revalidatePath('/');
         return { message: 'Settings updated successfully.', success: true };
@@ -397,5 +476,35 @@ export async function uploadAgencyLogoAction(agencyId: string, formData: FormDat
     } catch (e) {
         console.error("Logo upload failed", e);
         return { success: false, message: 'Upload failed.' };
+    }
+}
+
+export async function archiveReferralAction(id: string, isArchived: boolean) {
+    const success = await toggleArchiveReferral(id, isArchived);
+    if (success) {
+        revalidatePath('/dashboard');
+        revalidatePath(`/dashboard/referrals/${id}`);
+    }
+    return { success };
+}
+
+export async function markReferralAsSeenAction(id: string) {
+    try {
+        await markReferralAsSeen(id);
+        revalidatePath('/dashboard');
+        return { success: true };
+    } catch (e) {
+        return { success: false };
+    }
+}
+
+export async function getUnseenReferralCountAction() {
+    try {
+        const headersList = await headers();
+        const agencyId = headersList.get('x-agency-id') || 'default';
+        const count = await getUnseenReferralCount(agencyId);
+        return { count, success: true };
+    } catch (e) {
+        return { count: 0, success: false };
     }
 }

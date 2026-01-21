@@ -21,10 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-    File,
+    File as FileIcon,
     User,
     HeartPulse,
-    History,
+    History as HistoryIcon,
     MessageSquare,
     Sparkles,
     Lightbulb,
@@ -38,12 +38,13 @@ import {
     Mail,
     Phone,
     Send,
-    UserCircle
+    UserCircle,
+    Archive
 } from 'lucide-react';
 import StatusBadge from '@/components/referrals/status-badge';
 import { formatDate } from '@/lib/utils';
 import type { Referral, ReferralStatus, Note } from '@/lib/types';
-import { addInternalNote, addExternalNote, updateReferralStatus } from '@/lib/actions';
+import { addInternalNote, addExternalNote, updateReferralStatus, archiveReferralAction } from '@/lib/actions';
 import { useActionState, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -59,6 +60,19 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
     const [selectedStatus, setSelectedStatus] = useState<ReferralStatus>(initialReferral.status);
     const [statusNote, setStatusNote] = useState('');
     const { toast } = useToast();
+
+    const handleArchiveToggle = async () => {
+        const newState = !referral.isArchived;
+        startTransition(async () => {
+            const result = await archiveReferralAction(referral.id, newState);
+            if (result.success) {
+                toast({ title: newState ? "Archived" : "Restored", description: `Referral ${newState ? 'archived' : 'restored'} successfully.` });
+                setReferral(prev => ({ ...prev, isArchived: newState }));
+            } else {
+                toast({ title: "Error", description: "Failed to update archive status.", variant: "destructive" });
+            }
+        });
+    };
 
     const handleStatusUpdate = async () => {
         const formData = new FormData();
@@ -153,10 +167,22 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                         ID: <span className="font-mono text-primary font-medium">{referral.id}</span> • Received: {formatDate(referral.createdAt)}
                                     </p>
                                 </div>
-                                <StatusBadge status={referral.status} />
+                                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                    <StatusBadge status={referral.status} />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleArchiveToggle}
+                                        disabled={isPending}
+                                        className={referral.isArchived ? "border-orange-200 text-orange-600 bg-orange-50" : "text-muted-foreground"}
+                                    >
+                                        <Archive className="mr-2 h-4 w-4" />
+                                        {referral.isArchived ? 'Restore from Archive' : 'Archive Referral'}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                        <CardContent className="p-6 md:p-8 space-y-8 bg-card">
+                        <CardContent className="p-4 md:p-8 space-y-8 bg-card">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><Building className="text-primary h-5 w-5" /> Provider Information</h3>
@@ -268,14 +294,14 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             )}
 
                             <div className="space-y-4 pt-4">
-                                <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><File className="text-primary h-5 w-5" /> Patient Documents</h3>
+                                <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><FileIcon className="text-primary h-5 w-5" /> Patient Documents</h3>
                                 {referral.documents.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {referral.documents.map(doc => (
                                             <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 transition-all group">
                                                 <div className="flex items-center gap-3 overflow-hidden">
                                                     <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
-                                                        <File className="h-4 w-4 text-primary" />
+                                                        <FileIcon className="h-4 w-4 text-primary" />
                                                     </div>
                                                     <span className="text-sm font-medium truncate max-w-[150px]" title={doc.name}>{doc.name}</span>
                                                 </div>
@@ -315,19 +341,25 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                         <SelectItem value="ACCEPTED">Accepted</SelectItem>
                                         <SelectItem value="NEED_MORE_INFO">Need More Info</SelectItem>
                                         <SelectItem value="REJECTED">Rejected</SelectItem>
+                                        <SelectItem value="COMPLETED">Completed</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="status-note" className="text-xs font-bold uppercase text-muted-foreground">External Update (Visible to Referrer)</Label>
-                                <Textarea
-                                    id="status-note"
-                                    placeholder="Explain the update to the source..."
-                                    className="min-h-[100px] text-sm rounded-xl"
-                                    value={statusNote}
-                                    onChange={(e) => setStatusNote(e.target.value)}
-                                />
+                                <div className="space-y-1">
+                                    <Textarea
+                                        id="status-note"
+                                        placeholder="Explain the update to the source..."
+                                        className="min-h-[100px] text-sm rounded-xl"
+                                        value={statusNote}
+                                        onChange={(e) => setStatusNote(e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground italic px-1">
+                                        Please do not include any PHI in external communications.
+                                    </p>
+                                </div>
                             </div>
 
                             <Button
@@ -403,20 +435,23 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                         <div className="text-center py-10 text-muted-foreground text-xs italic">No external messages sent yet.</div>
                                     )}
                                 </div>
-                                <div className="p-4 bg-primary/5 border-t mt-auto">
+                                <div className="p-4 bg-primary/5 border-t mt-auto space-y-2">
                                     <NoteInput
                                         onAdd={(content, author) => handleAddNote(true, content, author)}
                                         placeholder="Msg to provider (viewable by source)..."
                                         authorLabel="Sender (Office, Maijel...)"
                                         isPrimary
                                     />
+                                    <p className="text-[10px] text-center text-muted-foreground italic">
+                                        Please do not include any PHI in external communications.
+                                    </p>
                                 </div>
                             </TabsContent>
                         </Tabs>
                     </Card>
 
                     <Card className="shadow-lg border-primary/10">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground"><History className="h-4 w-4" /> Timeline History</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground"><HistoryIcon className="h-4 w-4" /> Timeline History</CardTitle></CardHeader>
                         <CardContent>
                             <ul className="space-y-4 relative">
                                 <div className="absolute left-2 top-2 bottom-2 w-px bg-muted" />

@@ -49,6 +49,31 @@ export async function toggleAgencyStatus(agencyId: string, currentStatus: string
 
         revalidatePath('/super-admin');
         revalidatePath('/'); // To update landing if needed
+
+        // Send Activation Email if activating
+        if (newStatus === 'ACTIVE') {
+            const { getAgencySettings } = await import('@/lib/settings');
+            const { sendReferralNotification } = await import('@/lib/email');
+
+            const agency = await getAgencySettings(agencyId);
+            const userEmail = agency.companyProfile.email;
+            // Logic to find login link based on slug
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://referralflow.health';
+            // If they have a custom slug, subdomains might be tricky locally vs prod, but we can direct them to main login or their sub.
+            // Using standard login for now.
+            const loginUrl = `${baseUrl}/login`;
+            const portalUrl = agency.slug
+                ? (agency.slug.includes('.') ? `http://${agency.slug}` : `http://${agency.slug}.referralflow.health`)
+                : baseUrl;
+
+            sendReferralNotification(agencyId, 'AGENCY_ACTIVATED', {
+                firstName: agency.companyProfile.name, // Or a specific user name if we had it
+                referralLink: portalUrl,
+                loginUrl: loginUrl,
+                recipientOverride: userEmail
+            }).catch(e => console.error("Failed to send activation email", e));
+        }
+
         return { success: true, message: `Agency ${agencyId} is now ${newStatus}` };
     } catch (error) {
         console.error('Error toggling agency status:', error);
@@ -76,5 +101,21 @@ export async function updateAgencySubscription(
     } catch (error) {
         console.error('Error updating subscription:', error);
         return { success: false, message: 'Failed to update subscription' };
+    }
+}
+export async function deleteAgency(agencyId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        // Delete the main agency settings document
+        await adminDb.collection(SETTINGS_COLLECTION).doc(agencyId).delete();
+
+        // Optional: We could also recursively delete sub-collections like 'referrals' if needed,
+        // but for now, just removing the agency record from the list is sufficient.
+        // Firestore doesn't verify cascade delete automatically without a cloud function.
+
+        revalidatePath('/super-admin');
+        return { success: true, message: 'Agency deleted successfully' };
+    } catch (error) {
+        console.error('Error deleting agency:', error);
+        return { success: false, message: 'Failed to delete agency' };
     }
 }

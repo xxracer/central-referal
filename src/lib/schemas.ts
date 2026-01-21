@@ -12,20 +12,20 @@ const fileArraySchema = z.array(fileSchema).optional();
 
 export const referralSchema = z.object({
   // Referrer Info
-  organizationName: z.string().optional(),
+  organizationName: z.string().min(1, "Organization / Facility Name is required."),
   contactName: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().min(10, "Phone Number is required."),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
 
   // Patient Info
-  patientFullName: z.string().optional(),
+  patientFullName: z.string().min(1, "Patient Name is required."),
   patientDOB: z.string().optional(),
-  patientAddress: z.string().optional(),
-  patientZipCode: z.string().optional(),
+  patientZipCode: z.string().min(5, "Patient ZIP Code is required."),
   isFaxingPaperwork: z.boolean().optional(),
 
   // Insurance Info
-  primaryInsurance: z.string().min(1, "Primary Insurance is required."),
+  primaryInsurance: z.string().min(1, "Insurance is required."),
+  otherInsurance: z.string().optional(),
   memberId: z.string().optional(),
   insuranceType: z.string().optional(),
   planName: z.string().optional(),
@@ -35,7 +35,7 @@ export const referralSchema = z.object({
   // Services & Diagnosis
   servicesNeeded: z.preprocess(
     (val) => (Array.isArray(val) ? val : [val].filter(Boolean)),
-    z.array(z.string()).optional()
+    z.array(z.string()).min(1, "At least one service must be selected.")
   ),
   diagnosis: z.string().optional(),
 

@@ -12,6 +12,9 @@ import { useState, useTransition, useEffect } from "react";
 import { type AgencySettings } from "@/lib/types";
 import { updateAgencySettingsAction, uploadAgencyLogoAction } from "@/lib/actions";
 import { Plus, X, Save, AlertCircle, Upload, Loader2 } from "lucide-react";
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from "@/components/ui/dialog";
 
 const MASTER_INSURANCE_LIST = [
     "Medicare", "Aetna Medicare", "BCBS Medicare", "Community Health Choice",
@@ -42,12 +45,19 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
             const result = await updateAgencySettingsAction(agencyId, payload);
             if (result.success) {
                 setSettings(prev => ({ ...prev, ...payload }));
-                alert('Profile and URL updated successfully');
+                if (payload.slug && payload.slug !== initialSettings.slug) {
+                    // Only show popup if slug was updated/set
+                    setShowActivationDialog(true);
+                } else {
+                    alert('Profile updated successfully');
+                }
             } else {
                 alert('Error: ' + result.message);
             }
         });
     };
+
+    const [showActivationDialog, setShowActivationDialog] = useState(false);
 
     return (
         <div className="container mx-auto max-w-5xl py-6 space-y-8">
@@ -146,6 +156,36 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <Dialog open={showActivationDialog} onOpenChange={setShowActivationDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Setup Complete!</DialogTitle>
+                        <DialogDescription>
+                            Your custom domain configuration has been saved.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-3">
+                        <div className="flex items-start gap-3 bg-green-50 p-3 rounded-lg border border-green-100 dark:bg-green-950/20 dark:border-green-900">
+                            <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0 dark:bg-green-900 dark:text-green-300">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium text-green-800 dark:text-green-300">Activation in Progress</p>
+                                <p className="text-xs text-green-700 dark:text-green-400">
+                                    Your site <strong>{settings.slug}.referralflow.health</strong> will be active in approximately 40 minutes.
+                                </p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            You will receive an email notification once your portal is fully active and ready for use.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setShowActivationDialog(false)}>Got it</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -356,47 +396,344 @@ const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySe
     );
 };
 
+// --- Granular Notification Center Components ---
+
+const NotificationCategoryLabels: Record<string, { label: string; description: string }> = {
+    'new_referrals': { label: 'New Referrals Received', description: 'Notified when a new referral is submitted' },
+    'status_changes': { label: 'Status Changes', description: 'Accepted, rejected, needs more info, archived' },
+    'external_comms': { label: 'External Communications', description: 'Messages sent to referral sources or external parties' },
+    'internal_comms': { label: 'Internal Communications', description: 'Internal notes or staff messages on a referral' },
+    'billing_comms': { label: 'Billing Communications', description: 'Billing-related updates or requests' },
+};
+
 const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
+    // Local state for immediate UI feedback before saving to database
+    // "notifs" tracks the database state (via props usually, but we sync on effect)
+    // Actually we should use local state for the form, and onSave propagates up.
+
+    // We need to sync with parent settings
     const [notifs, setNotifs] = useState(settings.notifications);
-    const [newEmail, setNewEmail] = useState('');
+    const [isAddingStaff, setIsAddingStaff] = useState(false);
 
     useEffect(() => {
         setNotifs(settings.notifications);
     }, [settings.notifications]);
 
-    const addEmail = () => {
-        if (newEmail && !notifs.emailRecipients.includes(newEmail)) {
-            setNotifs(prev => ({ ...prev, emailRecipients: [...prev.emailRecipients, newEmail] }));
-            setNewEmail('');
+    // Derived state for Primary Admin (fallback to profiled email if not explicit)
+    const primaryAdminEmail = notifs.primaryAdminEmail || settings.companyProfile.email;
+
+    // --- Actions ---
+
+    const handleAddStaff = (newStaff: { email: string; enabledCategories: string[] }) => {
+        const currentStaff = notifs.staff || [];
+        // Prevent duplicates
+        if (currentStaff.some(s => s.email === newStaff.email)) {
+            alert('Staff member already exists.');
+            return;
         }
+
+        const updatedStaff = [...currentStaff, {
+            email: newStaff.email,
+            enabledCategories: newStaff.enabledCategories as any[]
+        }];
+
+        const updatedNotifs = { ...notifs, staff: updatedStaff };
+        setNotifs(updatedNotifs);
+        onSave(updatedNotifs); // Save immediately or let user click specific save? 
+        // Prompt says "Save Changes" on each card. But "Add Staff" usually saves immediately or adds to list.
+        // Let's add to list and assume parent 'onSave' persists it.
+        setIsAddingStaff(false);
     };
 
-    const removeEmail = (email: string) => {
-        setNotifs(prev => ({ ...prev, emailRecipients: prev.emailRecipients.filter(e => e !== email) }));
+    const handleRemoveStaff = (email: string) => {
+        if (!confirm('Are you sure you want to remove this staff member?')) return;
+        const updatedStaff = (notifs.staff || []).filter(s => s.email !== email);
+        const updatedNotifs = { ...notifs, staff: updatedStaff };
+        setNotifs(updatedNotifs);
+        onSave(updatedNotifs);
+    };
+
+    const handleUpdateStaff = (email: string, newCategories: string[]) => {
+        const updatedStaff = (notifs.staff || []).map(s => {
+            if (s.email === email) {
+                return { ...s, enabledCategories: newCategories as any[] };
+            }
+            return s;
+        });
+        const updatedNotifs = { ...notifs, staff: updatedStaff };
+        setNotifs(updatedNotifs);
+        onSave(updatedNotifs);
     };
 
     return (
-        <div className="space-y-4">
-            <div className="space-y-2">
-                <Label>Email Recipients</Label>
-                <p className="text-sm text-muted-foreground">These email addresses will receive alerts for new referrals.</p>
-                <div className="flex gap-2">
-                    <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="name@domain.com" />
-                    <Button onClick={addEmail} type="button" size="icon"><Plus className="h-4 w-4" /></Button>
+        <div className="space-y-10">
+            {/* Header / Intro */}
+            <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">The primary admin email receives all notifications by default.</p>
+                <p className="text-sm text-muted-foreground">You can control which notifications additional staff receive below.</p>
+            </div>
+
+            {/* SECTION 1 — PRIMARY ADMIN (Now Editable) */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                    Primary Admin
+                    <Badge variant="outline" className="text-[10px] h-5">System Owner</Badge>
+                </h3>
+
+                <StaffCard
+                    member={{
+                        email: primaryAdminEmail,
+                        name: 'Primary Admin',
+                        enabledCategories: notifs.primaryAdminPreferences || ['all_comms']
+                    }}
+                    onUpdate={(email, cats) => {
+                        const updatedNotifs = { ...notifs, primaryAdminPreferences: cats as any[] };
+                        setNotifs(updatedNotifs);
+                        onSave(updatedNotifs);
+                    }}
+                    onRemove={() => alert("Cannot remove Primary Admin.")}
+                    isLocked={false} // Allow editing!
+                    hideRemove={true}
+                />
+            </div>
+
+            {/* SECTION 2 — STAFF NOTIFICATIONS */}
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Staff Notifications</h3>
+                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff}>
+                        <Plus className="h-4 w-4 mr-2" /> Add Staff Member
+                    </Button>
+                </div>
+
+                {isAddingStaff && (
+                    <AddStaffForm
+                        onCancel={() => setIsAddingStaff(false)}
+                        onAdd={handleAddStaff}
+                    />
+                )}
+
+                <div className="space-y-6">
+                    {(notifs.staff || []).length === 0 && !isAddingStaff && (
+                        <p className="text-sm text-muted-foreground italic text-center py-8 border-2 border-dashed rounded-lg">
+                            No additional staff members configured.
+                        </p>
+                    )}
+                    {(notifs.staff || []).map(member => (
+                        <StaffCard
+                            key={member.email}
+                            member={member}
+                            onUpdate={handleUpdateStaff}
+                            onRemove={handleRemoveStaff}
+                        />
+                    ))}
                 </div>
             </div>
-            <div className="space-y-2">
-                {notifs.emailRecipients.map(email => (
-                    <div key={email} className="flex items-center justify-between border p-2 rounded">
-                        <span>{email}</span>
-                        <Button variant="ghost" size="sm" onClick={() => removeEmail(email)}><X className="h-4 w-4" /></Button>
-                    </div>
-                ))}
-            </div>
-            <Button onClick={() => onSave(notifs)} disabled={isPending}>Save Notifications</Button>
         </div>
     );
 };
+
+// --- Sub-components for Granular UI ---
+
+import { UserCheck, Check, Info } from "lucide-react";
+
+function StaffCard({ member, onUpdate, onRemove, isLocked = false, hideRemove = false }: {
+    member: { email: string, name?: string, enabledCategories: string[] },
+    onUpdate: (email: string, cats: string[]) => void,
+    onRemove: (email: string) => void,
+    isLocked?: boolean,
+    hideRemove?: boolean
+}) {
+    const [categories, setCategories] = useState<string[]>(member.enabledCategories || []);
+    const [isDirty, setIsDirty] = useState(false);
+
+    useEffect(() => {
+        setCategories(member.enabledCategories || []);
+        setIsDirty(false);
+    }, [member.enabledCategories]);
+
+    const isAllComms = categories.includes('all_comms');
+
+    const toggleCat = (key: string) => {
+        let newCats = [...categories];
+
+        if (key === 'all_comms') {
+            if (isAllComms) {
+                // Unchecking all comms -> Revert to empty or keep individual?
+                // Prompt: "Reverts to individual control" (implies manual selection needed or restores prev state?
+                // Let's simpler: Uncheck all.
+                newCats = [];
+            } else {
+                // Checking all comms -> Add all keys
+                const allKeys = Object.keys(NotificationCategoryLabels).map(k => k);
+                // "all_comms" key is 'all_comms'
+                newCats = ['all_comms', ...Object.keys(NotificationCategoryLabels)];
+            }
+        } else {
+            // Toggling individual
+            if (newCats.includes(key)) {
+                newCats = newCats.filter(c => c !== key);
+                // If we uncheck a specific one, 'all_comms' must also be unchecked
+                newCats = newCats.filter(c => c !== 'all_comms');
+            } else {
+                newCats.push(key);
+                // Check if all needed keys are now present? No need to auto-check 'all_comms' unless explicit user action usually.
+            }
+        }
+
+        setCategories(newCats);
+        setIsDirty(true);
+    };
+
+    // Auto-check logic for display: If 'all_comms' is checked, everything appears checked.
+    // The prompt says: "When checked: Auto-checks... Locks them visually".
+    // So 'categories' state should ideally reflect this.
+
+    const handleSave = () => {
+        onUpdate(member.email, categories);
+        setIsDirty(false); // Optimistic
+    };
+
+    return (
+        <div className="border rounded-lg p-6 bg-card shadow-sm space-y-6">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {(member.email && member.email.length > 0) ? member.email[0].toUpperCase() : '?'}
+                    </div>
+                    <div>
+                        <h4 className="font-semibold">{member.name || 'Staff Member'}</h4>
+                        <p className="text-sm text-muted-foreground">{member.email || 'No email set'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h5 className="text-sm font-medium border-b pb-2">Notification Access</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(NotificationCategoryLabels).map(([key, info]) => {
+                        const isChecked = categories.includes(key) || isAllComms;
+                        const isLocked = isAllComms; // "Locks them visually"
+
+                        return (
+                            <div key={key} className={`flex items-start space-x-3 p-3 rounded-md transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted/50'} ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                <Checkbox
+                                    id={`${member.email}-${key}`}
+                                    checked={isChecked}
+                                    onCheckedChange={() => !isLocked && toggleCat(key)}
+                                    disabled={isLocked}
+                                />
+                                <div className="space-y-1 leading-none">
+                                    <Label
+                                        htmlFor={`${member.email}-${key}`}
+                                        className={`text-sm font-medium cursor-pointer ${isLocked ? 'cursor-not-allowed' : ''}`}
+                                    >
+                                        {info.label}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        {info.description}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* All Communications Toggle */}
+                    <div className="flex items-start space-x-3 p-3 rounded-md bg-secondary/10 border border-secondary/20">
+                        <Checkbox
+                            id={`${member.email}-all_comms`}
+                            checked={isAllComms}
+                            onCheckedChange={() => toggleCat('all_comms')}
+                        />
+                        <div className="space-y-1 leading-none">
+                            <Label htmlFor={`${member.email}-all_comms`} className="text-sm font-bold cursor-pointer">
+                                All Communications
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                Overrides and includes all communication types
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="pt-4 flex items-center gap-3">
+                <Button onClick={handleSave} disabled={!isDirty}>
+                    {isDirty ? 'Save Changes' : 'Saved'}
+                </Button>
+                {!hideRemove && (
+                    <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onRemove(member.email)}>
+                        Remove Staff
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data: any) => void }) {
+    const [email, setEmail] = useState('');
+    const [cats, setCats] = useState<string[]>([]);
+
+    const toggleCat = (key: string) => {
+        if (key === 'all_comms') {
+            if (cats.includes('all_comms')) setCats([]);
+            else setCats(['all_comms', ...Object.keys(NotificationCategoryLabels)]);
+            return;
+        }
+
+        if (cats.includes(key)) {
+            setCats(cats.filter(c => c !== key && c !== 'all_comms'));
+        } else {
+            setCats([...cats, key]);
+        }
+    };
+
+    const isAll = cats.includes('all_comms');
+
+    return (
+        <div className="p-6 border rounded-lg bg-muted/10 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="font-semibold text-lg">Add Staff Member</h4>
+
+            <div className="space-y-2 max-w-md">
+                <Label>Email Address</Label>
+                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="name@domain.com" />
+            </div>
+
+            <div className="space-y-3">
+                <Label>Notification Access</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(NotificationCategoryLabels).map(([key, info]) => (
+                        <div key={key} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`new-${key}`}
+                                checked={cats.includes(key) || isAll}
+                                onCheckedChange={() => !isAll && toggleCat(key)}
+                                disabled={isAll}
+                            />
+                            <Label htmlFor={`new-${key}`} className={isAll ? 'opacity-50' : ''}>{info.label}</Label>
+                        </div>
+                    ))}
+                    <div className="flex items-center space-x-2 font-semibold">
+                        <Checkbox
+                            id="new-all"
+                            checked={isAll}
+                            onCheckedChange={() => toggleCat('all_comms')}
+                        />
+                        <Label htmlFor="new-all">All Communications</Label>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex gap-2">
+                <Button onClick={() => onAdd({ email, enabledCategories: cats })} disabled={!email || !email.includes('@')}>
+                    Add Staff
+                </Button>
+                <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+            </div>
+        </div>
+    )
+}
 
 const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
     const [access, setAccess] = useState(settings.userAccess);

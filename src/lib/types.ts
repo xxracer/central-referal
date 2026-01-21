@@ -1,4 +1,4 @@
-export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'NEED_MORE_INFO' | 'REJECTED';
+export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'NEED_MORE_INFO' | 'REJECTED' | 'COMPLETED';
 
 export type Document = {
   id: string;
@@ -30,6 +30,14 @@ export type AISummary = {
   reasoning: string;
 }
 
+export type NotificationCategory = 'new_referrals' | 'status_changes' | 'external_comms' | 'internal_comms' | 'billing_comms' | 'all_comms';
+
+export type StaffNotificationPreference = {
+  email: string;
+  name?: string;
+  enabledCategories: NotificationCategory[]; // Only stores enabled keys for efficiency
+};
+
 export type AgencySettings = {
   id: string; // usually the subdomain
   slug?: string; // custom subdomain slug
@@ -42,10 +50,17 @@ export type AgencySettings = {
     homeInsurances?: string[]; // Insurances shown on the landing/home page
   };
   branding: {
-    logoUrl?: string; // Redundant but keeping structure clean if we want more branding later
+    logoUrl?: string;
   };
   notifications: {
-    emailRecipients: string[];
+    // Legacy support (optional, can be deprecated)
+    emailRecipients?: string[];
+    enabledTypes?: string[];
+
+    // New Structure
+    primaryAdminEmail?: string; // If different from companyProfile.email, usually same checking logic
+    primaryAdminPreferences?: NotificationCategory[]; // Admin's granular preferences
+    staff: StaffNotificationPreference[];
   };
   configuration: {
     acceptedInsurances: string[];
@@ -128,4 +143,6 @@ export type Referral = {
   aiSummary?: AISummary;
   createdAt: Date;
   updatedAt: Date;
+  isArchived?: boolean;
+  isSeen?: boolean;
 };

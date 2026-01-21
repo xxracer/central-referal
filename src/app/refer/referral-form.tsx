@@ -61,17 +61,48 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
 
     const [selectedInsurance, setSelectedInsurance] = useState<string>('');
 
+    const [phone, setPhone] = useState('');
+    const [dob, setDob] = useState('');
+
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 10) value = value.slice(0, 10);
+
+        // Format: XXX-XXX-XXXX
+        let formatted = value;
+        if (value.length > 3 && value.length <= 6) {
+            formatted = `${value.slice(0, 3)}-${value.slice(3)}`;
+        } else if (value.length > 6) {
+            formatted = `${value.slice(0, 3)}-${value.slice(3, 6)}-${value.slice(6)}`;
+        }
+        setPhone(formatted);
+    };
+
+    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 8) value = value.slice(0, 8);
+
+        // Format: MM/DD/YYYY
+        let formatted = value;
+        if (value.length > 2 && value.length <= 4) {
+            formatted = `${value.slice(0, 2)}/${value.slice(2)}`;
+        } else if (value.length > 4) {
+            formatted = `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`;
+        }
+        setDob(formatted);
+    };
+
     const totalSize = [...referralDocs, ...progressNotes].reduce((acc, file) => acc + file.size, 0);
     const isOverLimit = totalSize > MAX_SIZE_BYTES;
 
     // Use insurances from settings, or fallback if empty (though settings should have defaults)
     // Use insurances from configuration, or fallback to home page insurances, or final minimal fallback
-    let insuranceOptions = settings.configuration.acceptedInsurances || [];
+    let insuranceOptions = (settings.configuration.acceptedInsurances || []).filter(i => i.toLowerCase() !== 'other');
     if (insuranceOptions.length === 0) {
-        insuranceOptions = settings.companyProfile.homeInsurances || [];
+        insuranceOptions = (settings.companyProfile.homeInsurances || []).filter(i => i.toLowerCase() !== 'other');
     }
     if (insuranceOptions.length === 0) {
-        insuranceOptions = ["Medicare", "Other"];
+        insuranceOptions = ["Medicare"];
     }
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, setFiles: React.Dispatch<React.SetStateAction<File[]>>) => {
@@ -95,6 +126,8 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
             formRef.current?.reset();
             setReferralDocs([]);
             setProgressNotes([]);
+            setPhone('');
+            setDob('');
         }
     }, [formState.success]);
 
@@ -139,8 +172,8 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             <CardHeader><CardTitle className="font-headline text-2xl">How can we contact you about this referral?</CardTitle></CardHeader>
                             <CardContent className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="organizationName">Organization / Facility Name</Label>
-                                    <Input id="organizationName" name="organizationName" placeholder="e.g., Memorial Hermann" />
+                                    <Label htmlFor="organizationName">Organization / Facility Name <span className="text-destructive">*</span></Label>
+                                    <Input id="organizationName" name="organizationName" placeholder="e.g., Memorial Hermann" required />
                                     {formState.errors?.organizationName && <p className="text-sm text-destructive">{formState.errors.organizationName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
@@ -149,8 +182,15 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                     {formState.errors?.contactName && <p className="text-sm text-destructive">{formState.errors.contactName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone Number</Label>
-                                    <Input id="phone" name="phone" placeholder="e.g., (713) 555-1234" />
+                                    <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
+                                    <Input
+                                        id="phone"
+                                        name="phone"
+                                        placeholder="XXX-XXX-XXXX"
+                                        value={phone}
+                                        onChange={handlePhoneChange}
+                                        required
+                                    />
                                     {formState.errors?.phone && <p className="text-sm text-destructive">{formState.errors.phone[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
@@ -165,23 +205,24 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             <CardHeader><CardTitle className="font-headline text-2xl">Patient Information</CardTitle></CardHeader>
                             <CardContent className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="patientFullName">Patient Full Name</Label>
-                                    <Input id="patientFullName" name="patientFullName" placeholder="e.g., John Doe" />
+                                    <Label htmlFor="patientFullName">Patient Full Name <span className="text-destructive">*</span></Label>
+                                    <Input id="patientFullName" name="patientFullName" placeholder="e.g., John Doe" required />
                                     {formState.errors?.patientFullName && <p className="text-sm text-destructive">{formState.errors.patientFullName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="patientDOB">Date of Birth</Label>
-                                    <Input id="patientDOB" name="patientDOB" placeholder="MM/DD/YYYY" />
+                                    <Input
+                                        id="patientDOB"
+                                        name="patientDOB"
+                                        placeholder="MM/DD/YYYY"
+                                        value={dob}
+                                        onChange={handleDobChange}
+                                    />
                                     {formState.errors?.patientDOB && <p className="text-sm text-destructive">{formState.errors.patientDOB[0]}</p>}
                                 </div>
-                                <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="patientAddress">Patient Full Address</Label>
-                                    <Input id="patientAddress" name="patientAddress" placeholder="e.g., 123 Main St, Houston, TX" />
-                                    {formState.errors?.patientAddress && <p className="text-sm text-destructive">{formState.errors.patientAddress[0]}</p>}
-                                </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="patientZipCode">Patient ZIP Code</Label>
-                                    <Input id="patientZipCode" name="patientZipCode" placeholder="e.g., 77005" />
+                                    <Label htmlFor="patientZipCode">Patient ZIP Code <span className="text-destructive">*</span></Label>
+                                    <Input id="patientZipCode" name="patientZipCode" placeholder="e.g., 77005" required />
                                     {formState.errors?.patientZipCode && <p className="text-sm text-destructive">{formState.errors.patientZipCode[0]}</p>}
                                 </div>
                             </CardContent>
@@ -196,9 +237,16 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                         <SelectTrigger id="primaryInsurance"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent>
                                             {insuranceOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                                            <SelectItem value="Other">Not Listed / Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {formState.errors?.primaryInsurance && <p className="text-sm text-destructive">{formState.errors.primaryInsurance[0]}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="otherInsurance">Other Insurance (if not listed above)</Label>
+                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" />
+                                    {formState.errors?.otherInsurance && <p className="text-sm text-destructive">{formState.errors.otherInsurance[0]}</p>}
                                 </div>
 
                                 {selectedInsurance && (
@@ -224,7 +272,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             <CardHeader><CardTitle className="font-headline text-2xl">Services & Diagnosis</CardTitle></CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label>Services Needed</Label>
+                                    <Label>Services Needed <span className="text-destructive">*</span></Label>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {(settings.configuration.offeredServices || []).map((serviceName) => (
                                             <div key={serviceName} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
@@ -293,7 +341,12 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             </CardContent>
                         </Card>
 
-                        {formState.message && !formState.success && (<Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{formState.message}</AlertDescription></Alert>)}
+                        <div className="text-center space-y-4">
+                            <p className="text-xs text-muted-foreground italic">
+                                This system is intended for referral coordination and does not replace clinical documentation.
+                            </p>
+                            {formState.message && !formState.success && (<Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{formState.message}</AlertDescription></Alert>)}
+                        </div>
 
                         <Button type="submit" disabled={isPending || formState.isSubmitting || isOverLimit} size="lg" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90">
                             {isPending || formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

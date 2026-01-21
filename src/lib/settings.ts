@@ -31,6 +31,8 @@ const DEFAULT_SETTINGS: AgencySettings = {
     },
     notifications: {
         emailRecipients: [],
+        enabledTypes: ['NEW_REFERRAL', 'STATUS_UPDATE'],
+        staff: [],
     },
     configuration: {
         acceptedInsurances: [],
@@ -93,7 +95,12 @@ export async function getAgencySettings(idOrSlug: string): Promise<AgencySetting
             homeInsurances: data.companyProfile?.homeInsurances || DEFAULT_SETTINGS.companyProfile.homeInsurances
         },
         branding: { ...DEFAULT_SETTINGS.branding, ...(data.branding || {}) },
-        notifications: { ...DEFAULT_SETTINGS.notifications, ...(data.notifications || {}) },
+        notifications: {
+            ...DEFAULT_SETTINGS.notifications,
+            ...(data.notifications || {}),
+            enabledTypes: data.notifications?.enabledTypes || DEFAULT_SETTINGS.notifications.enabledTypes,
+            staff: data.notifications?.staff || DEFAULT_SETTINGS.notifications.staff
+        },
         configuration: { ...DEFAULT_SETTINGS.configuration, ...(data.configuration || {}) },
         userAccess: { ...DEFAULT_SETTINGS.userAccess, ...(data.userAccess || {}) },
         subscription: { ...DEFAULT_SETTINGS.subscription, ...(data.subscription || {}) },

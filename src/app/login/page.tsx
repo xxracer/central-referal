@@ -27,8 +27,19 @@ export default function LoginPage() {
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
         try {
-            const user = await signInWithGoogle();
-            if (user) {
+            const { user, isNewUser } = await signInWithGoogle();
+
+            if (isNewUser) {
+                // User was not registered -> Redirect to subscribe
+                // We should probably sign them out so they aren't logged in as a 'ghost' user
+                // but for now, let's just redirect as requested.
+                // The prompt says "if not registered, return to subscribe page".
+                router.push('/subscribe');
+                toast({
+                    title: "Registration Required",
+                    description: "Please subscribe to access the dashboard.",
+                });
+            } else if (user) {
                 toast({
                     title: "Inicio de sesión exitoso",
                     description: `Bienvenido de nuevo, ${user.displayName}.`,

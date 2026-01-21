@@ -1,14 +1,18 @@
 'use client';
 
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { getAdditionalUserInfo, getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, type User, type UserCredential } from 'firebase/auth';
 import { initializeFirebase } from '@/firebase';
 
-export async function signInWithGoogle(): Promise<User | null> {
+export async function signInWithGoogle(): Promise<{ user: User; isNewUser: boolean }> {
     const { auth } = initializeFirebase();
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        return result.user;
+        const details = getAdditionalUserInfo(result);
+        return {
+            user: result.user,
+            isNewUser: details?.isNewUser ?? false
+        };
     } catch (error) {
         console.error("Error during Google sign-in:", error);
         throw error;

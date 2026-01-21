@@ -14,7 +14,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 const PdfInputSchema = z.object({
   patientFullName: z.string(),
   patientDOB: z.string(),
-  patientAddress: z.string(),
+  patientAddress: z.string().optional(),
   patientZipCode: z.string(),
   memberId: z.string(),
   primaryInsurance: z.string(),
@@ -42,10 +42,10 @@ const SummaryPromptOutputSchema = z.object({
 });
 
 const summaryPrompt = ai.definePrompt({
-    name: 'referralSummaryPrompt',
-    input: { schema: PdfInputSchema },
-    output: { schema: SummaryPromptOutputSchema },
-    prompt: `You are an expert administrative assistant creating a patient referral summary.
+  name: 'referralSummaryPrompt',
+  input: { schema: PdfInputSchema },
+  output: { schema: SummaryPromptOutputSchema },
+  prompt: `You are an expert administrative assistant creating a patient referral summary.
     Format the output as a Markdown table. Create two main sections: "GENERAL PATIENT INFO" and "INSURANCE INFO".
     Within each section, create a two-column layout using a markdown table.
     The first column will contain the fixed labels (e.g., "PATIENT NAME", "MEM ID#").
@@ -59,7 +59,8 @@ const summaryPrompt = ai.definePrompt({
     Here is the data:
     - patientFullName: {{{patientFullName}}}
     - patientDOB: {{{patientDOB}}}
-    - patientAddress: {{{patientAddress}}}, {{{patientZipCode}}}
+    - patientZipCode: {{{patientZipCode}}}
+    - patientAddress: {{{patientAddress}}}
     - pcpName: {{{pcpName}}}
     - pcpPhone: {{{pcpPhone}}}
     - surgeryDate: {{{surgeryDate}}}
@@ -86,74 +87,74 @@ const generateReferralPdfFlow = ai.defineFlow(
   async (data) => {
     // 1. Get the text summary from Gemini
     const { output } = await summaryPrompt(data);
-    
+
     if (!output?.summaryText) {
-        throw new Error("Failed to generate summary text from AI.");
+      throw new Error("Failed to generate summary text from AI.");
     }
     const summaryText = output.summaryText;
 
     // 2. Create a new PDF document
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
+    let page = pdfDoc.addPage();
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    
+
     const margin = 50;
     let y = height - margin;
 
     const lines = summaryText.split('\n');
 
     for (const line of lines) {
-        if (y < margin) {
-            page.addPage();
-            y = height - margin;
-        }
+      if (y < margin) {
+        page = pdfDoc.addPage();
+        y = height - margin;
+      }
 
-        let trimmedLine = line.trim();
-        if (trimmedLine.startsWith('## ')) {
-            page.drawText(trimmedLine.replace('## ', ''), {
-                x: margin,
-                y,
-                font: boldFont,
-                size: 14,
-                color: rgb(0, 0, 0),
-            });
-            y -= 25;
-        } else if (trimmedLine.startsWith('|')) { // Handle table rows
-            const columns = trimmedLine.split('|').map(s => s.trim()).slice(1, -1);
-            if (columns.length === 2) {
-                const [label, value] = columns;
-                page.drawText(label, {
-                    x: margin,
-                    y,
-                    font: boldFont,
-                    size: 10,
-                });
-                page.drawText(value, {
-                    x: margin + 150,
-                    y,
-                    font: font,
-                    size: 10,
-                });
-                y -= 15;
-            }
-        } else if (trimmedLine.length > 0) {
-             page.drawText(trimmedLine, {
-                x: margin,
-                y,
-                font: font,
-                size: 10,
-                lineHeight: 15,
-                color: rgb(0.1, 0.1, 0.1),
-             });
-             y -= 15;
+      let trimmedLine = line.trim();
+      if (trimmedLine.startsWith('## ')) {
+        page.drawText(trimmedLine.replace('## ', ''), {
+          x: margin,
+          y,
+          font: boldFont,
+          size: 14,
+          color: rgb(0, 0, 0),
+        });
+        y -= 25;
+      } else if (trimmedLine.startsWith('|')) { // Handle table rows
+        const columns = trimmedLine.split('|').map(s => s.trim()).slice(1, -1);
+        if (columns.length === 2) {
+          const [label, value] = columns;
+          page.drawText(label, {
+            x: margin,
+            y,
+            font: boldFont,
+            size: 10,
+          });
+          page.drawText(value, {
+            x: margin + 150,
+            y,
+            font: font,
+            size: 10,
+          });
+          y -= 15;
         }
+      } else if (trimmedLine.length > 0) {
+        page.drawText(trimmedLine, {
+          x: margin,
+          y,
+          font: font,
+          size: 10,
+          lineHeight: 15,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+        y -= 15;
+      }
     }
-    
+
     // 3. Save the PDF to a byte array
     const pdfBytes = await pdfDoc.save();
-    return pdfBytes;
+    return new Uint8Array(pdfBytes);
   }
 );
 
