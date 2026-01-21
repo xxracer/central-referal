@@ -40,18 +40,26 @@ export default function LoginPage() {
                     description: "Please subscribe to access the dashboard.",
                 });
             } else if (user) {
-                toast({
-                    title: "Inicio de sesión exitoso",
-                    description: `Bienvenido de nuevo, ${user.displayName}.`,
-                });
-                router.push('/dashboard');
+                if (user.email === 'maijelcancines2@gmail.com') {
+                    toast({
+                        title: "Welcome Super Admin",
+                        description: `Logged in as ${user.displayName}. Redirecting to Master Panel...`,
+                    });
+                    router.push('/super-admin');
+                } else {
+                    toast({
+                        title: "Login Successful",
+                        description: `Welcome back, ${user.displayName}.`,
+                    });
+                    router.push('/dashboard');
+                }
             }
         } catch (error: any) {
             console.error("Google Sign-In Error:", error);
             toast({
                 variant: "destructive",
-                title: "Error de inicio de sesión",
-                description: error.message || "No se pudo iniciar sesión con Google. Por favor, inténtelo de nuevo.",
+                title: "Login Failed",
+                description: error.message || "Failed to sign in with Google. Please try again.",
             });
         } finally {
             setIsLoading(false);
@@ -67,7 +75,7 @@ export default function LoginPage() {
                         <span className="text-2xl font-bold font-headline">ReferralFlow Central</span>
                     </div>
                     <CardTitle className="text-2xl">Staff Portal Login</CardTitle>
-                    <CardDescription>Inicia sesión para gestionar los referidos.</CardDescription>
+                    <CardDescription>Sign in to manage referrals.</CardDescription>
                     {isLoading && (
                         <div className="mt-2 text-xs text-secondary animate-pulse px-2 py-1 bg-secondary/10 rounded-md">
                             Check for a separate window. If nothing happens, ensure popups are allowed.
@@ -84,7 +92,7 @@ export default function LoginPage() {
                         ) : (
                             <>
                                 <GoogleIcon className="mr-2" />
-                                Iniciar sesión con Google
+                                Sign in with Google
                             </>
                         )}
                     </Button>
