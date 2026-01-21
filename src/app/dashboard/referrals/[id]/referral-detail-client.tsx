@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUser } from '@/firebase/auth/use-user';
 import {
     File as FileIcon,
     User,
@@ -45,9 +46,10 @@ import StatusBadge from '@/components/referrals/status-badge';
 import { formatDate } from '@/lib/utils';
 import type { Referral, ReferralStatus, Note } from '@/lib/types';
 import { addInternalNote, addExternalNote, updateReferralStatus, archiveReferralAction } from '@/lib/actions';
-import { useActionState, useState, useTransition } from 'react';
+import { useActionState, useState, useTransition, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 
 interface ReferralDetailClientProps {
@@ -57,6 +59,21 @@ interface ReferralDetailClientProps {
 export default function ReferralDetailClient({ referral: initialReferral }: ReferralDetailClientProps) {
     const [referral, setReferral] = useState<Referral>(initialReferral);
     const [isPending, startTransition] = useTransition();
+    const router = useRouter(); // Moved up
+
+    // Sync state when server data changes (e.g. after router.refresh())
+    useEffect(() => {
+        setReferral(initialReferral);
+    }, [initialReferral]);
+
+    // Poll for live updates every 5 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            router.refresh();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [router]);
+
     const [selectedStatus, setSelectedStatus] = useState<ReferralStatus>(initialReferral.status);
     const [statusNote, setStatusNote] = useState('');
     const { toast } = useToast();
@@ -68,6 +85,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
             if (result.success) {
                 toast({ title: newState ? "Archived" : "Restored", description: `Referral ${newState ? 'archived' : 'restored'} successfully.` });
                 setReferral(prev => ({ ...prev, isArchived: newState }));
+                router.refresh(); // Sync server
             } else {
                 toast({ title: "Error", description: "Failed to update archive status.", variant: "destructive" });
             }
@@ -78,7 +96,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
         const formData = new FormData();
         formData.append('status', selectedStatus);
         formData.append('externalNote', statusNote);
-        formData.append('authorName', 'Staff'); // In a real app, this would come from the logged in user
+        formData.append('authorName', user?.displayName || user?.email || 'Staff'); // Automate author
 
         startTransition(async () => {
             const result = await updateReferralStatus(referral.id, { message: '', success: false }, formData);
@@ -94,18 +112,22 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                     }]
                 }));
                 setStatusNote('');
+                router.refresh(); // Sync server
             } else {
                 toast({ title: "Error", description: result.message, variant: "destructive" });
             }
         });
     };
 
-    const handleAddNote = async (isExternal: boolean, content: string, author: string) => {
+    const { user } = useUser(); // Get logged in user
+
+    const handleAddNote = async (isExternal: boolean, content: string) => {
         if (!content.trim()) return;
 
+        const authorName = user?.displayName || user?.email || 'Staff'; // Automate author
         const formData = new FormData();
         formData.append('note', content);
-        formData.append('authorName', author);
+        formData.append('authorName', authorName);
 
         const action = isExternal ? addExternalNote : addInternalNote;
 
@@ -117,7 +139,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                 const newNote: Note = {
                     id: Date.now().toString(),
                     content,
-                    author: { name: author, email: '', role: isExternal ? 'SYSTEM' : 'STAFF' },
+                    author: { name: authorName, email: user?.email || '', role: isExternal ? 'SYSTEM' : 'STAFF' },
                     createdAt: new Date(),
                     isExternal
                 };
@@ -128,6 +150,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         newNote
                     ]
                 }));
+                router.refresh(); // Sync server
             } else {
                 toast({ title: "Error", description: result.message, variant: "destructive" });
             }
@@ -385,8 +408,22 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         <Tabs defaultValue="internal" className="flex-1 flex flex-col">
                             <div className="px-6">
                                 <TabsList className="w-full grid grid-cols-2 rounded-xl h-10">
-                                    <TabsTrigger value="internal" className="rounded-lg text-xs font-bold">INTERNAL NOTES</TabsTrigger>
-                                    <TabsTrigger value="external" className="rounded-lg text-xs font-bold">EXTERNAL CHAT</TabsTrigger>
+                                    <TabsTrigger value="internal" className="rounded-lg text-xs font-bold flex items-center gap-2">
+                                        INTERNAL NOTES
+                                        {referral.internalNotes?.length > 0 && (
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] text-primary">
+                                                {referral.internalNotes.length}
+                                            </span>
+                                        )}
+                                    </TabsTrigger>
+                                    <TabsTrigger value="external" className="rounded-lg text-xs font-bold flex items-center gap-2">
+                                        EXTERNAL CHAT
+                                        {referral.externalNotes?.length > 0 && (
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                                {referral.externalNotes.length}
+                                            </span>
+                                        )}
+                                    </TabsTrigger>
                                 </TabsList>
                             </div>
 
@@ -410,9 +447,8 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                                 <div className="p-4 bg-muted/20 border-t mt-auto">
                                     <NoteInput
-                                        onAdd={(content, author) => handleAddNote(false, content, author)}
+                                        onAdd={(content) => handleAddNote(false, content)}
                                         placeholder="Internal note (private)..."
-                                        authorLabel="Author (Office, Alex, Maijel...)"
                                     />
                                 </div>
                             </TabsContent>
@@ -437,9 +473,8 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                                 <div className="p-4 bg-primary/5 border-t mt-auto space-y-2">
                                     <NoteInput
-                                        onAdd={(content, author) => handleAddNote(true, content, author)}
+                                        onAdd={(content) => handleAddNote(true, content)}
                                         placeholder="Msg to provider (viewable by source)..."
-                                        authorLabel="Sender (Office, Maijel...)"
                                         isPrimary
                                     />
                                     <p className="text-[10px] text-center text-muted-foreground italic">
@@ -476,29 +511,21 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
     );
 }
 
-function NoteInput({ onAdd, placeholder, authorLabel, isPrimary = false }: {
-    onAdd: (content: string, author: string) => void,
+function NoteInput({ onAdd, placeholder, isPrimary = false }: {
+    onAdd: (content: string) => void,
     placeholder: string,
-    authorLabel: string,
     isPrimary?: boolean
 }) {
     const [content, setContent] = useState('');
-    const [author, setAuthor] = useState('');
 
     const handleAction = () => {
         if (!content.trim()) return;
-        onAdd(content, author || 'Staff');
+        onAdd(content);
         setContent('');
     };
 
     return (
         <div className="space-y-2">
-            <Input
-                placeholder={authorLabel}
-                value={author}
-                onChange={e => setAuthor(e.target.value)}
-                className="text-[10px] h-7 rounded-lg"
-            />
             <div className="relative">
                 <Textarea
                     placeholder={placeholder}

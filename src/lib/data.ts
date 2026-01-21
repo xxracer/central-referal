@@ -218,16 +218,17 @@ export async function markReferralAsSeen(id: string): Promise<void> {
 export async function getUnseenReferralCount(agencyId: string): Promise<number> {
     const firestore = getDb();
     try {
-        // Query for potentially unseen items for specific agency
+        // PERF: Query by agencyId only and filter isSeen in memory to avoid composite index requirement
         const snapshot = await firestore.collection('referrals')
             .where('agencyId', '==', agencyId)
-            .where('isSeen', '==', false)
+            // .where('isSeen', '==', false) // Moved to memory filter
+            .limit(500) // Safety limit
             .get();
 
-        // Filter in memory for isArchived just to be safe about composite indexes again
+        // Filter in memory
         const count = snapshot.docs.filter(d => {
             const data = d.data();
-            return data.isArchived !== true;
+            return data.isSeen === false && data.isArchived !== true;
         }).length;
 
         return count;

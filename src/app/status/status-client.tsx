@@ -100,6 +100,12 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                 className="min-h-[100px] resize-none"
                                                 key={`note-${formState.data?.updatedAt}`} // Reset field when update happens
                                             />
+                                            <div className="mt-2 flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-200 p-3 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800/30">
+                                                <AlertCircle className="h-5 w-5 shrink-0" />
+                                                <p className="text-sm font-bold">
+                                                    WARNING: Please do not include any PHI (Personal Health Information) in external communications.
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                     <div className="space-y-3">
