@@ -134,13 +134,26 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                     const isSuspended = sub.status === 'SUSPENDED';
 
                                     // Robust URL construction
+                                    // Robust URL construction
                                     const getAgencyUrl = (id: string) => {
                                         // If the ID already looks like a URL/Host (contains dot or colon), use it as is
                                         if (id.includes('.') || id.includes(':')) {
                                             return `http://${id}`;
                                         }
-                                        // Otherwise, assume it's a subdomain
-                                        return `http://${id}.localhost:3000`; // Change to production domain in build
+                                        // Otherwise, construct based on environment
+                                        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+                                        // Remove protocol from baseUrl to append subdomain
+                                        const cleanBase = baseUrl.replace(/^https?:\/\//, '');
+                                        const protocol = baseUrl.startsWith('https') ? 'https' : 'http';
+
+                                        // If localhost
+                                        if (baseUrl.includes('localhost')) {
+                                            return `${protocol}://${id}.${cleanBase}`;
+                                        }
+
+                                        // Production
+                                        return `${protocol}://${id}.referralflow.health`;
                                     };
 
                                     return (
