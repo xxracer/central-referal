@@ -134,26 +134,24 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                     const isSuspended = sub.status === 'SUSPENDED';
 
                                     // Robust URL construction
-                                    // Robust URL construction
                                     const getAgencyUrl = (id: string) => {
                                         // If the ID already looks like a URL/Host (contains dot or colon), use it as is
                                         if (id.includes('.') || id.includes(':')) {
                                             return `http://${id}`;
                                         }
-                                        // Otherwise, construct based on environment
-                                        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-                                        // Remove protocol from baseUrl to append subdomain
-                                        const cleanBase = baseUrl.replace(/^https?:\/\//, '');
-                                        const protocol = baseUrl.startsWith('https') ? 'https' : 'http';
-
-                                        // If localhost
-                                        if (baseUrl.includes('localhost')) {
-                                            return `${protocol}://${id}.${cleanBase}`;
+                                        // Client-side detection to determine if we are in dev or prod
+                                        if (typeof window !== 'undefined') {
+                                            const origin = window.location.origin;
+                                            if (origin.includes('localhost')) {
+                                                return `http://${id}.localhost:3000`;
+                                            }
+                                            // Assume production if not localhost
+                                            return `https://${id}.referralflow.health`;
                                         }
 
-                                        // Production
-                                        return `${protocol}://${id}.referralflow.health`;
+                                        // Fallback for SSR (Server Side Rendering) - Default to Prod to be safe
+                                        return `https://${id}.referralflow.health`;
                                     };
 
                                     return (

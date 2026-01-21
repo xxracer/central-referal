@@ -58,53 +58,67 @@ const DEFAULT_SETTINGS: AgencySettings = {
 };
 
 export async function getAgencySettings(idOrSlug: string): Promise<AgencySettings> {
-    // 1. Try finding by ID first
-    let docRef = adminDb.collection(SETTINGS_COLLECTION).doc(idOrSlug);
-    let docSnap = await docRef.get();
-    let agencyId = idOrSlug;
+    try {
+        // 1. Try finding by ID first
+        let docRef = adminDb.collection(SETTINGS_COLLECTION).doc(idOrSlug);
+        let docSnap = await docRef.get();
+        let agencyId = idOrSlug;
 
-    // 2. If not found, try finding by slug
-    if (!docSnap.exists) {
-        const query = await adminDb.collection(SETTINGS_COLLECTION)
-            .where('slug', '==', idOrSlug)
-            .limit(1)
-            .get();
+        // 2. If not found, try finding by slug
+        if (!docSnap.exists) {
+            const query = await adminDb.collection(SETTINGS_COLLECTION)
+                .where('slug', '==', idOrSlug)
+                .limit(1)
+                .get();
 
-        if (!query.empty) {
-            docSnap = query.docs[0];
-            agencyId = docSnap.id;
+            if (!query.empty) {
+                docSnap = query.docs[0];
+                agencyId = docSnap.id;
+            }
         }
-    }
 
-    if (!docSnap.exists) {
-        // Return defaults if not found, but retain the ID
-        return { ...DEFAULT_SETTINGS, id: idOrSlug, slug: idOrSlug };
-    }
+        if (!docSnap.exists) {
+            // Return defaults if not found, but retain the ID
+            return { ...DEFAULT_SETTINGS, id: idOrSlug, slug: idOrSlug };
+        }
 
-    // Merge with defaults to ensure all fields exist
-    const rawData = docSnap.data();
-    const data = convertTimestamps(rawData) as AgencySettings;
-    return {
-        ...DEFAULT_SETTINGS,
-        ...data,
-        id: agencyId,
-        slug: data.slug || agencyId, // Fallback to ID if no slug
-        companyProfile: {
-            ...DEFAULT_SETTINGS.companyProfile,
-            ...(data.companyProfile || {}),
-            homeInsurances: data.companyProfile?.homeInsurances || DEFAULT_SETTINGS.companyProfile.homeInsurances
-        },
-        branding: { ...DEFAULT_SETTINGS.branding, ...(data.branding || {}) },
-        notifications: {
-            ...DEFAULT_SETTINGS.notifications,
-            ...(data.notifications || {}),
-            enabledTypes: data.notifications?.enabledTypes || DEFAULT_SETTINGS.notifications.enabledTypes,
-            staff: data.notifications?.staff || DEFAULT_SETTINGS.notifications.staff
-        },
-        configuration: { ...DEFAULT_SETTINGS.configuration, ...(data.configuration || {}) },
-        userAccess: { ...DEFAULT_SETTINGS.userAccess, ...(data.userAccess || {}) },
-        subscription: { ...DEFAULT_SETTINGS.subscription, ...(data.subscription || {}) },
-    };
+        // Merge with defaults to ensure all fields exist
+        const rawData = docSnap.data();
+        const data = convertTimestamps(rawData) as AgencySettings;
+        return {
+            ...DEFAULT_SETTINGS,
+            ...data,
+            id: agencyId,
+            slug: data.slug || agencyId, // Fallback to ID if no slug
+            companyProfile: {
+                ...DEFAULT_SETTINGS.companyProfile,
+                ...(data.companyProfile || {}),
+                homeInsurances: data.companyProfile?.homeInsurances || DEFAULT_SETTINGS.companyProfile.homeInsurances
+            },
+            branding: { ...DEFAULT_SETTINGS.branding, ...(data.branding || {}) },
+            notifications: {
+                ...DEFAULT_SETTINGS.notifications,
+                ...(data.notifications || {}),
+                enabledTypes: data.notifications?.enabledTypes || DEFAULT_SETTINGS.notifications.enabledTypes,
+                staff: data.notifications?.staff || DEFAULT_SETTINGS.notifications.staff
+            },
+            configuration: { ...DEFAULT_SETTINGS.configuration, ...(data.configuration || {}) },
+            userAccess: { ...DEFAULT_SETTINGS.userAccess, ...(data.userAccess || {}) },
+            subscription: { ...DEFAULT_SETTINGS.subscription, ...(data.subscription || {}) },
+        };
+    } catch (error) {
+        console.error(`[getAgencySettings] Failed to fetch settings for ${idOrSlug}:`, error);
+        // Fallback to default settings to prevent page crash
+        return {
+            ...DEFAULT_SETTINGS,
+            id: idOrSlug,
+            slug: idOrSlug,
+            companyProfile: {
+                ...DEFAULT_SETTINGS.companyProfile,
+                name: 'Agency Not Loaded (System Error)',
+            }
+        };
+    }
 }
 
 export async function updateAgencySettings(agencyId: string, settings: Partial<AgencySettings>): Promise<void> {
