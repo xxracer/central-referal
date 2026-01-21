@@ -17,6 +17,19 @@ export default async function middleware(req: NextRequest) {
     const url = req.nextUrl;
     const hostname = req.headers.get("host")!; // e.g. "care.actinium.com" or "localhost:3000"
 
+    // --- SECURITY: BOT REDIRECTION ---
+    // Redirect common bot probe paths to Google
+    const suspiciousPaths = ['/admin', '/wp-admin', '/wp-login.php', '/dashboard/admin', '/administrator', '/backup', '/.env'];
+    if (suspiciousPaths.some(path => url.pathname.startsWith(path))) {
+        // Allow legitimate next.js app admin routes if they exist, but user specifically asked to block /admin probes.
+        // Our app uses /super-admin and /dashboard, so /admin is likely a bot.
+        // Double check: does /admin exist in our app? 
+        // We have /super-admin. We have /dashboard. We do NOT have /admin.
+        // So blocking /admin is safe.
+        return NextResponse.redirect('https://google.com');
+    }
+    // ---------------------------------
+
     // Allowed domains list (including localhost)
     // In production, you'd add your root domain here
     const allowedDomains = [
