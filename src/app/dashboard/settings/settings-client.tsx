@@ -769,14 +769,31 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-                {access.authorizedDomains.map(d => (
-                    <Badge key={d} variant="outline" className="gap-1 pr-1">
-                        @{d}
-                        <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeDomain(d)} />
-                    </Badge>
-                ))}
-            </div>
+            {access.authorizedDomains.length > 0 && (
+                <div className="space-y-3 pt-4">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saved Domains ({access.authorizedDomains.length})</Label>
+                    <div className="rounded-lg border bg-card divide-y">
+                        {access.authorizedDomains.map(d => (
+                            <div key={d} className="flex items-center justify-between p-3 text-sm transition-colors hover:bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                                    <span className="font-medium">@{d}</span>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => removeDomain(d)}
+                                    title="Remove domain"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <Button onClick={() => onSave(access)} disabled={isPending}>Save Access Settings</Button>
         </div>
     );
