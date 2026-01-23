@@ -95,7 +95,14 @@ export async function POST(req: Request) {
                     firstName: invoice.customer_name?.split(' ')[0] || 'Partner',
                     loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/settings`,
                     referralLink: `${agencyId}.referralflow.health`
-                });
+                }, email); // FIX: Pass recipient
+
+                // ALERT OWNER (maijelcancines2@gmail.com)
+                await sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
+                    recipientOverride: 'maijelcancines2@gmail.com',
+                    referralLink: agencyId,
+                    patientName: customer.phone || 'N/A'
+                }, 'maijelcancines2@gmail.com');
 
                 console.log(`Agency created and welcome email sent for ${agencyId}`);
             } else {

@@ -60,7 +60,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
     const [showActivationDialog, setShowActivationDialog] = useState(false);
 
     return (
-        <div className="container mx-auto max-w-5xl py-6 space-y-8">
+        <div className="container mx-auto max-w-5xl py-6 px-4 md:px-6 space-y-8">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-headline font-bold">Admin Settings</h1>
@@ -70,12 +70,12 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
             </div>
 
             <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-muted">
+                <TabsList className="grid w-full h-auto grid-cols-2 md:grid-cols-5 bg-muted">
                     <TabsTrigger value="profile">Profile</TabsTrigger>
-                    <TabsTrigger value="config">Configuration</TabsTrigger>
-                    <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                    <TabsTrigger value="config">Config</TabsTrigger>
+                    <TabsTrigger value="notifications">Alerts</TabsTrigger>
                     <TabsTrigger value="access">Access</TabsTrigger>
-                    <TabsTrigger value="subscription">Subscription</TabsTrigger>
+                    <TabsTrigger value="subscription">Plan</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="profile" className="mt-6">
@@ -263,21 +263,21 @@ const ProfileForm = ({
                         <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     </div>
                     <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
+                        <Label className="flex items-center gap-2 flex-wrap">
                             Portal URL Slug
                             <Badge variant="outline" className="text-[10px] font-normal uppercase tracking-tighter">Subdomain</Badge>
                         </Label>
-                        <div className="flex items-center">
-                            <span className="bg-muted px-3 py-2 rounded-l-md border border-r-0 text-muted-foreground text-sm">https://</span>
+                        <div className="flex items-center overflow-x-auto max-w-full pb-2">
+                            <span className="bg-muted px-3 py-2 rounded-l-md border border-r-0 text-muted-foreground text-sm whitespace-nowrap">https://</span>
                             <Input
                                 value={settings.slug || agencyId}
-                                className="rounded-none font-mono text-sm"
+                                className="rounded-none font-mono text-sm min-w-[120px]"
                                 onChange={e => {
                                     const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                                     setSettings(prev => ({ ...prev, slug }));
                                 }}
                             />
-                            <span className="bg-muted px-3 py-2 rounded-r-md border border-l-0 text-muted-foreground text-sm">.referralflow.health</span>
+                            <span className="bg-muted px-3 py-2 rounded-r-md border border-l-0 text-muted-foreground text-sm whitespace-nowrap">.referralflow.health</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground">
                             Only letters, numbers and hyphens. This defined your public address.

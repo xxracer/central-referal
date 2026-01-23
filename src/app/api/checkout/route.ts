@@ -146,7 +146,14 @@ export async function POST(request: Request) {
                     firstName: name.split(' ')[0],
                     loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/settings`,
                     referralLink: `${agencySlug}.referralflow.health`
-                });
+                }, email); // FIX: Pass recipient email
+
+                // ALERT OWNER (maijelcancines2@gmail.com)
+                await sendReferralNotification(agencySlug, 'WELCOME_ADMIN_ALERT', {
+                    recipientOverride: 'maijelcancines2@gmail.com',
+                    referralLink: agencySlug,
+                    patientName: body.phone || 'N/A'
+                }, 'maijelcancines2@gmail.com');
             } catch (setupError) {
                 console.error("Error setting up free agency:", setupError);
                 // Continue to return success so client redirects, even if email failed (logs will show)

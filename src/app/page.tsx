@@ -69,7 +69,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                   )}
                   <div className="space-y-3">
                     <h2 className="text-primary font-black uppercase tracking-[0.2em] text-sm">Official Referral Portal</h2>
-                    <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl">
+                    <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl break-words hyphens-auto">
                       {profile.name || "ReferralFlow Central"}
                     </h1>
                   </div>

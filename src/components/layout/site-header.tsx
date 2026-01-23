@@ -16,21 +16,21 @@ export default function SiteHeader({ logoUrl, companyName }: SiteHeaderProps) {
         ) : (
           <Logo className="h-6 w-6" />
         )}
-        <span className="text-lg font-bold font-headline">{companyName || "ReferralFlow Central"}</span>
+        <span className="text-lg font-bold font-headline truncate max-w-[120px] sm:max-w-none">{companyName || "ReferralFlow Central"}</span>
       </Link>
-      <nav className="ml-auto flex items-center gap-4 sm:gap-6">
-        <Button variant="ghost" asChild>
+      <nav className="ml-auto flex items-center gap-2 sm:gap-6">
+        <Button variant="ghost" asChild className="hidden md:flex">
           <Link href="/refer" prefetch={false}>
             Submit Referral
           </Link>
         </Button>
-        <Button variant="ghost" asChild>
+        <Button variant="ghost" asChild className="hidden md:flex">
           <Link href="/status" prefetch={false}>
             Check Status
           </Link>
         </Button>
-        <div className="w-px h-6 bg-border" />
-        <Button asChild variant="secondary">
+        <div className="hidden md:block w-px h-6 bg-border" />
+        <Button asChild variant="secondary" size="sm" className="h-9 px-4">
           <Link href="/dashboard" prefetch={false}>
             Staff Portal
           </Link>
