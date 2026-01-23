@@ -20,6 +20,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
     const [loading, setLoading] = useState(false);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [finalAmount, setFinalAmount] = useState<number | null>(null);
+    const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         agency: '',
         name: '',
@@ -81,11 +82,26 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                 body: JSON.stringify(payload),
             });
 
-            const { clientSecret, error, discountApplied, total } = await response.json();
+            const { clientSecret, error, discountApplied, total, promoCode: appliedCode, isFree } = await response.json();
 
             if (error) {
                 console.error("Checkout error:", error);
                 alert("Checkout failed: " + error);
+                setLoading(false);
+                return;
+            }
+
+            if (isFree) {
+                // Subscription successful and free!
+                // Don't redirect immediately. We want to show the "Success/Free" UI state.
+                setFinalAmount(0); // This will trigger the fake UI
+                if (appliedCode) setAppliedCoupon(appliedCode);
+
+                // We don't set clientSecret specifically, so !clientSecret remains true?
+                // Wait, if !clientSecret is true, we show the Form Inputs (Agency Name etc).
+                // My logic in the render block above says:
+                // {!clientSecret && !loading && finalAmount !== 0 ? (Inputs) : finalAmount === 0 ? (FakeUI) : (Elements)}
+                // So setting finalAmount(0) is enough to switch to FakeUI.
                 setLoading(false);
                 return;
             }
@@ -96,6 +112,10 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
 
             if (total !== undefined) {
                 setFinalAmount(total);
+            }
+
+            if (appliedCode) {
+                setAppliedCoupon(appliedCode);
             }
 
             if (clientSecret) {
@@ -109,7 +129,9 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
         }
     };
 
-    const displayName = companyName || "ReferralFlow.Health";
+    const displayName = (!companyName || companyName.toLowerCase().includes('noble health')) ? "ReferralFlow.Health" : companyName;
+    // MANUAL FIX: Hardcoded logo URL as requested.
+    const effectiveLogoUrl = "https://static.wixstatic.com/media/c5947c_14731b6192f740d8958b7a069f361b4e~mv2.png";
 
     return (
         <div className="landing-wrapper">
@@ -122,12 +144,12 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                 <div className="container">
                     <div className="nav">
                         <Link href="/" className="brand" aria-label="ReferralFlow.Health">
-                            {logoUrl ? (
-                                <div className="mark" style={{ background: 'white' }}>
+                            {effectiveLogoUrl ? (
+                                <div className="mark" style={{ background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <img
-                                        src={logoUrl}
+                                        src={effectiveLogoUrl}
                                         alt="ReferralFlow.Health"
-                                        style={{ width: '90%', height: '90%', objectFit: 'contain' }}
+                                        style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }}
                                     />
                                 </div>
                             ) : (
@@ -190,7 +212,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                             <b style={{ fontSize: '14px' }}>Account details</b>
                             <div className="fine">Pre-filled from the Get Started form</div>
 
-                            {!clientSecret ? (
+                            {!clientSecret && finalAmount !== 0 ? (
                                 <>
                                     <div className="field" style={{ marginTop: '12px' }}>
                                         <label htmlFor="agency">Agency Name</label>
@@ -244,10 +266,54 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                         </button>
                                     </div>
                                 </>
+                            ) : finalAmount === 0 ? (
+                                /* FREE FLOW UI */
+                                <div className="space-y-6 mt-4">
+                                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4 flex items-center gap-2">
+                                        <span className="font-bold">✓ Coupon Applied:</span> {appliedCoupon}
+                                    </div>
+
+                                    {/* Simulated Disabled Stripe Elements */}
+                                    <div className="rounded-md border border-gray-200 p-4 bg-gray-50 opacity-100 select-none">
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Card Information</label>
+                                            <div className="bg-white border rounded p-3 text-gray-300 italic flex justify-between">
+                                                <span>•••• •••• •••• ••••</span>
+                                                <div className="flex gap-2">
+                                                    <span className="w-8 h-5 bg-gray-200 rounded"></span>
+                                                    <span className="w-8 h-5 bg-gray-200 rounded"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Expiration</label>
+                                                <div className="bg-white border rounded p-3 text-gray-300 italic">MM / YY</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">CVC</label>
+                                                <div className="bg-white border rounded p-3 text-gray-300 italic">123</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        id="submit-free"
+                                        className="btn btn-primary w-full flex justify-center items-center gap-2"
+                                        style={{ marginTop: '20px' }}
+                                        onClick={() => window.location.href = '/dashboard/settings'}
+                                    >
+                                        Subscribe Now ($0.00)
+                                    </button>
+
+                                    <p className="text-xs text-muted-foreground text-center mt-2">
+                                        No payment required. Secure sign up.
+                                    </p>
+                                </div>
                             ) : (
-                                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                                <Elements stripe={stripePromise} options={{ clientSecret: clientSecret! }}>
                                     <div className="animate-in fade-in" style={{ animationDuration: '0.4s' }}>
-                                        <CheckoutForm amount={finalAmount || undefined} />
+                                        <CheckoutForm amount={finalAmount || undefined} couponCode={appliedCoupon || undefined} />
                                     </div>
                                 </Elements>
                             )}

@@ -1,5 +1,5 @@
-# Firebase Studio
+Referal flow sistem 
 
-This is a NextJS starter in Firebase Studio.
+this its a private company any case of mimic o copy this software its not allowed
 
-To get started, take a look at src/app/page.tsx.
+in case of any issue please contact me on this email: maijelcancines2@gmail.com

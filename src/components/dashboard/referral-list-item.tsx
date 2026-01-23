@@ -13,6 +13,7 @@ import type { Referral } from '@/lib/types';
 import { markReferralAsSeenAction } from '@/lib/actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Link from 'next/link';
+import CopyButton from '@/components/copy-button';
 
 const servicesMap = {
     skilledNursing: 'Skilled Nursing (SN)',
@@ -115,14 +116,21 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
         <AccordionItem value={referral.id} className="border-b-primary/5">
             <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md py-4" onClick={handleExpand}>
                 <div className="flex items-center gap-4 text-sm w-full">
-                    <div className="w-8 flex justify-center">
-                        <ReferralAlert referral={referral} />
-                    </div>
                     <div className="font-bold text-primary text-left min-w-[100px] font-mono flex items-center gap-1">
                         {referral.id}
-                        <CopyButton textToCopy={referral.id} className="h-6 w-6 ml-1" />
+                        {/* Use asDiv and stopPropagation to prevent accordion toggle when clicking copy */}
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <CopyButton textToCopy={referral.id} className="h-6 w-6 ml-1 cursor-pointer" asDiv />
+                        </div>
                     </div>
-                    <div className="flex-1 text-left font-medium">{referral.patientName}</div>
+                    <div className="flex-1 text-left font-medium flex items-center gap-2">
+                        {referral.patientName}
+                        {referral.isSeen === false && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white animate-pulse shadow-sm">
+                                NEW
+                            </span>
+                        )}
+                    </div>
                     <div className="hidden md:block text-muted-foreground text-left min-w-[120px]">{formatDate(referral.createdAt)}</div>
                     <div className="text-right pr-4"><StatusBadge status={referral.status} /></div>
                 </div>

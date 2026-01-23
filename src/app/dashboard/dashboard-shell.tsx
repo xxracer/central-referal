@@ -63,6 +63,16 @@ export default function DashboardShell({
     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
+        } else if (user?.email) {
+            // Fetch agency name for title
+            fetch(`/api/user/agency?email=${user.email}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.agencyName) {
+                        document.title = `ReferralFlow ${data.agencyName}`;
+                    }
+                })
+                .catch(err => console.error("Failed to fetch agency for title:", err));
         }
     }, [user, loading, router]);
 

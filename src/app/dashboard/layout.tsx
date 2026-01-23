@@ -5,6 +5,25 @@ import DashboardShell from './dashboard-shell';
 import { Ban } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const agencyId = headersList.get('x-agency-id') || 'default';
+
+  if (agencyId === 'default') {
+    return {
+      title: 'ReferralFlow Central',
+    };
+  }
+
+  const settings = await getAgencySettings(agencyId);
+  const companyName = settings.companyProfile.name || 'Company';
+
+  return {
+    title: `ReferralFlow ${companyName}`,
+  };
+}
 
 export default async function DashboardLayout({
   children,

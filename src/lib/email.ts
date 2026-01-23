@@ -13,6 +13,7 @@ export type NotificationType =
   | 'CARD_EXPIRING'
   | 'WELCOME_ADMIN_ALERT'
   | 'AGENCY_ACTIVATED'
+  | 'NEW_MESSAGE_FROM_AGENCY' // Message from Agency -> Referral Source
   // Keep legacy for compatibility during migration if needed, or replace usage
   | 'INTERNAL_NOTE'; // Internal staff note
 
@@ -201,6 +202,23 @@ export async function sendReferralNotification(
         `;
         break;
 
+      case 'NEW_MESSAGE_FROM_AGENCY':
+        subject = `New Message from ${agencyName}`;
+        htmlContent = `
+          <h2 style="color: #0f172a;">New Message from ${agencyName}</h2>
+          <p>Hello ${data.referrerName || 'Partner'},</p>
+          <p><strong>${agencyName}</strong> has sent you a message regarding referral <strong>${data.referralId}</strong>.</p>
+          <p><strong>Message:</strong></p>
+          <blockquote style="border-left: 4px solid #cbd5e1; padding-left: 16px; margin: 16px 0; font-style: italic; color: #64748b;">
+            "${data.messageSnippet}"
+          </blockquote>
+          <p>You can view the full history and status at the link below.</p>
+          ${button('View Status & Reply', data.statusLink || `${baseUrl}/status?id=${data.referralId}`)} 
+          <p>If you need to submit additional documents, you may reply directly to this email with attachments.</p>
+          <p>Best regards,<br/>${agencyName}</p>
+        `;
+        break;
+
       case 'REFERRAL_VIEWED': // Optional
         subject = 'Referral Update';
         htmlContent = `
@@ -300,6 +318,7 @@ export async function sendReferralNotification(
       to: uniqueRecipients,
       subject: subject,
       html: `<div style="${commonStyle}">${htmlContent}${footer}</div>`,
+      replyTo: settings.companyProfile.email || undefined,
     });
 
     if (error) {

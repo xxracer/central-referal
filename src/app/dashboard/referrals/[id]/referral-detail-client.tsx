@@ -40,7 +40,8 @@ import {
     Phone,
     Send,
     UserCircle,
-    Archive
+    Archive,
+    Printer
 } from 'lucide-react';
 import StatusBadge from '@/components/referrals/status-badge';
 import { formatDate } from '@/lib/utils';
@@ -180,6 +181,16 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
             </Link>
+
+            {referral.isFaxingPaperwork && (
+                <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+                    <Printer className="h-4 w-4" />
+                    <AlertTitle>Paperwork Incoming via Fax</AlertTitle>
+                    <AlertDescription>
+                        The provider indicated they will be faxing additional information to your office.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">

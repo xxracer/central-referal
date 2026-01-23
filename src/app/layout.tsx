@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'ReferralFlow Central',
+  title: 'ReferralFlow',
   description: 'An intelligent platform for managing medical referrals.',
 };
 

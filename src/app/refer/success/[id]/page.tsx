@@ -29,14 +29,11 @@ export default async function ReferralSuccessPage(props: { params: Promise<{ id:
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        import CopyButton from '@/components/copy-button';
-
-                        // ...
                         <div className="bg-muted p-4 rounded-md">
                             <p className="text-sm text-muted-foreground">Your Referral ID is:</p>
-                            <div className="flex items-center justify-center gap-2 bg-primary rounded-md py-2 mt-1">
-                                <p className="text-2xl font-bold font-mono tracking-wider text-primary-foreground">{params.id}</p>
-                                <CopyButton textToCopy={params.id} variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-white" />
+                            <div className="flex items-center justify-center gap-2 bg-primary/10 border border-primary/20 rounded-md py-3 mt-2">
+                                <p className="text-2xl font-bold font-mono tracking-wider text-primary">{params.id}</p>
+                                <CopyButton textToCopy={params.id} variant="ghost" className="text-primary hover:bg-primary/20" />
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
                                 Please save this ID. You can use it to check the status of your referral.

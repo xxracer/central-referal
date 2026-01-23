@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Loader2 } from 'lucide-react';
 
-export default function CheckoutForm({ amount }: { amount?: number }) {
+export default function CheckoutForm({ amount, couponCode }: { amount?: number, couponCode?: string }) {
     const stripe = useStripe();
     const elements = useElements();
 
@@ -24,8 +24,8 @@ export default function CheckoutForm({ amount }: { amount?: number }) {
         const { error } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                // Return to dashboard after payment
-                return_url: `${window.location.origin}/dashboard`,
+                // Return to dashboard settings after payment
+                return_url: `${window.location.origin}/dashboard/settings`,
             },
         });
 
@@ -41,13 +41,23 @@ export default function CheckoutForm({ amount }: { amount?: number }) {
         setIsLoading(false);
     };
 
+    const priceValue = (amount !== undefined && amount !== null) ? amount : 12999;
+
+    // Explicitly debug logic if needed, but Intl formatting is usually safe.
+    // Amount from Stripe is in cents.
     const formattedPrice = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-    }).format((amount || 12999) / 100);
+    }).format(priceValue / 100);
 
     return (
         <form id="payment-form" onSubmit={handleSubmit} className="space-y-6 mt-4">
+            {couponCode && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4 flex items-center gap-2">
+                    <span className="font-bold">✓ Coupon Applied:</span> {couponCode}
+                </div>
+            )}
+
             <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
 
             {message && (
@@ -61,7 +71,21 @@ export default function CheckoutForm({ amount }: { amount?: number }) {
                 style={{ marginTop: '20px' }}
             >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {isLoading ? "Processing..." : `Subscribe Now (${formattedPrice})`}
+                {isLoading ? (
+                    "Processing..."
+                ) : (
+                    <span>
+                        Subscribe Now
+                        {priceValue < 12999 ? (
+                            <span className="ml-1">
+                                <span className="line-through opacity-70 mr-1">$129.99</span>
+                                {formattedPrice}
+                            </span>
+                        ) : (
+                            ` (${formattedPrice})`
+                        )}
+                    </span>
+                )}
             </button>
 
             <p className="text-xs text-muted-foreground text-center mt-2">

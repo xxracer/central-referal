@@ -340,18 +340,15 @@ export async function addExternalNote(referralId: string, prevState: FormState, 
 
     await saveReferral(referral);
 
-    // Note: Template 6 (Referral Update/Viewed) or just reuse logic? 
-    // Usually external notes from agency don't have a specific template in user request EXCEPT #4 (status change) or #6 (viewed). 
-    // User didn't specify "New Message from Agency to Referrer". 
-    // But usually external notes accompany status changes. 
-    // If standalone note, maybe use 'REFERRAL_VIEWED' or skipped? 
-    // I'll skip notifying referrer of standalone notes unless user asked, to avoid spam, 
-    // OR I can use 'REFERRAL_VIEWED' if that's the closest. 
-    // User Template 6 is "We reviewed...". 
-    // I will trigger nothing for standalone external note for now to be safe, or just logging.
-    // Actually, `addExternalNote` is often used to just communicate. 
-    // Check user request: 3. Confirmation, 4. Status Change, 6. Referral Viewed.
-    // Nothing for "Agency sent message". I will leave it silent for external person to avoid mismatch.
+    // Notify Referrer of new message from Agency
+    if (referral.confirmationEmail) {
+        sendReferralNotification(referral.agencyId, 'NEW_MESSAGE_FROM_AGENCY', {
+            referralId: referral.id,
+            referrerName: referral.referrerName || 'Partner',
+            messageSnippet: noteContent,
+            statusLink: `https://referralflow.health/status?id=${referral.id}`
+        }, referral.confirmationEmail).catch(err => console.error("Failed to send notification email:", err));
+    }
 
     revalidatePath(`/dashboard/referrals/${referralId}`);
     revalidatePath('/status');
