@@ -19,52 +19,152 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
+// ... (imports remain matching existing file mostly, adding checkUserAgencies)
+import { checkUserAgencies } from './actions';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// ... GoogleIcon component ... (omit for brevity if I can reuse, but replace tool needs full context if not precise. I will provide full file content mostly or targeted replace)
+
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
+    const [userAgencies, setUserAgencies] = useState<any[]>([]);
+    const [showSelection, setShowSelection] = useState(false);
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
         try {
-            const { user, isNewUser } = await signInWithGoogle();
+            const { user } = await signInWithGoogle();
 
-            if (isNewUser) {
-                // User was not registered -> Redirect to subscribe
-                // We should probably sign them out so they aren't logged in as a 'ghost' user
-                // but for now, let's just redirect as requested.
-                // The prompt says "if not registered, return to subscribe page".
+            if (user && user.email) {
+                // Check if user belongs to any agencies
+                const { agencies } = await checkUserAgencies(user.email);
+
+                if (agencies.length > 0) {
+                    if (agencies.length === 1) {
+                        // Auto-redirect if only one
+                        const agency = agencies[0];
+                        handleAgencySelect(agency);
+                        return;
+                    }
+                    // Multiple agencies found -> Show selection
+                    setUserAgencies(agencies);
+                    setShowSelection(true);
+                    setIsLoading(false);
+                    return;
+                }
+
+                // No agencies found
+                // If special admin
+                if (user.email === 'maijelcancines2@gmail.com') {
+                    router.push('/super-admin');
+                    return;
+                }
+
+                // If truly new/no agency -> Subscribe
                 router.push('/subscribe');
                 toast({
-                    title: "Registration Required",
-                    description: "Please subscribe to access the dashboard.",
+                    title: "Welcome",
+                    description: "Please create your agency workspace.",
                 });
-            } else if (user) {
-                if (user.email === 'maijelcancines2@gmail.com') {
-                    toast({
-                        title: "Welcome Super Admin",
-                        description: `Logged in as ${user.displayName}. Redirecting to Master Panel...`,
-                    });
-                    router.push('/super-admin');
-                } else {
-                    toast({
-                        title: "Login Successful",
-                        description: `Welcome back, ${user.displayName}.`,
-                    });
-                    router.push('/dashboard');
-                }
             }
         } catch (error: any) {
             console.error("Google Sign-In Error:", error);
             toast({
                 variant: "destructive",
                 title: "Login Failed",
-                description: error.message || "Failed to sign in with Google. Please try again.",
+                description: error.message || "Failed to sign in.",
             });
-        } finally {
             setIsLoading(false);
         }
     };
+
+    const handleAgencySelect = (agency: any) => {
+        toast({
+            title: "Logging in...",
+            description: `Accessing ${agency.name}`,
+        });
+
+        // Construct URL based on environment
+        // In dev: localhost:3000/dashboard (cookies handled? or header params?)
+        // In prod: subdomain.referralflow.health/dashboard
+
+        // Actually, for now, our app relies on the domain being visited.
+        // If I am at 'app.referralflow.health' and I select 'care.referralflow.health', I need to validly redirect there.
+        // Redirecting to the full URL is best.
+
+        const protocol = window.location.protocol;
+        const host = window.location.host; // e.g. localhost:3000 or app.referralflow.health
+
+        let targetUrl = '/dashboard';
+
+        if (host.includes('localhost')) {
+            // Localheost testing: We simulate agency via header? No, we can't easily set headers on simple navigation.
+            // But usually for localhost we might just rely on 'default' or maybe query param?
+            // Middleware logic: "If localhost, agencyId = default".
+            // If we want to test multi-tenancy locally, we use test.localhost?
+            // Let's assume for PROD correctness first:
+            // Construct subdomain URL
+            // targetUrl = `${protocol}//${agency.slug}.referralflow.health/dashboard`;
+        } else {
+            // Production
+            // targetUrl = `${protocol}//${agency.slug}.referralflow.health/dashboard`;
+            // Wait, user says "don't create new subdomain".
+            // If they are logging in from 'referralflow.health', they should go to 'agency.referralflow.health'.
+        }
+
+        // FOR NOW: Let's assume we redirect to the correct subdomain.
+        // Is 'slug' the subdomain? Yes.
+
+        if (host.includes('localhost')) {
+            // Just go to dashboard, we can't easily cross-domain locally without specific setup
+            // Maybe we can utilize a cookie or query param if needed, but standard /dashboard is safer for now.
+            router.push('/dashboard');
+        } else {
+            window.location.href = `${protocol}//${agency.slug}.referralflow.health/dashboard`;
+        }
+    };
+
+    if (showSelection) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <CardTitle>Select Workspace</CardTitle>
+                        <CardDescription>Your email is associated with multiple agencies.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {userAgencies.map((agency) => (
+                            <div
+                                key={agency.id}
+                                onClick={() => handleAgencySelect(agency)}
+                                className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted cursor-pointer transition-colors"
+                            >
+                                <Avatar className="h-10 w-10 rounded-lg border">
+                                    <AvatarImage src={agency.logoUrl} alt={agency.name} />
+                                    <AvatarFallback className="rounded-lg">{agency.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-sm">{agency.name}</h4>
+                                    <p className="text-xs text-muted-foreground">{agency.slug}.referralflow.health</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <span className="sr-only">Select</span>
+                                    →
+                                </Button>
+                            </div>
+                        ))}
+                    </CardContent>
+                    <div className="p-4 border-t bg-muted/20 text-center">
+                        <Button variant="link" size="sm" onClick={() => setShowSelection(false)} className="text-muted-foreground">
+                            Back to Login
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
@@ -78,7 +178,7 @@ export default function LoginPage() {
                     <CardDescription>Sign in to manage referrals.</CardDescription>
                     {isLoading && (
                         <div className="mt-2 text-xs text-secondary animate-pulse px-2 py-1 bg-secondary/10 rounded-md">
-                            Check for a separate window. If nothing happens, ensure popups are allowed.
+                            Verifying access...
                         </div>
                     )}
                 </CardHeader>
@@ -87,7 +187,7 @@ export default function LoginPage() {
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Connecting to Google...
+                                Please wait...
                             </>
                         ) : (
                             <>

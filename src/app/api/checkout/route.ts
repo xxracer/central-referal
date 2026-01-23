@@ -34,6 +34,8 @@ export async function POST(request: Request) {
             });
             if (codes.data.length > 0) {
                 promotionCodeId = codes.data[0].id;
+            } else {
+                return NextResponse.json({ error: `Invalid promotion code: ${promoCode}` }, { status: 400 });
             }
         }
 
@@ -83,7 +85,8 @@ export async function POST(request: Request) {
         return NextResponse.json({
             subscriptionId: subscription.id,
             clientSecret: paymentIntent.client_secret,
-            discountApplied: !!promotionCodeId
+            discountApplied: !!promotionCodeId,
+            total: invoice.total
         });
     } catch (err: any) {
         console.error('Error creating subscription:', err);

@@ -77,6 +77,7 @@ export type AgencySettings = {
     endDate?: Date;
     customerId?: string; // Stripe Customer ID placeholder
   };
+  exists?: boolean;
 };
 
 export type Referral = {

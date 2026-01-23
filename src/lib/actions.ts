@@ -379,7 +379,7 @@ export async function updateReferralStatus(referralId: string, prevState: FormSt
     referral.statusHistory.push({
         status,
         changedAt: now,
-        notes: externalNote || undefined
+        ...(externalNote ? { notes: externalNote } : {})
     });
 
     // If there's an external note, also add it to externalNotes array

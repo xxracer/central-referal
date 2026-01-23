@@ -19,6 +19,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
     const [year, setYear] = useState(new Date().getFullYear());
     const [loading, setLoading] = useState(false);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [finalAmount, setFinalAmount] = useState<number | null>(null);
     const [formData, setFormData] = useState({
         agency: '',
         name: '',
@@ -80,7 +81,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                 body: JSON.stringify(payload),
             });
 
-            const { clientSecret, error, discountApplied } = await response.json();
+            const { clientSecret, error, discountApplied, total } = await response.json();
 
             if (error) {
                 console.error("Checkout error:", error);
@@ -91,6 +92,10 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
 
             if (discountApplied) {
                 // Optional: Show a success toast or message
+            }
+
+            if (total !== undefined) {
+                setFinalAmount(total);
             }
 
             if (clientSecret) {
@@ -242,7 +247,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                             ) : (
                                 <Elements stripe={stripePromise} options={{ clientSecret }}>
                                     <div className="animate-in fade-in" style={{ animationDuration: '0.4s' }}>
-                                        <CheckoutForm />
+                                        <CheckoutForm amount={finalAmount || undefined} />
                                     </div>
                                 </Elements>
                             )}

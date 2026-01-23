@@ -92,7 +92,6 @@ const LandingPage = () => {
                                         document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' });
                                     }}>See how it works</Link>
                                 </div>
-                                <div className="fine">Get started in minutes. No disruption.</div>
                             </div>
 
                             <aside className="media reveal">

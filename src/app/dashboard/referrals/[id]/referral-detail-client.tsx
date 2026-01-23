@@ -51,6 +51,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import CopyButton from '@/components/copy-button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ReferralDetailClientProps {
     referral: Referral;
@@ -186,8 +188,10 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <h1 className="font-headline text-3xl font-bold">Referral Details</h1>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        ID: <span className="font-mono text-primary font-medium">{referral.id}</span> • Received: {formatDate(referral.createdAt)}
+                                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                        ID: <span className="font-mono text-primary font-medium">{referral.id}</span>
+                                        <CopyButton textToCopy={referral.id} size="sm" className="h-6 w-6" />
+                                        • Received: {formatDate(referral.createdAt)}
                                     </p>
                                 </div>
                                 <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -205,6 +209,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                             </div>
                         </div>
+
                         <CardContent className="p-4 md:p-8 space-y-8 bg-card">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">

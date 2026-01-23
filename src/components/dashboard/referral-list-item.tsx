@@ -118,7 +118,10 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
                     <div className="w-8 flex justify-center">
                         <ReferralAlert referral={referral} />
                     </div>
-                    <div className="font-bold text-primary text-left min-w-[100px] font-mono">{referral.id}</div>
+                    <div className="font-bold text-primary text-left min-w-[100px] font-mono flex items-center gap-1">
+                        {referral.id}
+                        <CopyButton textToCopy={referral.id} className="h-6 w-6 ml-1" />
+                    </div>
                     <div className="flex-1 text-left font-medium">{referral.patientName}</div>
                     <div className="hidden md:block text-muted-foreground text-left min-w-[120px]">{formatDate(referral.createdAt)}</div>
                     <div className="text-right pr-4"><StatusBadge status={referral.status} /></div>

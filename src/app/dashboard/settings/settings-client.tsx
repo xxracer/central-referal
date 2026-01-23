@@ -237,6 +237,22 @@ const ProfileForm = ({
         setFormData(prev => ({ ...prev, homeInsurances: updated }));
     };
 
+    const formatPhoneNumber = (value: string) => {
+        if (!value) return value;
+        const phoneNumber = value.replace(/[^\d]/g, '');
+        const phoneNumberLength = phoneNumber.length;
+        if (phoneNumberLength < 4) return phoneNumber;
+        if (phoneNumberLength < 7) {
+            return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+        }
+        return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    };
+
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'phone' | 'fax') => {
+        const formatted = formatPhoneNumber(e.target.value);
+        setFormData({ ...formData, [field]: formatted });
+    };
+
     return (
         <div className="space-y-8">
             <div className="space-y-4">
@@ -269,15 +285,29 @@ const ProfileForm = ({
                     </div>
                     <div className="space-y-2">
                         <Label>Phone</Label>
-                        <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                        <Input
+                            value={formData.phone}
+                            onChange={e => handlePhoneChange(e, 'phone')}
+                            placeholder="XXX-XXX-XXXX"
+                            maxLength={12}
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label>Fax</Label>
-                        <Input value={formData.fax} onChange={e => setFormData({ ...formData, fax: e.target.value })} />
+                        <Input
+                            value={formData.fax}
+                            onChange={e => handlePhoneChange(e, 'fax')}
+                            placeholder="XXX-XXX-XXXX"
+                            maxLength={12}
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label>Email</Label>
-                        <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                        <Input
+                            type="email"
+                            value={formData.email}
+                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        />
                     </div>
                 </div>
                 <div className="space-y-2">
@@ -762,7 +792,7 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
             </div>
 
             <div className="space-y-2">
-                <Label>Authorized Domains</Label>
+                <Label>Saved Email Domains</Label>
                 <div className="flex gap-2">
                     <Input
                         value={newDomain}

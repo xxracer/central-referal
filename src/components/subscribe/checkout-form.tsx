@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Loader2 } from 'lucide-react';
 
-export default function CheckoutForm() {
+export default function CheckoutForm({ amount }: { amount?: number }) {
     const stripe = useStripe();
     const elements = useElements();
 
@@ -41,6 +41,11 @@ export default function CheckoutForm() {
         setIsLoading(false);
     };
 
+    const formattedPrice = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    }).format((amount || 12999) / 100);
+
     return (
         <form id="payment-form" onSubmit={handleSubmit} className="space-y-6 mt-4">
             <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
@@ -56,7 +61,7 @@ export default function CheckoutForm() {
                 style={{ marginTop: '20px' }}
             >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {isLoading ? "Processing..." : "Subscribe Now ($129.99)"}
+                {isLoading ? "Processing..." : `Subscribe Now (${formattedPrice})`}
             </button>
 
             <p className="text-xs text-muted-foreground text-center mt-2">

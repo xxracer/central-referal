@@ -105,15 +105,36 @@ export async function updateAgencySubscription(
 }
 export async function deleteAgency(agencyId: string): Promise<{ success: boolean; message: string }> {
     try {
-        // Delete the main agency settings document
+        // 1. Delete Agency Settings
         await adminDb.collection(SETTINGS_COLLECTION).doc(agencyId).delete();
 
-        // Optional: We could also recursively delete sub-collections like 'referrals' if needed,
-        // but for now, just removing the agency record from the list is sufficient.
-        // Firestore doesn't verify cascade delete automatically without a cloud function.
+        // 2. Delete All Referrals associated with this agency
+        // Note: Firestore requires deleting documents individually.
+        const referralsRef = adminDb.collection('referrals');
+        const snapshot = await referralsRef.where('agencyId', '==', agencyId).get();
+
+        if (!snapshot.empty) {
+            let batch = adminDb.batch();
+            let opCount = 0;
+
+            for (const doc of snapshot.docs) {
+                batch.delete(doc.ref);
+                opCount++;
+
+                // Commit batches of 400 (safe limit)
+                if (opCount >= 400) {
+                    await batch.commit();
+                    batch = adminDb.batch(); // Create new batch
+                    opCount = 0;
+                }
+            }
+            if (opCount > 0) {
+                await batch.commit();
+            }
+        }
 
         revalidatePath('/super-admin');
-        return { success: true, message: 'Agency deleted successfully' };
+        return { success: true, message: 'Agency and all data deleted successfully' };
     } catch (error) {
         console.error('Error deleting agency:', error);
         return { success: false, message: 'Failed to delete agency' };

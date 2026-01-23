@@ -27,6 +27,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
   const resolvedParams = await searchParams;
   const showPortal = resolvedParams.portal === 'true';
 
+  // REDIRECT LOGIC:
+  // Legacy: We used to redirect to dashboard, but now we want to show the Public Portal by default.
+  // Staff can click 'Login' to go to dashboard.
+  // if (agencyId !== 'default' && !showPortal) {
+  //   const { redirect } = await import('next/navigation');
+  //   redirect('/dashboard');
+  // }
+
   // Show main product landing page only if it's the root domain (default agency)
   // UNLESS the 'portal' query param is set to true (for testing/preview).
   if (!showPortal && agencyId === 'default') {

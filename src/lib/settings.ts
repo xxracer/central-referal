@@ -79,7 +79,12 @@ export async function getAgencySettings(idOrSlug: string): Promise<AgencySetting
 
         if (!docSnap.exists) {
             // Return defaults if not found, but retain the ID
-            return { ...DEFAULT_SETTINGS, id: idOrSlug, slug: idOrSlug };
+            return {
+                ...DEFAULT_SETTINGS,
+                id: idOrSlug,
+                slug: idOrSlug,
+                exists: false // Explicitly mark as not found/not configured
+            };
         }
 
         // Merge with defaults to ensure all fields exist
@@ -90,6 +95,7 @@ export async function getAgencySettings(idOrSlug: string): Promise<AgencySetting
             ...data,
             id: agencyId,
             slug: data.slug || agencyId, // Fallback to ID if no slug
+            exists: true, // Mark as existing
             companyProfile: {
                 ...DEFAULT_SETTINGS.companyProfile,
                 ...(data.companyProfile || {}),
@@ -113,6 +119,7 @@ export async function getAgencySettings(idOrSlug: string): Promise<AgencySetting
             ...DEFAULT_SETTINGS,
             id: idOrSlug,
             slug: idOrSlug,
+            exists: false, // Mark as not found due to error
             companyProfile: {
                 ...DEFAULT_SETTINGS.companyProfile,
                 name: 'Agency Not Loaded (System Error)',
@@ -130,4 +137,48 @@ export async function createAgencySettings(agencyId: string, initialSettings: Pa
     const docRef = adminDb.collection(SETTINGS_COLLECTION).doc(agencyId);
     const completeSettings = { ...DEFAULT_SETTINGS, ...initialSettings, id: agencyId };
     await docRef.set(completeSettings);
+}
+
+export async function findAgenciesForUser(email: string): Promise<AgencySettings[]> {
+    const domain = email.split('@')[1];
+    const settingsColl = adminDb.collection(SETTINGS_COLLECTION);
+    const agenciesMap = new Map<string, AgencySettings>();
+
+    try {
+        // 1. Check authorizedDomains
+        const domainQuery = await settingsColl.where('userAccess.authorizedDomains', 'array-contains', domain).get();
+        domainQuery.docs.forEach(doc => {
+            const data = convertTimestamps(doc.data()) as AgencySettings;
+            agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+        });
+
+        // 2. Check authorizedEmails
+        const emailQuery = await settingsColl.where('userAccess.authorizedEmails', 'array-contains', email).get();
+        emailQuery.docs.forEach(doc => {
+            if (!agenciesMap.has(doc.id)) {
+                const data = convertTimestamps(doc.data()) as AgencySettings;
+                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+            }
+        });
+
+        // 3. Check notifications.staff (optional/deep check - if we want to catch users added manually to staff but not authorized list?)
+        // Usually staff list implies access? Assuming yes. But staff list is array of objects.
+        // Queries for array inclusion of objects are strict.
+        // We might stick to the authorized lists explicitly for access control as per "User Access" tab.
+        // However, the primary Admin should also be found.
+
+        // 4. Check primary owner
+        const ownerQuery = await settingsColl.where('companyProfile.email', '==', email).get();
+        ownerQuery.docs.forEach(doc => {
+            if (!agenciesMap.has(doc.id)) {
+                const data = convertTimestamps(doc.data()) as AgencySettings;
+                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+            }
+        });
+
+        return Array.from(agenciesMap.values());
+    } catch (error) {
+        console.error("Error finding agencies for user:", error);
+        return [];
+    }
 }
