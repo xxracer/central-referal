@@ -9,7 +9,7 @@ export default async function StatusPage() {
   const agencyId = headersList.get('x-agency-id') || 'default';
   const settings = await getAgencySettings(agencyId);
 
-  if (settings.subscription.status === 'SUSPENDED') {
+  if (settings.subscription.status === 'SUSPENDED' || settings.subscription.status === 'CANCELLED') {
     const { redirect } = await import('next/navigation');
     redirect('/suspended');
   }

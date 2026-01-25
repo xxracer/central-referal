@@ -19,26 +19,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
   const profile = settings.companyProfile;
   const subscription = settings.subscription;
 
+  const resolvedParams = await searchParams;
+  const showPortal = resolvedParams.portal === 'true' && process.env.NODE_ENV === 'development';
+
+  // 1. Landing Page Logic (Highest Priority)
+  // Show main product landing page only if it's the root domain (default agency)
+  // UNLESS the 'portal' query param is set to true (only in dev).
+  if (!showPortal && agencyId === 'default') {
+    return <LandingPage />;
+  }
+
+  // 2. Subscription Check
   if (subscription.status === 'SUSPENDED') {
     const { redirect } = await import('next/navigation');
     redirect('/suspended');
-  }
-
-  const resolvedParams = await searchParams;
-  const showPortal = resolvedParams.portal === 'true';
-
-  // REDIRECT LOGIC:
-  // Legacy: We used to redirect to dashboard, but now we want to show the Public Portal by default.
-  // Staff can click 'Login' to go to dashboard.
-  // if (agencyId !== 'default' && !showPortal) {
-  //   const { redirect } = await import('next/navigation');
-  //   redirect('/dashboard');
-  // }
-
-  // Show main product landing page only if it's the root domain (default agency)
-  // UNLESS the 'portal' query param is set to true (for testing/preview).
-  if (!showPortal && agencyId === 'default') {
-    return <LandingPage />;
   }
 
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');

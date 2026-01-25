@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useTransition, useEffect } from "react";
 import { type AgencySettings } from "@/lib/types";
 import { updateAgencySettingsAction, uploadAgencyLogoAction } from "@/lib/actions";
-import { Plus, X, Save, AlertCircle, Upload, Loader2 } from "lucide-react";
+import { updateUserPassword } from "@/firebase/auth/client";
+import { Plus, X, Save, AlertCircle, Upload, Loader2, Key } from "lucide-react";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
@@ -765,9 +766,15 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
     )
 }
 
+
 const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
     const [access, setAccess] = useState(settings.userAccess);
     const [newDomain, setNewDomain] = useState('');
+
+    // Password State
+    const [newPass, setNewPass] = useState('');
+    const [cPass, setCPass] = useState('');
+    const [passLoading, setPassLoading] = useState(false);
 
     useEffect(() => {
         setAccess(settings.userAccess);
@@ -784,66 +791,131 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
         setAccess(prev => ({ ...prev, authorizedDomains: prev.authorizedDomains.filter(x => x !== d) }));
     };
 
+    const handleUpdatePassword = async () => {
+        if (!newPass || newPass.length < 6) {
+            alert("Password must be at least 6 characters.");
+            return;
+        }
+        if (newPass !== cPass) {
+            alert("Passwords do not match.");
+            return;
+        }
+
+        setPassLoading(true);
+        try {
+            await updateUserPassword(newPass);
+            alert("Password updated successfully.");
+            setNewPass('');
+            setCPass('');
+        } catch (error: any) {
+            alert("Failed to update password: " + error.message);
+        } finally {
+            setPassLoading(false);
+        }
+    };
+
     return (
-        <div className="space-y-4">
-            <div className="bg-yellow-50 p-4 rounded border border-yellow-200 text-yellow-800 text-sm flex gap-2">
-                <AlertCircle className="h-4 w-4 mt-0.5" />
-                <p>Only users with emails confirming to these domains will be able to sign up or log in to your agency workspace.</p>
-            </div>
-
-            <div className="space-y-2">
-                <Label>Saved Email Domains</Label>
-                <div className="flex gap-2">
-                    <Input
-                        value={newDomain}
-                        onChange={e => setNewDomain(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                addDomain();
-                            }
-                        }}
-                        placeholder="example.com"
-                    />
-                    <Button onClick={addDomain} type="button" size="icon"><Plus className="h-4 w-4" /></Button>
-                </div>
-            </div>
-
-            {access.authorizedDomains.length > 0 && (
-                <div className="space-y-3 pt-4">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saved Domains ({access.authorizedDomains.length})</Label>
-                    <div className="rounded-lg border bg-card divide-y">
-                        {access.authorizedDomains.map(d => (
-                            <div key={d} className="flex items-center justify-between p-3 text-sm transition-colors hover:bg-muted/30">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                                    <span className="font-medium">@{d}</span>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => removeDomain(d)}
-                                    title="Remove domain"
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2 flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    Security (Password Management)
+                </h3>
+                <CardDescription>
+                    If you signed up with Google, you can set a password here to enable email/password login.
+                </CardDescription>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
+                    <div className="space-y-2">
+                        <Label>New Password</Label>
+                        <Input
+                            type="password"
+                            value={newPass}
+                            onChange={(e) => setNewPass(e.target.value)}
+                            placeholder="New password"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Confirm Password</Label>
+                        <Input
+                            type="password"
+                            value={cPass}
+                            onChange={(e) => setCPass(e.target.value)}
+                            placeholder="Confirm password"
+                        />
                     </div>
                 </div>
-            )}
-            <Button onClick={() => {
-                let finalAccess = access;
-                // Auto-add pending domain if user forgot to click plus
-                if (newDomain && !access.authorizedDomains.includes(newDomain)) {
-                    finalAccess = { ...access, authorizedDomains: [...access.authorizedDomains, newDomain] };
-                    setAccess(finalAccess);
-                    setNewDomain('');
-                }
-                onSave(finalAccess);
-            }} disabled={isPending}>Save Access Settings</Button>
+                <Button
+                    onClick={handleUpdatePassword}
+                    disabled={passLoading || !newPass}
+                    variant="secondary"
+                    className="w-full md:w-auto"
+                >
+                    {passLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Set Password
+                </Button>
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Authorized Domains</h3>
+                <div className="bg-yellow-50 p-4 rounded border border-yellow-200 text-yellow-800 text-sm flex gap-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5" />
+                    <p>Only users with emails confirming to these domains will be able to sign up or log in to your agency workspace.</p>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Saved Email Domains</Label>
+                    <div className="flex gap-2">
+                        <Input
+                            value={newDomain}
+                            onChange={e => setNewDomain(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addDomain();
+                                }
+                            }}
+                            placeholder="example.com"
+                        />
+                        <Button onClick={addDomain} type="button" size="icon"><Plus className="h-4 w-4" /></Button>
+                    </div>
+                </div>
+
+                {access.authorizedDomains.length > 0 && (
+                    <div className="space-y-3 pt-4">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saved Domains ({access.authorizedDomains.length})</Label>
+                        <div className="rounded-lg border bg-card divide-y">
+                            {access.authorizedDomains.map(d => (
+                                <div key={d} className="flex items-center justify-between p-3 text-sm transition-colors hover:bg-muted/30">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                                        <span className="font-medium">@{d}</span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => removeDomain(d)}
+                                        title="Remove domain"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <Button onClick={() => {
+                    let finalAccess = access;
+                    // Auto-add pending domain if user forgot to click plus
+                    if (newDomain && !access.authorizedDomains.includes(newDomain)) {
+                        finalAccess = { ...access, authorizedDomains: [...access.authorizedDomains, newDomain] };
+                        setAccess(finalAccess);
+                        setNewDomain('');
+                    }
+                    onSave(finalAccess);
+                }} disabled={isPending}>Save Access Settings</Button>
+            </div>
         </div>
     );
 };

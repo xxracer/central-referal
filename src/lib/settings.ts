@@ -53,7 +53,7 @@ const DEFAULT_SETTINGS: AgencySettings = {
     },
     subscription: {
         plan: 'FREE',
-        status: 'ACTIVE',
+        status: process.env.NODE_ENV === 'development' ? 'ACTIVE' : 'SUSPENDED',
     }
 };
 

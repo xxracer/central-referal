@@ -15,7 +15,7 @@ export default async function ReferPage() {
   console.log(`[ReferPage] Accessing with AgencyID: ${agencyId}`);
   const settings = await getAgencySettings(agencyId);
 
-  if (settings.subscription.status === 'SUSPENDED') {
+  if (settings.subscription.status === 'SUSPENDED' || settings.subscription.status === 'CANCELLED') {
     const { redirect } = await import('next/navigation');
     redirect('/suspended');
   }

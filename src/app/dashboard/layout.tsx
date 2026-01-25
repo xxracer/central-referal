@@ -54,6 +54,13 @@ export default async function DashboardLayout({
     );
   }
 
+  // 2. CRITICAL: Check Subscription Status
+  // Prevent access if subscription is ignored/bypassed
+  const subStatus = settings.subscription?.status;
+  if (agencyId !== 'default' && (subStatus === 'SUSPENDED' || subStatus === 'CANCELLED')) {
+    redirect('/suspended');
+  }
+
   // 2. Check Configuration (Optional: Redirect to settings if basic info missing)
   // We check if name is the default placeholder.
   // We must allow access to /dashboard/settings to fix it, so don't redirect if already there.
