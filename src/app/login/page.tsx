@@ -200,10 +200,13 @@ export default function LoginPage() {
         const protocol = window.location.protocol;
         const host = window.location.host;
 
+        // Check for forced password reset
+        const targetPath = agency.requiresPasswordReset ? '/dashboard/settings?tab=access' : '/dashboard';
+
         if (host.includes('localhost')) {
-            router.push('/dashboard');
+            router.push(targetPath);
         } else {
-            window.location.href = `${protocol}//${agency.slug}.referralflow.health/dashboard`;
+            window.location.href = `${protocol}//${agency.slug}.referralflow.health${targetPath}`;
         }
     };
 

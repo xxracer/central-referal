@@ -31,3 +31,4 @@ try {
 // Export safe instances or throw clear errors when accessed
 export const adminStorage = admin.storage();
 export const adminDb = admin.firestore();
+export const adminAuth = admin.auth();

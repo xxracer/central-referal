@@ -36,6 +36,7 @@ export type StaffNotificationPreference = {
   email: string;
   name?: string;
   enabledCategories: NotificationCategory[]; // Only stores enabled keys for efficiency
+  requiresPasswordReset?: boolean;
 };
 
 export type AgencySettings = {

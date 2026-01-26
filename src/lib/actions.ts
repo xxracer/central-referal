@@ -12,6 +12,113 @@ import type { Referral, ReferralStatus, Document, Note, StatusHistory } from './
 import { categorizeReferral } from '@/ai/flows/smart-categorization';
 import { generateReferralPdf } from '@/ai/flows/generate-referral-pdf';
 import { sendReferralNotification } from './email';
+import { adminAuth } from '@/lib/firebase-admin';
+
+export async function provisionStaffUser(agencyId: string, email: string, tempPassword?: string, name?: string): Promise<{ success: boolean; message: string }> {
+    try {
+        if (!tempPassword || tempPassword.length < 6) {
+            // If no password provided, we can either gen one or error. User asked to assign one.
+            // If they didn't provide one, maybe we just add them as notification-only?
+            // But user specifically asked for "assign password".
+            if (!tempPassword) return { success: false, message: 'Temporary password is required for provisioning.' };
+            return { success: false, message: 'Password must be at least 6 characters.' };
+        }
+
+        // 1. Create User in Firebase Auth
+        let uid: string;
+        try {
+            const userRecord = await adminAuth.createUser({
+                email,
+                password: tempPassword,
+                displayName: name || 'Staff Member',
+                emailVerified: true // Auto-verify since admin trusted it
+            });
+            uid = userRecord.uid;
+        } catch (error: any) {
+            if (error.code === 'auth/email-already-exists') {
+                // If user exists, we just want to ensure they are added to the agency.
+                // We CANNOT set their password if they already exist without reset link.
+                // But user request was "assign new key". If user exists, we can't overwrite password easily without admin force.
+                // adminAuth.updateUser() CAN overwrite password.
+                const user = await adminAuth.getUserByEmail(email);
+                uid = user.uid;
+                await adminAuth.updateUser(uid, { password: tempPassword });
+                // Note: Overwriting password for existing user might annoy them if they use it elsewhere, 
+                // but in this context (Staff Provisioning), it implies admin control.
+            } else {
+                throw error;
+            }
+        }
+
+        // 2. Add to Agency Settings (Staff List)
+        const { getAgencySettings, updateAgencySettings } = await import('./settings');
+        const agency = await getAgencySettings(agencyId);
+
+        const currentStaff = agency.notifications.staff || [];
+        const existingIndex = currentStaff.findIndex(s => s.email === email);
+
+        const newStaffEntry = {
+            email,
+            name: name || '',
+            enabledCategories: ['new_referrals', 'status_changes'] as any[], // Defaults
+            requiresPasswordReset: true
+        };
+
+        let newStaffList = [...currentStaff];
+        if (existingIndex >= 0) {
+            newStaffList[existingIndex] = { ...newStaffList[existingIndex], ...newStaffEntry };
+        } else {
+            newStaffList.push(newStaffEntry);
+        }
+
+        // Ensure user is in authorizedEmails too
+        const authEmails = new Set(agency.userAccess.authorizedEmails || []);
+        authEmails.add(email);
+
+        await updateAgencySettings(agencyId, {
+            notifications: {
+                ...agency.notifications,
+                staff: newStaffList
+            },
+            userAccess: {
+                ...agency.userAccess,
+                authorizedEmails: Array.from(authEmails)
+            }
+        });
+
+        return { success: true, message: 'Staff member provisioned successfully.' };
+
+    } catch (error: any) {
+        console.error("Error provisioning staff:", error);
+        return { success: false, message: error.message || 'Failed to provision staff.' };
+    }
+}
+
+export async function markPasswordResetComplete(agencyId: string, email: string): Promise<boolean> {
+    try {
+        const { getAgencySettings, updateAgencySettings } = await import('./settings');
+        const agency = await getAgencySettings(agencyId);
+
+        const currentStaff = agency.notifications.staff || [];
+        const index = currentStaff.findIndex(s => s.email === email);
+
+        if (index === -1) return false;
+
+        const updatedStaff = [...currentStaff];
+        updatedStaff[index] = { ...updatedStaff[index], requiresPasswordReset: false };
+
+        await updateAgencySettings(agencyId, {
+            notifications: {
+                ...agency.notifications,
+                staff: updatedStaff
+            }
+        });
+        return true;
+    } catch (e) {
+        console.error("Error marking password reset complete:", e);
+        return false;
+    }
+}
 
 export type FormState = {
     message: string;

@@ -14,7 +14,8 @@ export async function checkUserAgencies(email: string) {
                 id: a.id,
                 name: a.companyProfile.name,
                 slug: a.slug || a.id,
-                logoUrl: a.branding?.logoUrl || a.companyProfile.logoUrl
+                logoUrl: a.branding?.logoUrl || a.companyProfile.logoUrl,
+                requiresPasswordReset: a.notifications?.staff?.find(s => s.email.toLowerCase() === normalizedEmail)?.requiresPasswordReset || false
             }))
         };
     } catch (error) {

@@ -25,9 +25,13 @@ const MASTER_INSURANCE_LIST = [
     "Wellpoint MMP", "Other"
 ];
 
+import { useSearchParams } from "next/navigation";
+
 export default function SettingsClient({ initialSettings, agencyId }: { initialSettings: AgencySettings; agencyId: string }) {
     const [settings, setSettings] = useState<AgencySettings>(initialSettings);
     const [isPending, startTransition] = useTransition();
+    const searchParams = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'profile';
 
     const handleSave = async (section: keyof AgencySettings, data: any) => {
         startTransition(async () => {
@@ -70,13 +74,13 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                 {isPending && <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />}
             </div>
 
-            <Tabs defaultValue="profile" className="w-full">
+            <Tabs defaultValue="profile" value={activeTab} className="w-full">
                 <TabsList className="grid w-full h-auto grid-cols-2 md:grid-cols-5 bg-muted">
-                    <TabsTrigger value="profile">Profile</TabsTrigger>
-                    <TabsTrigger value="config">Config</TabsTrigger>
-                    <TabsTrigger value="notifications">Alerts</TabsTrigger>
-                    <TabsTrigger value="access">Access</TabsTrigger>
-                    <TabsTrigger value="subscription">Plan</TabsTrigger>
+                    <TabsTrigger value="profile" onClick={() => window.history.pushState(null, '', '?tab=profile')}>Profile</TabsTrigger>
+                    <TabsTrigger value="config" onClick={() => window.history.pushState(null, '', '?tab=config')}>Config</TabsTrigger>
+                    <TabsTrigger value="notifications" onClick={() => window.history.pushState(null, '', '?tab=notifications')}>Alerts</TabsTrigger>
+                    <TabsTrigger value="access" onClick={() => window.history.pushState(null, '', '?tab=access')}>Access</TabsTrigger>
+                    <TabsTrigger value="subscription" onClick={() => window.history.pushState(null, '', '?tab=subscription')}>Plan</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="profile" className="mt-6">
@@ -455,7 +459,7 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
 
     // --- Actions ---
 
-    const handleAddStaff = (newStaff: { email: string; enabledCategories: string[] }) => {
+    const handleAddStaff = async (newStaff: { email: string; enabledCategories: string[]; tempPassword?: string }) => {
         const currentStaff = notifs.staff || [];
         // Prevent duplicates
         if (currentStaff.some(s => s.email === newStaff.email)) {
@@ -463,16 +467,36 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
             return;
         }
 
+        if (newStaff.tempPassword) {
+            try {
+                // Dynamically import to avoid server-action-in-client-component issues if not careful, 
+                // though direct import of action is fine in client components usually.
+                // Using dynamic to be safe and cleaner since it's conditional.
+                const { provisionStaffUser } = await import('@/lib/actions');
+                const result = await provisionStaffUser(settings.id, newStaff.email, newStaff.tempPassword, newStaff.email.split('@')[0]);
+
+                if (!result.success) {
+                    alert('Error provisioning staff: ' + result.message);
+                    return;
+                }
+
+                // Show success toast?
+                // alert('User provisioned with encryption.');
+            } catch (e: any) {
+                alert('Provisioning failed: ' + e.message);
+                return;
+            }
+        }
+
         const updatedStaff = [...currentStaff, {
             email: newStaff.email,
-            enabledCategories: newStaff.enabledCategories as any[]
+            enabledCategories: newStaff.enabledCategories as any[],
+            requiresPasswordReset: !!newStaff.tempPassword
         }];
 
         const updatedNotifs = { ...notifs, staff: updatedStaff };
         setNotifs(updatedNotifs);
-        onSave(updatedNotifs); // Save immediately or let user click specific save? 
-        // Prompt says "Save Changes" on each card. But "Add Staff" usually saves immediately or adds to list.
-        // Let's add to list and assume parent 'onSave' persists it.
+        onSave(updatedNotifs);
         setIsAddingStaff(false);
     };
 
@@ -704,7 +728,8 @@ function StaffCard({ member, onUpdate, onRemove, isLocked = false, hideRemove = 
 
 function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data: any) => void }) {
     const [email, setEmail] = useState('');
-    const [cats, setCats] = useState<string[]>([]);
+    const [tempPass, setTempPass] = useState('');
+    const [cats, setCats] = useState<string[]>(['new_referrals']);
 
     const toggleCat = (key: string) => {
         if (key === 'all_comms') {
@@ -729,6 +754,17 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
             <div className="space-y-2 max-w-md">
                 <Label>Email Address</Label>
                 <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="name@domain.com" />
+            </div>
+
+            <div className="space-y-2 max-w-md">
+                <Label>Temporary Password (Optional)</Label>
+                <Input
+                    type="text"
+                    value={tempPass}
+                    onChange={e => setTempPass(e.target.value)}
+                    placeholder="e.g. Temp123! (Leave empty to just add email)"
+                />
+                <p className="text-[10px] text-muted-foreground">If set, a user account will be created/updated with this password and forced to reset it on login.</p>
             </div>
 
             <div className="space-y-3">
@@ -757,8 +793,8 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
             </div>
 
             <div className="flex gap-2">
-                <Button onClick={() => onAdd({ email, enabledCategories: cats })} disabled={!email || !email.includes('@')}>
-                    Add Staff
+                <Button onClick={() => onAdd({ email, enabledCategories: cats, tempPassword: tempPass })} disabled={!email || !email.includes('@')}>
+                    Provision Staff
                 </Button>
                 <Button variant="ghost" onClick={onCancel}>Cancel</Button>
             </div>
@@ -804,6 +840,17 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
         setPassLoading(true);
         try {
             await updateUserPassword(newPass);
+
+            // Clear requireReset flag if present
+            const { getAuth } = await import('firebase/auth');
+            const auth = getAuth();
+            if (auth.currentUser && auth.currentUser.email) {
+                const { markPasswordResetComplete } = await import('@/lib/actions');
+                // We need agencyId. Passed via props to SettingsClient -> UserAccessForm
+                // UserAccessForm props: settings (has id).
+                await markPasswordResetComplete(settings.id, auth.currentUser.email);
+            }
+
             alert("Password updated successfully.");
             setNewPass('');
             setCPass('');
