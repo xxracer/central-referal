@@ -66,12 +66,14 @@ export default function LoginPage() {
                 return;
             }
 
-            // If truly new/no agency -> Subscribe
-            router.push('/subscribe');
+            // If truly new/no agency -> Show error instead of redirecting to subscribe (which creates dupes)
+            // router.push('/subscribe'); 
             toast({
-                title: "Welcome",
-                description: "Please create your agency workspace.",
+                variant: 'destructive',
+                title: "No Account Found",
+                description: "This email is not associated with any active agency. Please contact your administrator.",
             });
+            setIsLoading(false);
         }
     };
 

@@ -4,9 +4,11 @@ import { findAgenciesForUser } from '@/lib/settings';
 
 export async function checkUserAgencies(email: string) {
     if (!email) return { agencies: [] };
+    const normalizedEmail = email.toLowerCase();
+
 
     try {
-        const agencies = await findAgenciesForUser(email);
+        const agencies = await findAgenciesForUser(normalizedEmail);
         return {
             agencies: agencies.map(a => ({
                 id: a.id,

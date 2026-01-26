@@ -76,7 +76,7 @@ export async function POST(req: Request) {
                     },
                     subscription: {
                         plan: 'PRO',
-                        status: 'ACTIVE'
+                        status: 'SUSPENDED' // Wait for manual approval or activation email
                     },
                     notifications: {
                         emailRecipients: [email],
