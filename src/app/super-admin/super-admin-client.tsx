@@ -20,7 +20,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import {
-    Shield, Power, Calendar, Building2, ExternalLink, Edit2, Loader2, Trash2
+    Shield, Power, Calendar, Building2, ExternalLink, Edit2, Loader2, Trash2, Mail
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -213,6 +213,25 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                                         onClick={() => handleToggleStatus(agency.id, sub.status)}
                                                     >
                                                         <Power className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-blue-500 hover:bg-blue-100 hover:text-blue-700"
+                                                        title="Resend Activation Email"
+                                                        onClick={async () => {
+                                                            if (confirm(`Resend activation email to ${agency.companyProfile?.email || 'this agency'}?`)) {
+                                                                const { sendActivationEmail } = await import('./actions');
+                                                                const result = await sendActivationEmail(agency.id);
+                                                                if (result.success) {
+                                                                    toast({ title: "Email Sent", description: result.message });
+                                                                } else {
+                                                                    toast({ title: "Error", description: result.message, variant: "destructive" });
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Mail className="w-4 h-4" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"

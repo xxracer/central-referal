@@ -89,7 +89,31 @@ export async function updateAgencySubscription(
         const updateData: any = {};
         if (data.endDate) updateData['subscription.endDate'] = new Date(data.endDate);
         if (data.plan) updateData['subscription.plan'] = data.plan;
-        if (data.status) updateData['subscription.status'] = data.status;
+        if (data.status) {
+            updateData['subscription.status'] = data.status;
+
+            // Send email if status is being set to ACTIVE
+            if (data.status === 'ACTIVE') {
+                const { getAgencySettings } = await import('@/lib/settings');
+                const { sendReferralNotification } = await import('@/lib/email');
+
+                const agency = await getAgencySettings(agencyId);
+                const userEmail = agency.companyProfile.email;
+                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://referralflow.health';
+                const loginUrl = `${baseUrl}/login`;
+                const portalUrl = data.slug
+                    ? (data.slug.includes('.') ? `http://${data.slug}` : `http://${data.slug}.referralflow.health`)
+                    : (agency.slug ? (agency.slug.includes('.') ? `http://${agency.slug}` : `http://${agency.slug}.referralflow.health`) : baseUrl);
+
+                // Fire and forget email
+                sendReferralNotification(agencyId, 'AGENCY_ACTIVATED', {
+                    firstName: agency.companyProfile.name,
+                    referralLink: portalUrl,
+                    loginUrl: loginUrl,
+                    recipientOverride: userEmail
+                }).catch(e => console.error("Failed to send activation email during subscription update", e));
+            }
+        }
         if (data.slug) updateData['slug'] = data.slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
         updateData['subscription.updatedAt'] = new Date();
@@ -103,6 +127,43 @@ export async function updateAgencySubscription(
         return { success: false, message: 'Failed to update subscription' };
     }
 }
+
+export async function sendActivationEmail(agencyId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const { getAgencySettings } = await import('@/lib/settings');
+        const { sendReferralNotification } = await import('@/lib/email');
+
+        const agency = await getAgencySettings(agencyId);
+
+        if (!agency.exists) {
+            return { success: false, message: 'Agency not found' };
+        }
+
+        const userEmail = agency.companyProfile.email;
+        if (!userEmail) {
+            return { success: false, message: 'Agency has no email address' };
+        }
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://referralflow.health';
+        const loginUrl = `${baseUrl}/login`;
+        const portalUrl = agency.slug
+            ? (agency.slug.includes('.') ? `http://${agency.slug}` : `http://${agency.slug}.referralflow.health`)
+            : baseUrl;
+
+        await sendReferralNotification(agencyId, 'AGENCY_ACTIVATED', {
+            firstName: agency.companyProfile.name,
+            referralLink: portalUrl,
+            loginUrl: loginUrl,
+            recipientOverride: userEmail
+        });
+
+        return { success: true, message: `Activation email sent to ${userEmail}` };
+    } catch (error: any) {
+        console.error('Error sending activation email:', error);
+        return { success: false, message: 'Failed to send email: ' + error.message };
+    }
+}
+
 export async function deleteAgency(agencyId: string): Promise<{ success: boolean; message: string }> {
     try {
         // 1. Delete Agency Settings
