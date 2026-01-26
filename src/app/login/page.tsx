@@ -104,6 +104,19 @@ export default function LoginPage() {
             return;
         }
 
+        // Server-side verification
+        const { verifyCaptcha } = await import('./actions');
+        const verification = await verifyCaptcha(captchaValue);
+
+        if (!verification.success) {
+            toast({
+                variant: 'destructive',
+                title: 'Security Check Failed',
+                description: 'Please try the captcha again.'
+            });
+            return;
+        }
+
         setIsLoading(true);
         try {
             const { user, isNewUser } = await signInWithEmail(email, password);
@@ -335,7 +348,7 @@ export default function LoginPage() {
                                 </div>
                                 <div className="flex justify-center">
                                     <ReCAPTCHA
-                                        sitekey="6Ldf5VUsAAAAAMYqqvixySq0mhxfYJAA49Jpj-Pk"
+                                        sitekey="6Ldf6FYsAAAAADY3yx4u36Epr77t4UYM2FPVMWis"
                                         onChange={(val) => setCaptchaValue(val)}
                                     />
                                 </div>
