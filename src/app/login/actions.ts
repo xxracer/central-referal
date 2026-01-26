@@ -25,7 +25,7 @@ export async function checkUserAgencies(email: string) {
 }
 
 export async function verifyCaptcha(token: string) {
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6Ldf6FYsAAAAAIx3KBhJn8ViuPZmWg_IJVhaCJcJ'; // Fallback to provided key for now
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
     if (!token) {
         return { success: false, message: 'No token provided' };

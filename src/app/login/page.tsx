@@ -353,7 +353,7 @@ export default function LoginPage() {
                                 </div>
                                 <div className="flex justify-center">
                                     <ReCAPTCHA
-                                        sitekey="6Ldf6FYsAAAAADY3yx4u36Epr77t4UYM2FPVMWis"
+                                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
                                         onChange={(val) => setCaptchaValue(val)}
                                     />
                                 </div>
