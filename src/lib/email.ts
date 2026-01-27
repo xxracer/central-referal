@@ -14,6 +14,7 @@ export type NotificationType =
   | 'WELCOME_ADMIN_ALERT'
   | 'AGENCY_ACTIVATED'
   | 'NEW_MESSAGE_FROM_AGENCY' // Message from Agency -> Referral Source
+  | 'STAFF_INVITATION' // New staff member invited
   // Keep legacy for compatibility during migration if needed, or replace usage
   | 'INTERNAL_NOTE'; // Internal staff note
 
@@ -33,6 +34,7 @@ interface EmailData {
   elapsedTime?: string; // For Stale
   dateTime?: string; // For timestamps
   recipientOverride?: string; // For Admin Alert context
+  password?: string; // For Staff Invitation
 }
 
 export async function sendReferralNotification(
@@ -51,7 +53,8 @@ export async function sendReferralNotification(
       'NEW_REFERRAL_INTERNAL',
       'NEW_EXTERNAL_MESSAGE_INTERNAL',
       'REFERRAL_STALE',
-      'INTERNAL_NOTE'
+      'INTERNAL_NOTE',
+      'STAFF_INVITATION'
     ].includes(type);
 
     if (recipientOverride) {
@@ -309,6 +312,31 @@ export async function sendReferralNotification(
             ${button('Login to Dashboard', data.loginUrl || `${baseUrl}/login`)}
             <p>Welcome aboard!</p>
             <p>The ReferralFlow.Health Team</p>
+          `;
+        break;
+
+      case 'STAFF_INVITATION':
+        subject = `You have been invited to join ${agencyName}`;
+        htmlContent = `
+            <h2 style="color: #0f172a;">Welcome to ${agencyName}</h2>
+            <p>Hello,</p>
+            <p>You have been invited to join <strong>${agencyName}</strong> on ReferralFlow.Health.</p>
+            
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+                <p style="margin-top: 0; font-weight: bold;">Your Login Credentials:</p>
+                <p><strong>Email:</strong> ${recipients[0]}</p>
+                ${data.password ? `<p><strong>Password:</strong> ${data.password}</p>` : ''}
+            </div>
+
+            <p style="font-size: 14px; background-color: #fff7ed; padding: 10px; border-radius: 4px; border: 1px solid #fed7aa; color: #9a3412;">
+               <strong>Wait! Do you use Google Workspace (Business Gmail)?</strong><br/>
+               If your email is a Google Business email, you do <strong>not</strong> need the password above. Simply click "Sign in with Google" on the login page.
+            </p>
+
+            <p>If you are using a standard email (Outlook, Yahoo, etc.), please use the email and password provided above.</p>
+
+            ${button('Log in to Dashboard', data.loginUrl || `${baseUrl}/login`)}
+            <p>Welcome to the team!</p>
           `;
         break;
     }

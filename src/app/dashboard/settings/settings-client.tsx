@@ -764,7 +764,7 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
                     onChange={e => setTempPass(e.target.value)}
                     placeholder="e.g. Temp123! (Leave empty to just add email)"
                 />
-                <p className="text-[10px] text-muted-foreground">If set, a user account will be created/updated with this password and forced to reset it on login.</p>
+                <p className="text-[10px] text-muted-foreground">If left empty, a secure password will be generated and emailed to the user.</p>
             </div>
 
             <div className="space-y-3">

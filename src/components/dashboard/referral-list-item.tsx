@@ -56,7 +56,7 @@ function ReferralDetail({ referral }: { referral: Referral }) {
             </div>
             <div className="space-y-2">
                 <h4 className="font-semibold flex items-center gap-2 text-primary font-body uppercase text-[10px] tracking-widest"><FileText className="h-4 w-4" /> Documents</h4>
-                {referral.documents.length > 0 ? (
+                {(referral.documents && referral.documents.length > 0) ? (
                     <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                         {referral.documents.map(doc => (
                             <li key={doc.id}>

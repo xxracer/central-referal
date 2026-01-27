@@ -16,12 +16,10 @@ import { adminAuth } from '@/lib/firebase-admin';
 
 export async function provisionStaffUser(agencyId: string, email: string, tempPassword?: string, name?: string): Promise<{ success: boolean; message: string }> {
     try {
-        if (!tempPassword || tempPassword.length < 6) {
-            // If no password provided, we can either gen one or error. User asked to assign one.
-            // If they didn't provide one, maybe we just add them as notification-only?
-            // But user specifically asked for "assign password".
-            if (!tempPassword) return { success: false, message: 'Temporary password is required for provisioning.' };
-            return { success: false, message: 'Password must be at least 6 characters.' };
+        let passwordToUse = tempPassword;
+        if (!passwordToUse || passwordToUse.length < 6) {
+            // If no password provided, generate a random secure one
+            passwordToUse = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
         }
 
         // 1. Create User in Firebase Auth
@@ -29,7 +27,7 @@ export async function provisionStaffUser(agencyId: string, email: string, tempPa
         try {
             const userRecord = await adminAuth.createUser({
                 email,
-                password: tempPassword,
+                password: passwordToUse,
                 displayName: name || 'Staff Member',
                 emailVerified: true // Auto-verify since admin trusted it
             });
@@ -42,9 +40,11 @@ export async function provisionStaffUser(agencyId: string, email: string, tempPa
                 // adminAuth.updateUser() CAN overwrite password.
                 const user = await adminAuth.getUserByEmail(email);
                 uid = user.uid;
-                await adminAuth.updateUser(uid, { password: tempPassword });
-                // Note: Overwriting password for existing user might annoy them if they use it elsewhere, 
-                // but in this context (Staff Provisioning), it implies admin control.
+
+                // Only overwrite password if explicitly provided or requested? 
+                // Logic: If I'm re-inviting or "provisioning", maybe I DO want to reset access.
+                // Let's reset it to the new one so the email credentials work.
+                await adminAuth.updateUser(uid, { password: passwordToUse });
             } else {
                 throw error;
             }
@@ -61,7 +61,7 @@ export async function provisionStaffUser(agencyId: string, email: string, tempPa
             email,
             name: name || '',
             enabledCategories: ['new_referrals', 'status_changes'] as any[], // Defaults
-            requiresPasswordReset: true
+            requiresPasswordReset: !!tempPassword // Only force reset if admin manually set a temp password? Or always? Let's keep existing logic.
         };
 
         let newStaffList = [...currentStaff];
@@ -86,7 +86,15 @@ export async function provisionStaffUser(agencyId: string, email: string, tempPa
             }
         });
 
-        return { success: true, message: 'Staff member provisioned successfully.' };
+        // 3. Send Invitation Email with Credentials
+        // We use 'recipientOverride' to send directly to the new user
+        await sendReferralNotification(agencyId, 'STAFF_INVITATION', {
+            referralLink: '', // Not needed for this template really, or could be dashboard link
+            loginUrl: 'https://referralflow.health/login', // Or dynamic base url
+            password: passwordToUse
+        }, email);
+
+        return { success: true, message: 'Staff member provisioned and invited successfully.' };
 
     } catch (error: any) {
         console.error("Error provisioning staff:", error);
@@ -294,6 +302,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         internalNotes: [],
         externalNotes: [],
         isArchived: false,
+        isSeen: false, // Initialize as unseen for notifications
     };
 
     try {
