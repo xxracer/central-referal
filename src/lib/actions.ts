@@ -303,6 +303,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         externalNotes: [],
         isArchived: false,
         isSeen: false, // Initialize as unseen for notifications
+        hasUnreadMessages: false,
     };
 
     try {
@@ -358,6 +359,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
             isExternal: true
         });
         referral.updatedAt = now;
+        referral.hasUnreadMessages = true; // Mark as having unread messages
         await saveReferral(referral);
 
         // Notify staff of new external message (Template 5)

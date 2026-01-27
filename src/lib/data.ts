@@ -208,7 +208,8 @@ export async function markReferralAsSeen(id: string): Promise<void> {
     const firestore = getDb();
     try {
         await firestore.collection('referrals').doc(id).update({
-            isSeen: true
+            isSeen: true,
+            hasUnreadMessages: false
         });
     } catch (e) {
         console.error("Error marking as seen:", e);

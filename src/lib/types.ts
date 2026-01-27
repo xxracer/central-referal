@@ -147,4 +147,5 @@ export type Referral = {
   updatedAt: Date;
   isArchived?: boolean;
   isSeen?: boolean;
+  hasUnreadMessages?: boolean;
 };

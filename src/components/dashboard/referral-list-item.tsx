@@ -107,7 +107,7 @@ function ReferralAlert({ referral }: { referral: Referral }) {
 
 export default function ReferralListItem({ referral }: { referral: Referral }) {
     const handleExpand = () => {
-        if (referral.isSeen === false) {
+        if (referral.isSeen === false || referral.hasUnreadMessages) {
             markReferralAsSeenAction(referral.id);
         }
     };
@@ -128,6 +128,11 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
                         {referral.isSeen === false && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white animate-pulse shadow-sm">
                                 NEW
+                            </span>
+                        )}
+                        {referral.hasUnreadMessages && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-500 text-white animate-pulse shadow-sm">
+                                NEW MESSAGE
                             </span>
                         )}
                     </div>
