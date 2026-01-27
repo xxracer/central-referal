@@ -88,6 +88,14 @@ export default async function DashboardPage({
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 font-medium text-xs text-muted-foreground uppercase tracking-wider rounded-t-md">
+                        <div className="col-span-1">ID</div>
+                        <div className="col-span-2">Name</div>
+                        <div className="col-span-3">Source</div>
+                        <div className="col-span-2">Insurance</div>
+                        <div className="col-span-2">Date</div>
+                        <div className="col-span-2 text-right">Status</div>
+                    </div>
                     {referrals.length > 0 ? (
                         <Accordion type="single" collapsible className="w-full">
                             {referrals.map((referral) => (

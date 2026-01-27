@@ -115,15 +115,17 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
     return (
         <AccordionItem value={referral.id} className="border-b-primary/5">
             <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md py-4" onClick={handleExpand}>
-                <div className="flex items-center gap-4 text-sm w-full">
-                    <div className="font-bold text-primary text-left min-w-[100px] font-mono flex items-center gap-1">
+                <div className="flex md:grid md:grid-cols-12 gap-4 text-sm w-full items-center">
+                    {/* ID */}
+                    <div className="font-bold text-primary text-left font-mono flex items-center gap-1 col-span-1">
                         {referral.id}
-                        {/* Use asDiv and stopPropagation to prevent accordion toggle when clicking copy */}
                         <div onClick={(e) => e.stopPropagation()}>
                             <CopyButton textToCopy={referral.id} className="h-6 w-6 ml-1 cursor-pointer" asDiv />
                         </div>
                     </div>
-                    <div className="flex-1 text-left font-medium flex items-center gap-2">
+
+                    {/* Name */}
+                    <div className="flex-1 text-left font-medium flex items-center gap-2 md:col-span-2">
                         {referral.patientName}
                         {referral.isSeen === false && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white animate-pulse shadow-sm">
@@ -132,12 +134,30 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
                         )}
                         {referral.hasUnreadMessages && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-500 text-white animate-pulse shadow-sm">
-                                NEW MESSAGE
+                                MSG
                             </span>
                         )}
                     </div>
-                    <div className="hidden md:block text-muted-foreground text-left min-w-[120px]">{formatDate(referral.createdAt)}</div>
-                    <div className="text-right pr-4"><StatusBadge status={referral.status} /></div>
+
+                    {/* Source - Hidden on mobile */}
+                    <div className="hidden md:block text-left truncate col-span-3 text-muted-foreground" title={referral.referrerName}>
+                        {referral.referrerName}
+                    </div>
+
+                    {/* Insurance - Hidden on mobile */}
+                    <div className="hidden md:block text-left truncate col-span-2 text-muted-foreground" title={referral.patientInsurance}>
+                        {referral.patientInsurance || '-'}
+                    </div>
+
+                    {/* Date - Hidden on mobile */}
+                    <div className="hidden md:block text-muted-foreground text-left col-span-2">
+                        {formatDate(referral.createdAt)}
+                    </div>
+
+                    {/* Status */}
+                    <div className="text-right md:col-span-2">
+                        <StatusBadge status={referral.status} />
+                    </div>
                 </div>
             </AccordionTrigger>
             <AccordionContent className="p-6 bg-muted/20 border-l-4 border-primary">
