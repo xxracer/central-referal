@@ -229,7 +229,9 @@ export async function getUnseenReferralCount(agencyId: string): Promise<number> 
         // Filter in memory
         const count = snapshot.docs.filter(d => {
             const data = d.data();
-            return data.isSeen === false && data.isArchived !== true;
+            const isUnseen = data.isSeen === false;
+            const hasUnread = data.hasUnreadMessages === true;
+            return (isUnseen || hasUnread) && data.isArchived !== true;
         }).length;
 
         return count;

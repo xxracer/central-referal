@@ -41,7 +41,10 @@ export function NotificationsMenu() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(() => {
+            fetchData();
+            router.refresh(); // Refresh dashboard data too
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -70,7 +73,7 @@ export function NotificationsMenu() {
                         </div>
                     ) : (
                         <div className="px-4 py-3 text-sm text-center">
-                            <p className="font-medium text-foreground">You have {count} new referral{count !== 1 && 's'}.</p>
+                            <p className="font-medium text-foreground">You have {count} unread notification{count !== 1 && 's'}.</p>
                             <p className="text-muted-foreground text-xs mt-1">Check the dashboard list for details.</p>
 
                             <Button size="sm" className="w-full mt-3" onClick={() => {
