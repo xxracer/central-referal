@@ -12,7 +12,7 @@ export default function SiteHeader({ logoUrl, companyName }: SiteHeaderProps) {
     <header className="px-4 lg:px-6 h-16 flex items-center bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
       <Link href="/" className="flex items-center justify-center gap-2" prefetch={false}>
         {logoUrl ? (
-          <img src={logoUrl} alt={companyName || "Agency Logo"} className="h-8 w-auto object-contain" />
+          <img src={logoUrl} alt={companyName || "Agency Logo"} className="h-10 md:h-12 w-auto object-contain" />
         ) : (
           <Logo className="h-6 w-6" />
         )}

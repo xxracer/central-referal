@@ -55,9 +55,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                       <Image
                         src={profile.logoUrl}
                         alt={`${profile.name} Logo`}
-                        width={120}
-                        height={60}
-                        className="h-12 w-auto object-contain"
+                        width={240}
+                        height={100}
+                        className="h-16 md:h-20 w-auto object-contain"
                       />
                     </div>
                   )}
