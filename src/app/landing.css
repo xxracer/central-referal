@@ -441,11 +441,11 @@
 
 .landing-wrapper .hero-img {
   width: 100%;
-  height: 420px;
+  height: auto;
+  min-height: 280px;
   border-radius: 26px;
   border: 1px solid rgba(214, 231, 255, .9);
-  object-fit: cover;
-  object-position: center center;
+  /* object-fit: cover; Removed to stop cropping */
   background: #fff;
   box-shadow: 0 18px 40px rgba(11, 27, 43, .10);
 }

@@ -48,12 +48,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
         <section className="relative w-full py-12 md:py-24 lg:py-32 overflow-hidden">
           {/* Background Watermark Logo */}
           {profile.logoUrl && (
-            <div className="absolute top-1/2 left-0 md:left-10 -translate-y-1/2 w-[600px] h-[600px] opacity-[0.04] pointer-events-none -z-10 select-none flex items-center justify-center grayscale blur-sm">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-[0.07] pointer-events-none -z-10 select-none flex items-center justify-center grayscale blur-sm">
               <Image
                 src={profile.logoUrl}
                 alt=""
-                width={600}
-                height={600}
+                width={800}
+                height={800}
                 className="object-contain w-full h-full"
               />
             </div>
