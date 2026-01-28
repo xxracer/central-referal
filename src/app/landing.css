@@ -442,7 +442,6 @@
 .landing-wrapper .hero-img {
   width: 100%;
   height: auto;
-  min-height: 280px;
   border-radius: 26px;
   border: 1px solid rgba(214, 231, 255, .9);
   /* object-fit: cover; Removed to stop cropping */

@@ -46,22 +46,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] -z-10" />
 
         <section className="relative w-full py-12 md:py-24 lg:py-32 overflow-hidden">
-          {/* Background Watermark Logo */}
-          {profile.logoUrl && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-[0.07] pointer-events-none -z-10 select-none flex items-center justify-center grayscale blur-sm">
-              <Image
-                src={profile.logoUrl}
-                alt=""
-                width={800}
-                height={800}
-                className="object-contain w-full h-full"
-              />
-            </div>
-          )}
           <div className="container px-4 md:px-6">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-              <div className="flex flex-col items-start justify-center space-y-8">
-                <div className="space-y-6">
+              <div className="relative flex flex-col items-start justify-center space-y-8">
+                {/* Local Watermark */}
+                {profile.logoUrl && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] opacity-[0.04] pointer-events-none -z-10 grayscale flex items-center justify-center">
+                    <Image src={profile.logoUrl} alt="" fill className="object-contain" />
+                  </div>
+                )}
+                <div className="space-y-6 relative z-10">
                   {profile.logoUrl && (
                     <div className="mb-4 inline-block p-2 bg-white rounded-xl shadow-sm border border-primary/10">
                       <Image
@@ -74,7 +68,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                     </div>
                   )}
                   <div className="space-y-3">
-                    <h2 className="text-primary font-black uppercase tracking-[0.2em] text-sm">Official Referral Portal</h2>
+                    <h2 className="text-gray-600 font-black uppercase tracking-[0.2em] text-sm">Official Referral Portal</h2>
                     <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl break-words hyphens-auto">
                       {profile.name || "ReferralFlow Central"}
                     </h1>
