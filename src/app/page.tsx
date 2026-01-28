@@ -45,7 +45,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] -z-10" />
 
-        <section className="relative w-full py-12 md:py-24 lg:py-32">
+        <section className="relative w-full py-12 md:py-24 lg:py-32 overflow-hidden">
+          {/* Background Watermark Logo */}
+          {profile.logoUrl && (
+            <div className="absolute top-1/2 left-0 md:left-10 -translate-y-1/2 w-[600px] h-[600px] opacity-[0.04] pointer-events-none -z-10 select-none flex items-center justify-center grayscale blur-sm">
+              <Image
+                src={profile.logoUrl}
+                alt=""
+                width={600}
+                height={600}
+                className="object-contain w-full h-full"
+              />
+            </div>
+          )}
           <div className="container px-4 md:px-6">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
               <div className="flex flex-col items-start justify-center space-y-8">
@@ -93,7 +105,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                   {heroImage && (
                     <Image
                       alt={profile.name || heroImage.description}
-                      className="mx-auto aspect-[4/3] overflow-hidden rounded-2xl object-cover shadow-2xl"
+                      className="mx-auto w-full h-auto rounded-2xl shadow-2xl"
                       src={heroImage.imageUrl}
                       width={600}
                       height={450}
