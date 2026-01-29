@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '@/components/logo';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendPasswordReset } from '@/firebase/auth/client';
+import { signInWithGoogle, signInWithEmail, sendPasswordReset } from '@/firebase/auth/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
@@ -142,30 +142,7 @@ export default function LoginPage() {
         }
     };
 
-    const handleEmailSignUp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email || !password) return;
 
-        setIsLoading(true);
-        try {
-            const { user, isNewUser } = await signUpWithEmail(email, password);
-            await handlePostLogin(user, isNewUser);
-        } catch (error: any) {
-            console.error("Email Sign-Up Error:", error);
-            let message = "Failed to sign up.";
-            if (error.code === 'auth/email-already-in-use') {
-                message = "Email is already in use.";
-            } else if (error.code === 'auth/weak-password') {
-                message = "Password should be at least 6 characters.";
-            }
-            toast({
-                variant: "destructive",
-                title: "Sign Up Failed",
-                description: message,
-            });
-            setIsLoading(false);
-        }
-    };
 
     const handlePasswordReset = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -311,90 +288,52 @@ export default function LoginPage() {
                     )}
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Tabs defaultValue="signin" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-4">
-                            <TabsTrigger value="signin">Sign In</TabsTrigger>
-                            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="signin">
-                            <form onSubmit={handleEmailSignIn} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="m@example.com"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
+                    <div className="space-y-4">
+                        <form onSubmit={handleEmailSignIn} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="m@example.com"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="px-0 h-auto text-xs text-muted-foreground"
+                                        type="button"
+                                        onClick={() => setShowForgotPassword(true)}
+                                    >
+                                        Forgot password?
+                                    </Button>
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="password">Password</Label>
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="px-0 h-auto text-xs text-muted-foreground"
-                                            type="button"
-                                            onClick={() => setShowForgotPassword(true)}
-                                        >
-                                            Forgot password?
-                                        </Button>
-                                    </div>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex justify-center">
-                                    <ReCAPTCHA
-                                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                                        onChange={(val) => setCaptchaValue(val)}
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                                    Sign In with Email
-                                </Button>
-                            </form>
-                        </TabsContent>
-
-                        <TabsContent value="signup">
-                            <form onSubmit={handleEmailSignUp} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="signup-email">Email</Label>
-                                    <Input
-                                        id="signup-email"
-                                        type="email"
-                                        placeholder="m@example.com"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="signup-password">Password</Label>
-                                    <Input
-                                        id="signup-password"
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        minLength={6}
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                                    Create Account
-                                </Button>
-                            </form>
-                        </TabsContent>
-                    </Tabs>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-center">
+                                <ReCAPTCHA
+                                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                                    onChange={(val) => setCaptchaValue(val)}
+                                />
+                            </div>
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                                Sign In with Email
+                            </Button>
+                        </form>
+                    </div>
 
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
