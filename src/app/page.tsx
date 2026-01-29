@@ -9,6 +9,7 @@ import { getAgencySettings } from '@/lib/settings';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import LandingPage from '@/components/landing/landing-page';
+import ContactSection from '@/components/landing/contact-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,8 +82,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                 </div>
                 <div className="flex flex-col gap-4 w-full sm:flex-row">
                   <Button asChild size="lg" className="h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full transition-all hover:scale-105 active:scale-95">
-                    <Link href="/refer" prefetch={false}>
-                      Start New Referral
+                    <Link href="/subscribe" prefetch={false}>
+                      Get Started
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
@@ -137,8 +138,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
             )}
           </div>
         </section>
+        <ContactSection />
       </main>
-      <footer className="flex items-center justify-center py-8 border-t bg-background/50 backdrop-blur-sm">
+      <footer className="flex flex-col items-center justify-center py-8 border-t bg-background/50 backdrop-blur-sm gap-4">
+        <div className="flex gap-6 text-sm font-medium text-foreground/70">
+          <Link href="https://referralflow.health/contact" className="hover:text-primary transition-colors">Contact Us</Link>
+        </div>
         <p className="text-sm text-foreground/50 tracking-wide">&copy; {new Date().getFullYear()} {profile.name || "ReferralFlow Central"}. Excellence in care coordination.</p>
       </footer>
     </div>

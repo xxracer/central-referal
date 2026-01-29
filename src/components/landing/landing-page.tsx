@@ -67,7 +67,8 @@ const LandingPage = () => {
                         </Link>
                         <div className="nav-actions">
                             <Link href="/login" className="btn btn-link">Login</Link>
-                            <button className="btn btn-primary" type="button" onClick={openModal}>Get Started</button>
+                            <Link href="https://referralflow.health/contact" className="btn btn-link">Contact</Link>
+                            <Link href="/subscribe" className="btn btn-primary">Get Started</Link>
                         </div>
                     </div>
                 </div>
@@ -86,7 +87,7 @@ const LandingPage = () => {
                                     Strengthen your process with clarity, visibility, and control without replacing your EMR, retraining staff, or forcing logins on referral sources.
                                 </p>
                                 <div className="hero-actions">
-                                    <button className="btn btn-primary" type="button" onClick={openModal}>Get Started</button>
+                                    <Link href="/subscribe" className="btn btn-primary">Get Started</Link>
                                     <Link href="#how" className="btn" onClick={(e) => {
                                         e.preventDefault();
                                         document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' });
@@ -210,17 +211,22 @@ const LandingPage = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                                     <Link href="/login" className="btn">Login</Link>
-                                    <button className="btn btn-primary" type="button" onClick={openModal}>Get Started</button>
+                                    <Link href="/subscribe" className="btn btn-primary">Get Started</Link>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
+
+
                 <footer>
                     <div className="container">
-                        <div className="row" style={{ alignItems: 'center' }}>
-                            <span>© {new Date().getFullYear()} ReferralFlow.Health</span>
+                        <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                <span>© {new Date().getFullYear()} ReferralFlow.Health</span>
+                                <Link href="https://referralflow.health/contact" style={{ fontSize: '12px', opacity: 0.8, color: 'inherit' }}>Contact Us</Link>
+                            </div>
                             <span style={{ fontSize: '11px', opacity: 0.8 }}>
                                 Powered by <b>ReferralFlow.Health</b> and created by <a href="https://ilptechnology.com/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>ILP Technologies</a>
                             </span>
@@ -245,7 +251,7 @@ const LandingPage = () => {
                                 <input
                                     id="agency"
                                     type="text"
-                                    placeholder="e.g., Central Home Health"
+                                    placeholder="e.g., Best Home Care"
                                     autoComplete="organization"
                                     value={formData.agency}
                                     onChange={e => setFormData({ ...formData, agency: e.target.value })}
@@ -256,7 +262,7 @@ const LandingPage = () => {
                                 <input
                                     id="name"
                                     type="text"
-                                    placeholder="e.g., Alex Guerra"
+                                    placeholder="e.g., John Smith"
                                     autoComplete="name"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}

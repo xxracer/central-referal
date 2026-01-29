@@ -623,3 +623,36 @@ export async function getUnseenReferralCountAction() {
         return { count: 0, success: false };
     }
 }
+
+export async function submitContactForm(data: any) {
+    try {
+        console.log("Contact form submitted:", data);
+
+        // Explicitly send to requested recipients
+        const recipients = ['proguerraa@gmail.com', 'maijelcancines2@gmail.com'];
+
+        const { resend } = await import('./resend');
+
+        await resend.emails.send({
+            from: 'ReferralFlow Contact <notifications@referralflow.health>',
+            to: recipients,
+            replyTo: data.email,
+            subject: `New Contact Inquiry from ${data.name}`,
+            html: `
+                <h2>New Contact Inquiry</h2>
+                <p><strong>Name/Agency:</strong> ${data.name}</p>
+                <p><strong>Email:</strong> ${data.email}</p>
+                <p><strong>Phone:</strong> ${data.phone}</p>
+                <p><strong>Client Type:</strong> ${data.clientType}</p>
+                <br/>
+                <p><strong>Message:</strong></p>
+                <p style="white-space: pre-wrap; background: #f4f4f5; padding: 12px; border-radius: 8px;">${data.comment}</p>
+            `
+        });
+
+        return { success: true, message: 'Message received' };
+    } catch (error) {
+        console.error("Error submitting contact form:", error);
+        return { success: false, message: 'Failed to submit form' };
+    }
+}

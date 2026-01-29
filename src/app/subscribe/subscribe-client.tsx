@@ -181,18 +181,16 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                         <section className="panel reveal">
                             <div className="kicker"><span className="pill"></span> Limited-time offer</div>
                             <div className="pricebox">
-                                <h2 className="plan-title">{displayName} Subscription</h2>
+                                <h2 className="plan-title">ReferralFlow Subscription</h2>
                                 <p className="plan-desc">Lightweight referral intake and tracking for agencies that want to handle referrals better without replacing existing systems.</p>
 
                                 <div className="price-row">
                                     <div>
-                                        <div className="was">$149.99/mo</div>
                                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                                             <div className="now">$129.99</div>
                                             <div className="per">/ month</div>
                                         </div>
                                     </div>
-                                    <div className="save">Save $20/mo</div>
                                 </div>
 
                                 <div className="features">
@@ -219,7 +217,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                         <input
                                             id="agency"
                                             type="text"
-                                            placeholder="e.g., Central Home Health"
+                                            placeholder="e.g., Best Home Care"
                                             autoComplete="organization"
                                             value={formData.agency}
                                             onChange={e => setFormData({ ...formData, agency: e.target.value })}
@@ -230,7 +228,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                         <input
                                             id="name"
                                             type="text"
-                                            placeholder="e.g., Alex Guerra"
+                                            placeholder="e.g., John Smith"
                                             autoComplete="name"
                                             value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
