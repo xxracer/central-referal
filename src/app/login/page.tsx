@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { checkUserAgencies } from './actions';
+import { createSession } from '@/lib/auth-actions';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ReCAPTCHA from "react-google-recaptcha";
 
@@ -42,6 +43,11 @@ export default function LoginPage() {
 
     const handlePostLogin = async (user: any, isNewUser: boolean) => {
         if (user && user.email) {
+            // 1. Create Server Session (COOKIE)
+            // Get the ID token from the user object (Firebase Client SDK)
+            const idToken = await user.getIdToken();
+            await createSession(idToken);
+
             // Check if user belongs to any agencies
             const { agencies } = await checkUserAgencies(user.email);
 

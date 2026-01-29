@@ -1,6 +1,7 @@
 
 'use server';
 import { adminDb } from '@/lib/firebase-admin';
+import { verifySession } from '@/lib/auth-actions';
 import type { Referral } from '@/lib/types';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
@@ -32,6 +33,13 @@ function convertTimestampsToDates(obj: any): any {
 
 
 export async function getReferrals(agencyId: string, filters?: { search?: string; startDate?: Date; endDate?: Date; isArchived?: boolean }): Promise<Referral[]> {
+    const user = await verifySession();
+    if (!user) {
+        console.error('[Security] Access denied: No active session for getReferrals');
+        throw new Error('Unauthorized');
+    }
+    // Optional: Check if user belongs to agencyId? For now, at least require Login.
+
     const firestore = getDb();
     let snapshot;
     try {
@@ -109,6 +117,9 @@ export async function getReferrals(agencyId: string, filters?: { search?: string
 }
 
 export async function getReferralById(id: string): Promise<Referral | undefined> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
     const firestore = getDb();
     if (!id) return undefined;
     const docRef = firestore.collection('referrals').doc(id);
@@ -134,6 +145,9 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
 }
 
 export async function saveReferral(referral: Referral): Promise<Referral> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
     const firestore = getDb();
     const docRef = firestore.collection('referrals').doc(referral.id);
 
@@ -168,6 +182,11 @@ export async function saveReferral(referral: Referral): Promise<Referral> {
 }
 
 export async function findReferral(id: string): Promise<Referral | undefined> {
+    // This function seems similar to getReferralById but logic slightly different?
+    // Secure it too.
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
     const firestore = getDb();
     if (!id) return undefined;
     const docRef = firestore.collection('referrals').doc(id);
@@ -191,6 +210,9 @@ export async function findReferral(id: string): Promise<Referral | undefined> {
 }
 
 export async function toggleArchiveReferral(id: string, isArchived: boolean): Promise<boolean> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
     const firestore = getDb();
     try {
         await firestore.collection('referrals').doc(id).update({
@@ -205,6 +227,9 @@ export async function toggleArchiveReferral(id: string, isArchived: boolean): Pr
 }
 
 export async function markReferralAsSeen(id: string): Promise<void> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
     const firestore = getDb();
     try {
         await firestore.collection('referrals').doc(id).update({
@@ -217,6 +242,9 @@ export async function markReferralAsSeen(id: string): Promise<void> {
 }
 
 export async function getUnseenReferralCount(agencyId: string): Promise<number> {
+    const user = await verifySession();
+    if (!user) return 0; // Fail safe
+
     const firestore = getDb();
     try {
         // PERF: Query by agencyId only and filter isSeen in memory to avoid composite index requirement

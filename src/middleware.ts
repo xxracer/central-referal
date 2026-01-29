@@ -29,6 +29,21 @@ export default async function middleware(req: NextRequest) {
         return NextResponse.redirect('https://google.com');
     }
     // ---------------------------------
+    // ---------------------------------
+    // SECURITY: PROTECT DASHBOARD
+    // ---------------------------------
+    if (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/super-admin')) {
+        const session = req.cookies.get('session');
+        // We cannot verify the token signature in Edge Middleware (firebase-admin is Node only),
+        // so we check for existence. The actual token verification happens in Server Actions/Components.
+        if (!session) {
+            const loginUrl = new URL('/login', req.url);
+            // Optionally add return URL
+            // loginUrl.searchParams.set('from', url.pathname);
+            return NextResponse.redirect(loginUrl);
+        }
+    }
+    // ---------------------------------
 
     // Allowed domains list (including localhost)
     // In production, you'd add your root domain here
