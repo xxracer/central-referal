@@ -33,7 +33,11 @@ function convertTimestampsToDates(obj: any): any {
 
 
 export async function getReferrals(agencyId: string, filters?: { search?: string; startDate?: Date; endDate?: Date; isArchived?: boolean }): Promise<Referral[]> {
+    // [SECURITY DEBUG]
+    console.log('[Security] getReferrals called. Agency:', agencyId);
     const user = await verifySession();
+    console.log('[Security] Session User:', user ? user.uid : 'NULL (Unauthorized)');
+
     if (!user) {
         console.error('[Security] Access denied: No active session for getReferrals');
         throw new Error('Unauthorized');

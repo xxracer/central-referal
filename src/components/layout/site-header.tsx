@@ -29,11 +29,7 @@ export default function SiteHeader({ logoUrl, companyName }: SiteHeaderProps) {
             Check Status
           </Link>
         </Button>
-        <Button variant="ghost" asChild className="hidden md:flex">
-          <Link href="https://referralflow.health/contact" prefetch={false}>
-            Contact
-          </Link>
-        </Button>
+
         <div className="hidden md:block w-px h-6 bg-border" />
         <Button asChild variant="secondary" size="sm" className="h-9 px-4">
           <Link href="/dashboard" prefetch={false}>

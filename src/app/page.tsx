@@ -9,7 +9,7 @@ import { getAgencySettings } from '@/lib/settings';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import LandingPage from '@/components/landing/landing-page';
-import ContactSection from '@/components/landing/contact-section';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -138,7 +138,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
             )}
           </div>
         </section>
-        <ContactSection />
+
       </main>
       <footer className="flex flex-col items-center justify-center py-8 border-t bg-background/50 backdrop-blur-sm gap-4">
         <div className="flex gap-6 text-sm font-medium text-foreground/70">
