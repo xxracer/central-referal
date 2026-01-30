@@ -82,8 +82,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                 </div>
                 <div className="flex flex-col gap-4 w-full sm:flex-row">
                   <Button asChild size="lg" className="h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full transition-all hover:scale-105 active:scale-95">
-                    <Link href="/subscribe" prefetch={false}>
-                      Get Started
+                    <Link href="/refer" prefetch={false}>
+                      Submit Referral
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
