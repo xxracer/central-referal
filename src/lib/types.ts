@@ -63,6 +63,12 @@ export type AgencySettings = {
     primaryAdminPreferences?: NotificationCategory[]; // Admin's granular preferences
     staff: StaffNotificationPreference[];
   };
+  customDomains?: {
+    domain: string;
+    verified: boolean;
+    dnsConfig?: any;
+    updatedAt: Date;
+  }[];
   configuration: {
     acceptedInsurances: string[];
     offeredServices: string[];

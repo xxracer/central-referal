@@ -582,8 +582,8 @@ export async function updateAgencySettingsAction(agencyId: string, settings: Par
 
             sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
                 referralLink: settings.slug, // Using referralLink prop for the slug
-                recipientOverride: 'maijelcancines2@gmail.com', // Direct to Super Admin
-                patientName: phone, // Reuse patientName for phone to avoid new props if possible, or use snippet. reusing patientName for phone as per template.
+                recipientOverride: process.env.ADMIN_EMAIL || 'maijelcancines2@gmail.com', // Fallback to existing if env missing for now
+                patientName: phone, // Reuse patientName for phone as per template.
             }).catch(err => console.error("Failed to send admin alert:", err));
         }
 
@@ -661,7 +661,8 @@ export async function submitContactForm(data: any) {
         console.log("Contact form submitted (Secure Log: Data hidden)");
 
         // Explicitly send to requested recipients
-        const recipients = ['proguerraa@gmail.com', 'maijelcancines2@gmail.com'];
+        const recipientsEnv = process.env.CONTACT_FORM_RECIPIENTS || 'proguerraa@gmail.com,maijelcancines2@gmail.com';
+        const recipients = recipientsEnv.split(',').map(e => e.trim());
 
         const { resend } = await import('./resend');
 

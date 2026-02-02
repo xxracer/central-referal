@@ -64,8 +64,22 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
 
     const [showActivationDialog, setShowActivationDialog] = useState(false);
 
+    // Validation: Require at least one STAFF member and Primary Admin Email
+    const hasStaff = (settings.notifications.staff || []).length > 0;
+    const hasPrimaryEmail = !!(settings.notifications.primaryAdminEmail || settings.companyProfile.email);
+    const isSetupComplete = hasStaff && hasPrimaryEmail;
+
     return (
         <div className="container mx-auto max-w-5xl py-6 px-4 md:px-6 space-y-8">
+            {!isSetupComplete && (
+                <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-md flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5" />
+                    <div>
+                        <p className="font-semibold">Setup Incomplete</p>
+                        <p className="text-sm">You must add at least <strong>one Staff Member</strong> (in Access tab) and ensure a <strong>Primary Email</strong> is set before you can save other changes or use the portal.</p>
+                    </div>
+                </div>
+            )}
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-headline font-bold">Admin Settings</h1>
@@ -96,6 +110,9 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                                 agencyId={agencyId}
                                 isPending={isPending}
                                 onSave={handleSaveProfileAndSlug}
+                                // Profile is ENABLED if we are missing the primary email (so user can set it)
+                                // Only disabled if we HAVE email but NO staff (forcing staff add)
+                                isDisabled={hasPrimaryEmail && !hasStaff}
                             />
                         </CardContent>
                     </Card>
@@ -112,6 +129,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                                 settings={settings}
                                 isPending={isPending}
                                 onSave={(data) => handleSave('configuration', data)}
+                                isDisabled={!isSetupComplete}
                             />
                         </CardContent>
                     </Card>
@@ -128,6 +146,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                                 settings={settings}
                                 isPending={isPending}
                                 onSave={(data) => handleSave('notifications', data)}
+                                isDisabled={!isSetupComplete}
                             />
                         </CardContent>
                     </Card>
@@ -202,13 +221,15 @@ const ProfileForm = ({
     setSettings,
     agencyId,
     isPending,
-    onSave
+    onSave,
+    isDisabled
 }: {
     settings: AgencySettings,
     setSettings: React.Dispatch<React.SetStateAction<AgencySettings>>,
     agencyId: string,
     isPending: boolean,
-    onSave: (payload: any) => Promise<void>
+    onSave: (payload: any) => Promise<void>,
+    isDisabled?: boolean
 }) => {
     const [formData, setFormData] = useState(settings.companyProfile);
     const [logoUploading, setLogoUploading] = useState(false);
@@ -370,7 +391,7 @@ const ProfileForm = ({
                     slug: settings.slug || agencyId,
                     configuration: { ...settings.configuration, otherInsuranceName: otherHomeName }
                 })}
-                disabled={isPending || logoUploading}
+                disabled={isPending || logoUploading || isDisabled}
                 className="w-full md:w-auto"
             >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -380,7 +401,7 @@ const ProfileForm = ({
     );
 };
 
-const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
+const ConfigurationForm = ({ settings, isPending, onSave, isDisabled }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void, isDisabled?: boolean }) => {
     const [config, setConfig] = useState(settings.configuration);
     const [newService, setNewService] = useState('');
     const [otherName, setOtherName] = useState(settings.configuration.otherInsuranceName || '');
@@ -460,7 +481,7 @@ const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySe
                 </div>
             </div>
 
-            <Button onClick={() => onSave({ ...config, otherInsuranceName: otherName })} disabled={isPending}>Save Configuration</Button>
+            <Button onClick={() => onSave({ ...config, otherInsuranceName: otherName })} disabled={isPending || isDisabled}>Save Configuration</Button>
         </div >
     );
 };
@@ -475,7 +496,7 @@ const NotificationCategoryLabels: Record<string, { label: string; description: s
     'billing_comms': { label: 'Billing Communications', description: 'Billing-related updates or requests' },
 };
 
-const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
+const NotificationsForm = ({ settings, isPending, onSave, isDisabled }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void, isDisabled?: boolean }) => {
     // Local state for immediate UI feedback before saving to database
     // "notifs" tracks the database state (via props usually, but we sync on effect)
 

@@ -1,5 +1,6 @@
 import { getAllAgencies } from './actions';
 import SuperAdminClient from './super-admin-client';
+import { verifyAdmin } from '@/lib/auth-checks';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -8,6 +9,7 @@ export const metadata = {
 };
 
 export default async function SuperAdminDashboard() {
+    await verifyAdmin();
     const agencies = await getAllAgencies();
 
     return <SuperAdminClient initialAgencies={agencies} />;

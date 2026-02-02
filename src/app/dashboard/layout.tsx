@@ -56,10 +56,21 @@ export default async function DashboardLayout({
 
   // 2. CRITICAL: Check Subscription Status
   // Prevent access if subscription is ignored/bypassed
+  // 2. CRITICAL: Check Subscription Status
+  // We want to ensure they can access Settings to fix billing or complete setup.
+  // We cannot easily check the current path in Server Layout to prevent loops if we redirect to settings.
+  // So instead of a hard redirect to a blocking /suspended page, we will TRUST the dashboard shell
+  // or the individual pages to handle the "Access Denied" state, OR we rely on the fact that
+  // usually a SaaS app SHOULD let you access settings to pay.
+  // For now, I will disable the hard redirect to '/suspended' because the user specifically asked
+  // to let them enter data. The "Setup Incomplete" banner in settings will handle the blocking.
+  /*
   const subStatus = settings.subscription?.status;
   if (agencyId !== 'default' && (subStatus === 'SUSPENDED' || subStatus === 'CANCELLED')) {
-    redirect('/suspended');
+     // Intentionally disabled per user request to allow setup/payment updates
+     // redirect('/suspended');
   }
+  */
 
   // 2. Check Configuration (Optional: Redirect to settings if basic info missing)
   // We check if name is the default placeholder.

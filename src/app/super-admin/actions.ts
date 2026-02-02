@@ -8,6 +8,8 @@ import { getReferralCount } from '@/lib/data';
 const SETTINGS_COLLECTION = 'agencySettings';
 
 export async function getAllAgencies(): Promise<(AgencySettings & { referralCount: number })[]> {
+    const { verifyAdmin } = await import('@/lib/auth-checks');
+    await verifyAdmin();
     try {
         const snapshot = await adminDb.collection(SETTINGS_COLLECTION).get();
 
@@ -50,6 +52,8 @@ export async function getAllAgencies(): Promise<(AgencySettings & { referralCoun
 }
 
 export async function toggleAgencyStatus(agencyId: string, currentStatus: string): Promise<{ success: boolean; message: string }> {
+    const { verifyAdmin } = await import('@/lib/auth-checks');
+    await verifyAdmin();
     try {
         const newStatus = currentStatus === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
         await adminDb.collection(SETTINGS_COLLECTION).doc(agencyId).update({
@@ -95,6 +99,8 @@ export async function updateAgencySubscription(
     agencyId: string,
     data: { endDate?: string; plan?: string; status?: string; slug?: string }
 ): Promise<{ success: boolean; message: string }> {
+    const { verifyAdmin } = await import('@/lib/auth-checks');
+    await verifyAdmin();
     try {
         const updateData: any = {};
         if (data.endDate) updateData['subscription.endDate'] = new Date(data.endDate);
@@ -139,6 +145,8 @@ export async function updateAgencySubscription(
 }
 
 export async function sendActivationEmail(agencyId: string): Promise<{ success: boolean; message: string }> {
+    const { verifyAdmin } = await import('@/lib/auth-checks');
+    await verifyAdmin();
     try {
         const { getAgencySettings } = await import('@/lib/settings');
         const { sendReferralNotification } = await import('@/lib/email');
@@ -175,6 +183,8 @@ export async function sendActivationEmail(agencyId: string): Promise<{ success: 
 }
 
 export async function deleteAgency(agencyId: string): Promise<{ success: boolean; message: string }> {
+    const { verifyAdmin } = await import('@/lib/auth-checks');
+    await verifyAdmin();
     try {
         // 1. Delete Agency Settings
         await adminDb.collection(SETTINGS_COLLECTION).doc(agencyId).delete();
