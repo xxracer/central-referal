@@ -478,11 +478,9 @@ const NotificationCategoryLabels: Record<string, { label: string; description: s
 const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
     // Local state for immediate UI feedback before saving to database
     // "notifs" tracks the database state (via props usually, but we sync on effect)
-    // Actually we should use local state for the form, and onSave propagates up.
 
     // We need to sync with parent settings
     const [notifs, setNotifs] = useState(settings.notifications);
-    const [isAddingStaff, setIsAddingStaff] = useState(false);
 
     useEffect(() => {
         setNotifs(settings.notifications);
@@ -491,56 +489,9 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
     // Derived state for Primary Admin (fallback to profiled email if not explicit)
     const primaryAdminEmail = notifs.primaryAdminEmail || settings.companyProfile.email;
 
-    // --- Actions ---
+    // --- Actions (Preferences Only) ---
 
-    const handleAddStaff = async (newStaff: { email: string; enabledCategories: string[]; tempPassword?: string }) => {
-        const currentStaff = notifs.staff || [];
-        // Prevent duplicates
-        if (currentStaff.some(s => s.email === newStaff.email)) {
-            alert('Staff member already exists.');
-            return;
-        }
-
-        if (newStaff.tempPassword) {
-            try {
-                // Dynamically import to avoid server-action-in-client-component issues if not careful, 
-                // though direct import of action is fine in client components usually.
-                // Using dynamic to be safe and cleaner since it's conditional.
-                const { provisionStaffUser } = await import('@/lib/actions');
-                const result = await provisionStaffUser(settings.id, newStaff.email, newStaff.tempPassword, newStaff.email.split('@')[0]);
-
-                if (!result.success) {
-                    alert('Error provisioning staff: ' + result.message);
-                    return;
-                }
-
-                // Show success toast?
-                // alert('User provisioned with encryption.');
-            } catch (e: any) {
-                alert('Provisioning failed: ' + e.message);
-                return;
-            }
-        }
-
-        const updatedStaff = [...currentStaff, {
-            email: newStaff.email,
-            enabledCategories: newStaff.enabledCategories as any[],
-            requiresPasswordReset: !!newStaff.tempPassword
-        }];
-
-        const updatedNotifs = { ...notifs, staff: updatedStaff };
-        setNotifs(updatedNotifs);
-        onSave(updatedNotifs);
-        setIsAddingStaff(false);
-    };
-
-    const handleRemoveStaff = (email: string) => {
-        if (!confirm('Are you sure you want to remove this staff member?')) return;
-        const updatedStaff = (notifs.staff || []).filter(s => s.email !== email);
-        const updatedNotifs = { ...notifs, staff: updatedStaff };
-        setNotifs(updatedNotifs);
-        onSave(updatedNotifs);
-    };
+    // Note: Staff Addition/Removal moved to Access Tab per user request.
 
     const handleUpdateStaff = (email: string, newCategories: string[]) => {
         const updatedStaff = (notifs.staff || []).map(s => {
@@ -558,8 +509,7 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
         <div className="space-y-10">
             {/* Header / Intro */}
             <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">The primary admin email receives all notifications by default.</p>
-                <p className="text-sm text-muted-foreground">You can control which notifications additional staff receive below.</p>
+                <p className="text-sm text-muted-foreground">Configure which alerts each team member receives.</p>
             </div>
 
             {/* SECTION 1 — PRIMARY ADMIN (Now Editable) */}
@@ -580,32 +530,23 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
                         setNotifs(updatedNotifs);
                         onSave(updatedNotifs);
                     }}
-                    onRemove={() => alert("Cannot remove Primary Admin.")}
-                    isLocked={false} // Allow editing!
+                    onRemove={() => { }} // No op
                     hideRemove={true}
+                    isLocked={false}
                 />
             </div>
 
             {/* SECTION 2 — STAFF NOTIFICATIONS */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Staff Notifications</h3>
-                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff}>
-                        <Plus className="h-4 w-4 mr-2" /> Add Staff Member
-                    </Button>
+                    <h3 className="text-lg font-semibold">Staff Alerts</h3>
+                    <p className="text-sm text-muted-foreground">Manage staff access in the <span className="font-semibold text-primary">Access</span> tab.</p>
                 </div>
 
-                {isAddingStaff && (
-                    <AddStaffForm
-                        onCancel={() => setIsAddingStaff(false)}
-                        onAdd={handleAddStaff}
-                    />
-                )}
-
                 <div className="space-y-6">
-                    {(notifs.staff || []).length === 0 && !isAddingStaff && (
+                    {(notifs.staff || []).length === 0 && (
                         <p className="text-sm text-muted-foreground italic text-center py-8 border-2 border-dashed rounded-lg">
-                            No additional staff members configured.
+                            No additional staff members found. Add them in the Access tab.
                         </p>
                     )}
                     {(notifs.staff || []).map(member => (
@@ -613,7 +554,8 @@ const NotificationsForm = ({ settings, isPending, onSave }: { settings: AgencySe
                             key={member.email}
                             member={member}
                             onUpdate={handleUpdateStaff}
-                            onRemove={handleRemoveStaff}
+                            onRemove={() => { }} // Hidden or no-op here implies managed elsewhere
+                            hideRemove={true} // Hide remove button here, strict separation
                         />
                     ))}
                 </div>
@@ -841,6 +783,21 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
     const [access, setAccess] = useState(settings.userAccess);
     const [newDomain, setNewDomain] = useState('');
 
+    // Staff State (synced from settings.notifications.staff for management)
+    // We update settings.notifications implicitly when we add staff here.
+    // Wait, onSave in UserAccessForm usually saves 'userAccess' slice?
+    // settings-client page logic: handleSave('userAccess', data).
+    // We need to save 'notifications' slice too if we modify staff list.
+    // We might need to call a different save, or parent needs to handle multi-slice updates.
+    // HACK: We will use a special server action or just update both if we can, 
+    // BUT current architecture passes `onSave={(data) => handleSave('userAccess', data)}`.
+    // This restricts us to saving only userAccess.
+    // We should modify the parent to allow saving arbitrary partial settings from here, 
+    // OR we just use `updateAgencySettingsAction` directly here for staff.
+    // Direct action is better for "Provisioning" anyway.
+
+    const [isAddingStaff, setIsAddingStaff] = useState(false);
+
     // Password State
     const [newPass, setNewPass] = useState('');
     const [cPass, setCPass] = useState('');
@@ -849,6 +806,70 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
     useEffect(() => {
         setAccess(settings.userAccess);
     }, [settings.userAccess]);
+
+    const handleAddStaff = async (newStaff: { email: string; enabledCategories: string[]; tempPassword?: string }) => {
+        try {
+            // Check duplicates
+            const currentStaff = settings.notifications.staff || [];
+            if (currentStaff.some(s => s.email === newStaff.email)) {
+                alert('Staff member already exists.');
+                return;
+            }
+
+            if (newStaff.tempPassword) {
+                // Provision with password
+                const { provisionStaffUser } = await import('@/lib/actions');
+                const result = await provisionStaffUser(settings.id, newStaff.email, newStaff.tempPassword, newStaff.email.split('@')[0]);
+                if (!result.success) {
+                    alert('Error: ' + result.message);
+                    return;
+                }
+            } else {
+                // Custom logic to just add to DB if no password provisioning needed (rare for "staff" but maybe just listing them?)
+                // Actually provisionStaffUser handles the DB update too. 
+                // If no password, we should probably still call provision but generate one? 
+                // Or just add to settings?
+                // Let's assume for now we ALWAYS leverage provisionStaffUser for consistency, passing empty pass maybe?
+                // The definition of provisionStaffUser says passwordToUse generated if empty. Perfect.
+                const { provisionStaffUser } = await import('@/lib/actions');
+                const result = await provisionStaffUser(settings.id, newStaff.email, undefined, newStaff.email.split('@')[0]);
+                if (!result.success) {
+                    alert('Error: ' + result.message);
+                    return;
+                }
+            }
+
+            alert('Staff member added successfully.');
+            setIsAddingStaff(false);
+            // Trigger refresh or router refresh?
+            window.location.reload(); // Simplest way to resync everything since we bypassed parent props
+        } catch (e: any) {
+            alert('Failed: ' + e.message);
+        }
+    };
+
+    // We use a direct delete action for staff to be clean
+    const removeStaff = async (email: string) => {
+        if (!confirm('Remove this user and their access?')) return;
+        const currentStaff = settings.notifications.staff || [];
+        const updatedStaff = currentStaff.filter(s => s.email !== email);
+
+        // We need to update settings.notifications
+        // And also access.authorizedEmails probably?
+
+        try {
+            const { updateAgencySettingsAction } = await import('@/lib/actions');
+            await updateAgencySettingsAction(settings.id, {
+                notifications: {
+                    ...settings.notifications,
+                    staff: updatedStaff
+                }
+            });
+            window.location.reload();
+        } catch (e) {
+            alert("Error removing staff");
+        }
+    };
 
     const addDomain = () => {
         if (newDomain && !access.authorizedDomains.includes(newDomain)) {
@@ -988,16 +1009,62 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
                 )}
                 <Button onClick={() => {
                     let finalAccess = access;
-                    // Auto-add pending domain if user forgot to click plus
-                    if (newDomain && !access.authorizedDomains.includes(newDomain)) {
-                        finalAccess = { ...access, authorizedDomains: [...access.authorizedDomains, newDomain] };
-                        setAccess(finalAccess);
-                        setNewDomain('');
-                    }
                     onSave(finalAccess);
                 }} disabled={isPending}>Save Access Settings</Button>
             </div>
-        </div>
+
+            {/* SECTION 3 — TEAM MEMBERS (Moved from Notifications) */}
+            <div className="space-y-4 pt-6 border-t">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-medium flex items-center gap-2">
+                            <UserCheck className="h-4 w-4" />
+                            Team Members
+                        </h3>
+                        <CardDescription>
+                            Manage staff accounts and login access.
+                        </CardDescription>
+                    </div>
+                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff} variant="outline">
+                        <Plus className="h-4 w-4 mr-2" /> Add Member
+                    </Button>
+                </div>
+
+                {isAddingStaff && (
+                    <AddStaffForm
+                        onCancel={() => setIsAddingStaff(false)}
+                        onAdd={handleAddStaff}
+                    />
+                )}
+
+                <div className="space-y-3">
+                    {(!settings.notifications.staff || settings.notifications.staff.length === 0) && !isAddingStaff && (
+                        <div className="p-4 border border-dashed rounded text-center text-sm text-muted-foreground">
+                            No additional staff members.
+                        </div>
+                    )}
+
+                    {(settings.notifications.staff || []).map(member => (
+                        <div key={member.email} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                                    {(member.email && member.email.length > 0) ? member.email[0].toUpperCase() : '?'}
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-sm font-medium">{member.name || 'Staff Member'}</p>
+                                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => removeStaff(member.email)}>
+                                Remove
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+        </div >
+
     );
 };
 
