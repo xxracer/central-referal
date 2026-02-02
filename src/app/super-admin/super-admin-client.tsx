@@ -28,8 +28,25 @@ import { useToast } from '@/hooks/use-toast';
 export default function SuperAdminClient({ initialAgencies }: { initialAgencies: (AgencySettings & { referralCount: number })[] }) {
     const [agencies, setAgencies] = useState(initialAgencies);
     const [editingAgency, setEditingAgency] = useState<AgencySettings | null>(null);
+    const [deletingAgencyId, setDeletingAgencyId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+
+    const handleDelete = async () => {
+        if (!deletingAgencyId) return;
+        setIsSaving(true);
+        const { deleteAgency } = await import('./actions'); // Dynamic import to avoid client-side bundling issues if any
+        const result = await deleteAgency(deletingAgencyId);
+        setIsSaving(false);
+        setDeletingAgencyId(null);
+
+        if (result.success) {
+            setAgencies(agencies.filter(a => a.id !== deletingAgencyId));
+            toast({ title: "Deleted", description: result.message });
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    };
 
     const handleToggleStatus = async (agencyId: string, currentStatus: string) => {
         const result = await toggleAgencyStatus(agencyId, currentStatus);

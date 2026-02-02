@@ -146,11 +146,15 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
 
     try {
         // 1. Check authorizedDomains
-        const domainQuery = await settingsColl.where('userAccess.authorizedDomains', 'array-contains', domain).get();
-        domainQuery.docs.forEach(doc => {
-            const data = convertTimestamps(doc.data()) as AgencySettings;
-            agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
-        });
+        // CRITICAL SECURITY: specific allow-list or block common public domains to prevent accidental exposure
+        const bannedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com'];
+        if (domain && !bannedDomains.includes(domain.toLowerCase())) {
+            const domainQuery = await settingsColl.where('userAccess.authorizedDomains', 'array-contains', domain).get();
+            domainQuery.docs.forEach(doc => {
+                const data = convertTimestamps(doc.data()) as AgencySettings;
+                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+            });
+        }
 
         // 2. Check authorizedEmails
         const emailQuery = await settingsColl.where('userAccess.authorizedEmails', 'array-contains', email).get();
