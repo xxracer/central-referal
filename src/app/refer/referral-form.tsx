@@ -180,12 +180,12 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             <CardContent className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="organizationName">Organization / Facility Name <span className="text-destructive">*</span></Label>
-                                    <Input id="organizationName" name="organizationName" placeholder="e.g., Memorial Hermann" required />
+                                    <Input id="organizationName" name="organizationName" placeholder="e.g., Memorial Hermann" required className="bg-blue-50 text-blue-900 border-blue-200" />
                                     {formState.errors?.organizationName && <p className="text-sm text-destructive">{formState.errors.organizationName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="contactName">Contact Name</Label>
-                                    <Input id="contactName" name="contactName" placeholder="e.g., Maria Lopez" />
+                                    <Input id="contactName" name="contactName" placeholder="e.g., Maria Lopez" className="bg-blue-50 text-blue-900 border-blue-200" />
                                     {formState.errors?.contactName && <p className="text-sm text-destructive">{formState.errors.contactName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
@@ -197,12 +197,13 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                         value={phone}
                                         onChange={handlePhoneChange}
                                         required
+                                        className="bg-blue-50 text-blue-900 border-blue-200"
                                     />
                                     {formState.errors?.phone && <p className="text-sm text-destructive">{formState.errors.phone[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email Address (for confirmation)</Label>
-                                    <Input id="email" type="email" name="email" placeholder="e.g., case.manager@facility.com" />
+                                    <Input id="email" type="email" name="email" placeholder="e.g., case.manager@facility.com" className="bg-blue-50 text-blue-900 border-blue-200" />
                                     {formState.errors?.email && <p className="text-sm text-destructive">{formState.errors.email[0]}</p>}
                                 </div>
                             </CardContent>
@@ -213,7 +214,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             <CardContent className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="patientFullName">Patient Full Name <span className="text-destructive">*</span></Label>
-                                    <Input id="patientFullName" name="patientFullName" placeholder="e.g., John Doe" required />
+                                    <Input id="patientFullName" name="patientFullName" placeholder="e.g., John Doe" required className="bg-blue-50 text-blue-900 border-blue-200" />
                                     {formState.errors?.patientFullName && <p className="text-sm text-destructive">{formState.errors.patientFullName[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
@@ -224,12 +225,13 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                         placeholder="MM/DD/YYYY"
                                         value={dob}
                                         onChange={handleDobChange}
+                                        className="bg-blue-50 text-blue-900 border-blue-200"
                                     />
                                     {formState.errors?.patientDOB && <p className="text-sm text-destructive">{formState.errors.patientDOB[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="patientZipCode">Patient ZIP Code <span className="text-destructive">*</span></Label>
-                                    <Input id="patientZipCode" name="patientZipCode" placeholder="e.g., 77005" required />
+                                    <Input id="patientZipCode" name="patientZipCode" placeholder="e.g., 77005" required className="bg-blue-50 text-blue-900 border-blue-200" />
                                     {formState.errors?.patientZipCode && <p className="text-sm text-destructive">{formState.errors.patientZipCode[0]}</p>}
                                 </div>
                             </CardContent>
@@ -241,10 +243,10 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                 <div className="space-y-2">
                                     <Label htmlFor="primaryInsurance">Primary Insurance Payer <span className="text-destructive">*</span></Label>
                                     <Select name="primaryInsurance" onValueChange={setSelectedInsurance}>
-                                        <SelectTrigger id="primaryInsurance" className="bg-white text-gray-900 border-input"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent className="bg-white text-gray-900">
-                                            {insuranceOptions.map(option => <SelectItem key={option} value={option} className="text-gray-900 focus:bg-gray-100 hover:bg-gray-100 cursor-pointer">{option}</SelectItem>)}
-                                            <SelectItem value="Other" className="text-gray-900 focus:bg-gray-100 hover:bg-gray-100 cursor-pointer">Not Listed / Other</SelectItem>
+                                        <SelectTrigger id="primaryInsurance" className="bg-blue-50 text-blue-900 border-blue-200 shadow-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent className="bg-white text-blue-900 border-blue-100">
+                                            {insuranceOptions.map(option => <SelectItem key={option} value={option} className="text-blue-900 focus:bg-blue-50 hover:bg-blue-50 cursor-pointer">{option}</SelectItem>)}
+                                            <SelectItem value="Other" className="text-blue-900 font-semibold focus:bg-blue-50 hover:bg-blue-50 cursor-pointer">Not Listed / Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {formState.errors?.primaryInsurance && <p className="text-sm text-destructive">{formState.errors.primaryInsurance[0]}</p>}
@@ -252,7 +254,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
 
                                 <div className="space-y-2">
                                     <Label htmlFor="otherInsurance">Other Insurance (if not listed above)</Label>
-                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" className="bg-white text-gray-900 placeholder:text-gray-400" />
+                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" className="bg-blue-50 text-blue-900 border-blue-200 placeholder:text-blue-400 shadow-sm" />
                                     {formState.errors?.otherInsurance && <p className="text-sm text-destructive">{formState.errors.otherInsurance[0]}</p>}
                                 </div>
 

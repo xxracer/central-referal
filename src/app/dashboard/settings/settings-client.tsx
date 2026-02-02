@@ -893,10 +893,23 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
     };
 
     const addDomain = () => {
-        if (newDomain && !access.authorizedDomains.includes(newDomain)) {
-            setAccess(prev => ({ ...prev, authorizedDomains: [...prev.authorizedDomains, newDomain] }));
-            setNewDomain('');
+        if (!newDomain) return;
+
+        const lowerDomain = newDomain.toLowerCase();
+        const bannedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com'];
+
+        if (bannedDomains.includes(lowerDomain)) {
+            alert('Security Restriction: You cannot add public email providers (Gmail, Yahoo, etc.) as authorized domains. Please use a corporate domain or add individual users via the Team Members section.');
+            return;
         }
+
+        if (access.authorizedDomains.includes(lowerDomain)) {
+            alert('Domain already added.');
+            return;
+        }
+
+        setAccess(prev => ({ ...prev, authorizedDomains: [...prev.authorizedDomains, lowerDomain] }));
+        setNewDomain('');
     };
 
     const removeDomain = (d: string) => {
