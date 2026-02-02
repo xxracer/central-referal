@@ -364,9 +364,11 @@ const ProfileForm = ({
 const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
     const [config, setConfig] = useState(settings.configuration);
     const [newService, setNewService] = useState('');
+    const [otherName, setOtherName] = useState(settings.configuration.otherInsuranceName || '');
 
     useEffect(() => {
         setConfig(settings.configuration);
+        setOtherName(settings.configuration.otherInsuranceName || '');
     }, [settings.configuration]);
 
     const addService = () => {
@@ -407,6 +409,19 @@ const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySe
                         </div>
                     ))}
                 </div>
+
+                {(config.acceptedInsurances || []).includes('Other') && (
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                        <Label>Custom Name for "Other" Insurance (Optional)</Label>
+                        <Input
+                            className="mt-2"
+                            placeholder="e.g., Local Health Plan"
+                            value={otherName}
+                            onChange={(e) => setOtherName(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">If set, this will appear in the dropdown menu for referrers.</p>
+                    </div>
+                )}
             </div>
 
             <div className="space-y-4">
@@ -426,8 +441,8 @@ const ConfigurationForm = ({ settings, isPending, onSave }: { settings: AgencySe
                 </div>
             </div>
 
-            <Button onClick={() => onSave(config)} disabled={isPending}>Save Configuration</Button>
-        </div>
+            <Button onClick={() => onSave({ ...config, otherInsuranceName: otherName })} disabled={isPending}>Save Configuration</Button>
+        </div >
     );
 };
 

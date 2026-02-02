@@ -152,8 +152,11 @@ async function uploadFiles(files: File[], referralId: string, agencyId: string):
             },
         });
 
-        await fileRef.makePublic();
-        const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        // REMOVED: await fileRef.makePublic(); // SECURITY: Do not make PHI public
+
+        // Return a reference that our new secure-image/file component can use.
+        // We'll store the direct path, and the frontend will request /api/files/...?path=...
+        const url = `_private/${filename}`;
 
         return {
             id: filename,
@@ -193,6 +196,13 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     }
 
     const { referralDocuments, progressNotes, servicesNeeded, ...rest } = validatedFields.data;
+    const {
+        organizationName, contactName, phone, email,
+        patientFullName, patientDOB, patientZipCode, isFaxingPaperwork,
+        primaryInsurance, otherInsurance, memberId, insuranceType, planName, planNumber, groupNumber,
+        diagnosis
+    } = validatedFields.data;
+
     const formDataForPdf = {
         ...rest,
         organizationName: rest.organizationName || '',
@@ -218,7 +228,12 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     const agencyId = headersList.get('x-agency-id') || 'default';
 
     // Simplified referral code: REF-XXXX (4 character random hex)
-    const referralId = `REF-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
+    // Secure Referral ID Generation: SHA-256 hash of random values, truncated to 6 chars
+    const { createHash } = await import('crypto');
+    const seed = `${Date.now()}-${Math.random()}-${organizationName || 'ref'}`;
+    const hash = createHash('sha256').update(seed).digest('hex');
+    const referralId = hash.substring(0, 6).toUpperCase();
+    // Example: "9A2B3C"
     let allUploadedDocuments: Document[] = [];
 
     try {
@@ -247,8 +262,10 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             },
         });
 
-        await pdfFile.makePublic();
-        const pdfUrl = `https://storage.googleapis.com/${bucket.name}/${pdfPath}`;
+        // REMOVED: await pdfFile.makePublic(); // SECURITY: Do not make PHI public
+        // For now, we store the internal storage path. 
+        // We will create a secure proxy route to serve this file via the dashboard using signed URLs or admin SDK.
+        const pdfUrl = `_private/${pdfPath}`; // Marker for frontend component to know it needs to fetch securely
 
         allUploadedDocuments.push({
             id: pdfPath,
@@ -263,12 +280,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     }
 
     const now = new Date();
-    const {
-        organizationName, contactName, phone, email,
-        patientFullName, patientDOB, patientZipCode, isFaxingPaperwork,
-        primaryInsurance, otherInsurance, memberId, insuranceType, planName, planNumber, groupNumber,
-        diagnosis
-    } = validatedFields.data;
+    // Destructuring happened above
 
     const newReferral: Referral = {
         id: referralId,
@@ -339,11 +351,31 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
 
 export async function checkStatus(prevState: FormState, formData: FormData): Promise<FormState> {
     const rawId = formData.get('referralId') as string;
-    const referralId = rawId ? rawId.trim() : '';
-    const referral = await findReferral(referralId);
+    const referralId = rawId ? rawId.trim().toUpperCase() : '';
+    const token = formData.get('g-recaptcha-response') as string;
+
+    if (!referralId) {
+        return { message: 'Referral ID is required.', success: false };
+    }
+
+    if (!token) {
+        return { message: 'Please complete the reCAPTCHA verification.', success: false };
+    }
+
+    // Verify reCAPTCHA
+    const { verifyRecaptcha } = await import('./recaptcha');
+    const isHuman = await verifyRecaptcha(token);
+
+    if (!isHuman) {
+        return { message: 'reCAPTCHA verification failed. Please try again.', success: false };
+    }
+
+    // Use secure public lookup
+    const { getPublicReferralStatus } = await import('./data');
+    const referral = await getPublicReferralStatus(referralId);
 
     if (!referral) {
-        return { message: 'No matching referral found. Please check the ID.', success: false };
+        return { message: 'No matching record found. Please check the Referral ID.', success: false };
     }
 
     const optionalNote = formData.get('optionalNote') as string;
@@ -626,7 +658,7 @@ export async function getUnseenReferralCountAction() {
 
 export async function submitContactForm(data: any) {
     try {
-        console.log("Contact form submitted:", data);
+        console.log("Contact form submitted (Secure Log: Data hidden)");
 
         // Explicitly send to requested recipients
         const recipients = ['proguerraa@gmail.com', 'maijelcancines2@gmail.com'];

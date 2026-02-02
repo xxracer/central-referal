@@ -4,6 +4,28 @@ import { adminDb } from '@/lib/firebase-admin';
 import { verifySession } from '@/lib/auth-actions';
 import type { Referral } from '@/lib/types';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { createHash } from 'crypto'; // For secure DOB comparison
+
+// Audit Log Structure
+type AuditEvent = {
+    action: string;
+    resourceId?: string;
+    agencyId?: string;
+    actor: string; // 'system', 'user:ID', 'public:IP'
+    details?: any;
+    timestamp: FieldValue;
+};
+
+async function logAudit(event: AuditEvent) {
+    try {
+        await adminDb.collection('audit_logs').add({
+            ...event,
+            timestamp: FieldValue.serverTimestamp() // Guaranteed server time
+        });
+    } catch (e) {
+        console.error("Failed to write audit log:", e);
+    }
+}
 
 // Helper to get db instance (consistent with previous code style, though direct export is fine)
 function getDb() {
@@ -40,8 +62,17 @@ export async function getReferrals(agencyId: string, filters?: { search?: string
 
     if (!user) {
         console.error('[Security] Access denied: No active session for getReferrals');
+        // Log basic header info if possible
         throw new Error('Unauthorized');
     }
+
+    // Log Access
+    logAudit({
+        action: 'VIEW_REFERRALS_LIST',
+        agencyId,
+        actor: `user:${user.uid}`,
+        details: { filters }
+    } as any);
     // Optional: Check if user belongs to agencyId? For now, at least require Login.
 
     const firestore = getDb();
@@ -271,4 +302,65 @@ export async function getUnseenReferralCount(agencyId: string): Promise<number> 
         console.error("Error counting unseen referrals:", e);
         return 0;
     }
+}
+
+export async function getReferralCount(agencyId: string): Promise<number> {
+    try {
+        const firestore = getDb();
+        const snapshot = await firestore.collection('referrals')
+            .where('agencyId', '==', agencyId)
+            .count()
+            .get();
+        return snapshot.data().count;
+    } catch (e) {
+        console.error(`Error counting referrals for agency ${agencyId}:`, e);
+        return 0;
+    }
+}
+
+export async function getPublicReferralStatus(referralId: string): Promise<Referral | null> {
+    if (!referralId) return null;
+
+    const firestore = getDb();
+
+    // 1. Fetch by ID
+    const docRef = firestore.collection('referrals').doc(referralId);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+        // Log secure failure (prevent enumeration)
+        logAudit({
+            action: 'PUBLIC_STATUS_CHECK_FAILED',
+            resourceId: referralId,
+            actor: 'public',
+            details: { reason: 'not_found' }
+        } as any);
+        return null;
+    }
+
+    const data = convertTimestampsToDates(docSnap.data());
+
+    // 2. Success - Log and Return LIMITED data
+    logAudit({
+        action: 'PUBLIC_STATUS_CHECK_SUCCESS',
+        resourceId: referralId,
+        agencyId: data.agencyId,
+        actor: 'public'
+    } as any);
+
+    // Return full object? status-client uses it. 
+    // Ensure we don't leak sensitive internal notes if they exist (though client component filters UI).
+    // Let's strip internal notes for safety.
+    const safeData = { ...data };
+    delete safeData.internalNotes;
+
+    // Migration logic for external notes (same as other getters)
+    if (safeData.externalNotes) {
+        safeData.externalNotes = safeData.externalNotes.map((n: any) => ({
+            ...n,
+            createdAt: n.createdAt instanceof Date ? n.createdAt : new Date(n.createdAt)
+        }));
+    }
+
+    return safeData as Referral;
 }

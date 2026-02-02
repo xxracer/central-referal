@@ -16,6 +16,8 @@ import { cn, formatDate } from '@/lib/utils';
 import StatusBadge from '@/components/referrals/status-badge';
 import { useFormStatus } from 'react-dom';
 import { type AgencySettings } from '@/lib/types';
+import ReCAPTCHA from "react-google-recaptcha";
+import { useRef } from 'react';
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
     const { pending } = useFormStatus();
@@ -30,6 +32,8 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
     const searchParams = useSearchParams();
     const initialReferralId = useMemo(() => searchParams.get('id') || '', [searchParams]);
     const [referralId, setReferralId] = useState(initialReferralId);
+    const recaptchaRef = useRef<ReCAPTCHA>(null);
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
     const initialState: FormState = { message: '', success: false };
     const [formState, dispatch] = useActionState(checkStatus, initialState);
@@ -50,6 +54,10 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
     useEffect(() => {
         if (formState.success && !initialReferralId) {
             // No longer clearing referralId to keep it fixed
+        }
+        if (!formState.success) {
+            recaptchaRef.current?.reset();
+            setCaptchaToken(null);
         }
     }, [formState, initialReferralId]);
 
@@ -88,6 +96,16 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                             className={cn("bg-background", showResults && "bg-muted cursor-not-allowed")}
                                             readOnly={showResults}
                                             required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2 flex flex-col items-center">
+                                        <Input type="hidden" name="g-recaptcha-response" value={captchaToken || ''} />
+                                        <ReCAPTCHA
+                                            ref={recaptchaRef}
+                                            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"} // Test Key default
+                                            onChange={(token) => setCaptchaToken(token)}
+                                            size="normal"
                                         />
                                     </div>
                                     {showResults && (
@@ -205,8 +223,8 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                         </div>
                     )}
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
 

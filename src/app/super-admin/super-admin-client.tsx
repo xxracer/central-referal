@@ -25,7 +25,7 @@ import {
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export default function SuperAdminClient({ initialAgencies }: { initialAgencies: AgencySettings[] }) {
+export default function SuperAdminClient({ initialAgencies }: { initialAgencies: (AgencySettings & { referralCount: number })[] }) {
     const [agencies, setAgencies] = useState(initialAgencies);
     const [editingAgency, setEditingAgency] = useState<AgencySettings | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +122,7 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Agency / Subdomain</TableHead>
+                                    <TableHead>Total Referrals</TableHead>
                                     <TableHead>Current Phase</TableHead>
                                     <TableHead>Account Status</TableHead>
                                     <TableHead>Renewal Date</TableHead>
@@ -171,6 +172,11 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                                         )}
                                                     </span>
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="font-mono">
+                                                    {(agency as any).referralCount || 0}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="secondary" className="font-bold">

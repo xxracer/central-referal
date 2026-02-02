@@ -3,13 +3,15 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { AgencySettings } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { getReferralCount } from '@/lib/data';
 
 const SETTINGS_COLLECTION = 'agencySettings';
 
-export async function getAllAgencies(): Promise<AgencySettings[]> {
+export async function getAllAgencies(): Promise<(AgencySettings & { referralCount: number })[]> {
     try {
         const snapshot = await adminDb.collection(SETTINGS_COLLECTION).get();
-        return snapshot.docs.map(doc => {
+
+        const agencies = snapshot.docs.map(doc => {
             const data = doc.data() as any;
 
             // Basic data conversion (similar to settings.ts)
@@ -33,6 +35,14 @@ export async function getAllAgencies(): Promise<AgencySettings[]> {
                 subscription: converted.subscription || { plan: 'FREE', status: 'ACTIVE' }
             } as AgencySettings;
         });
+
+        // Fetch counts in parallel
+        const agenciesWithCounts = await Promise.all(agencies.map(async (agency) => {
+            const count = await getReferralCount(agency.id);
+            return { ...agency, referralCount: count };
+        }));
+
+        return agenciesWithCounts;
     } catch (error) {
         console.error('Error fetching agencies:', error);
         return [];

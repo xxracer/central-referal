@@ -105,6 +105,13 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
         insuranceOptions = ["Medicare"];
     }
 
+    // Insert custom 'Other' name if defined
+    if (settings.configuration.otherInsuranceName) {
+        // Prepend or append? Usually specialized ones go along with others.
+        // Let's prepend it to ensure visibility or append. Alphabetical is handled by user order? No order is arbitrary.
+        insuranceOptions = [...insuranceOptions, settings.configuration.otherInsuranceName];
+    }
+
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, setFiles: React.Dispatch<React.SetStateAction<File[]>>) => {
         const newFiles = Array.from(event.target.files || []);
         if (newFiles.length > 0) {

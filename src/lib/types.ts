@@ -66,6 +66,7 @@ export type AgencySettings = {
   configuration: {
     acceptedInsurances: string[];
     offeredServices: string[];
+    otherInsuranceName?: string;
   };
   userAccess: {
     authorizedDomains: string[];
