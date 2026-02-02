@@ -241,10 +241,10 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                 <div className="space-y-2">
                                     <Label htmlFor="primaryInsurance">Primary Insurance Payer <span className="text-destructive">*</span></Label>
                                     <Select name="primaryInsurance" onValueChange={setSelectedInsurance}>
-                                        <SelectTrigger id="primaryInsurance"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {insuranceOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                                            <SelectItem value="Other">Not Listed / Other</SelectItem>
+                                        <SelectTrigger id="primaryInsurance" className="bg-white text-gray-900 border-input"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent className="bg-white text-gray-900">
+                                            {insuranceOptions.map(option => <SelectItem key={option} value={option} className="text-gray-900 focus:bg-gray-100 hover:bg-gray-100 cursor-pointer">{option}</SelectItem>)}
+                                            <SelectItem value="Other" className="text-gray-900 focus:bg-gray-100 hover:bg-gray-100 cursor-pointer">Not Listed / Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {formState.errors?.primaryInsurance && <p className="text-sm text-destructive">{formState.errors.primaryInsurance[0]}</p>}
@@ -252,7 +252,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
 
                                 <div className="space-y-2">
                                     <Label htmlFor="otherInsurance">Other Insurance (if not listed above)</Label>
-                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" />
+                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" className="bg-white text-gray-900 placeholder:text-gray-400" />
                                     {formState.errors?.otherInsurance && <p className="text-sm text-destructive">{formState.errors.otherInsurance[0]}</p>}
                                 </div>
 
