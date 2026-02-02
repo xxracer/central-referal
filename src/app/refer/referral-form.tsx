@@ -99,11 +99,13 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
     // Use insurances from configuration, or fallback to home page insurances, or final minimal fallback
     let insuranceOptions = (settings.configuration.acceptedInsurances || []).filter(i => i.toLowerCase() !== 'other');
     if (insuranceOptions.length === 0) {
+        // Fallback to home insurances
         insuranceOptions = (settings.companyProfile.homeInsurances || []).filter(i => i.toLowerCase() !== 'other');
     }
-    if (insuranceOptions.length === 0) {
-        insuranceOptions = ["Medicare"];
-    }
+    // Removed hardcoded "Medicare" fallback to prevent "ghost" options
+    // if (insuranceOptions.length === 0) {
+    //    insuranceOptions = ["Medicare"];
+    // }
 
     // Insert custom 'Other' name if defined
     if (settings.configuration.otherInsuranceName) {
@@ -245,8 +247,8 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                     <Select name="primaryInsurance" onValueChange={setSelectedInsurance}>
                                         <SelectTrigger id="primaryInsurance" className="bg-blue-50 text-blue-900 border-blue-200 shadow-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
                                         <SelectContent className="bg-white text-blue-900 border-blue-100">
-                                            {insuranceOptions.map(option => <SelectItem key={option} value={option} className="text-blue-900 focus:bg-blue-50 hover:bg-blue-50 cursor-pointer">{option}</SelectItem>)}
-                                            <SelectItem value="Other" className="text-blue-900 font-semibold focus:bg-blue-50 hover:bg-blue-50 cursor-pointer">Not Listed / Other</SelectItem>
+                                            {insuranceOptions.map(option => <SelectItem key={option} value={option} className="text-blue-900 focus:text-blue-900 focus:bg-blue-100 cursor-pointer">{option}</SelectItem>)}
+                                            <SelectItem value="Other" className="text-blue-900 focus:text-blue-900 focus:bg-blue-100 font-semibold cursor-pointer">Not Listed / Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {formState.errors?.primaryInsurance && <p className="text-sm text-destructive">{formState.errors.primaryInsurance[0]}</p>}
