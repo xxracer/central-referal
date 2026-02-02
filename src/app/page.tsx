@@ -122,15 +122,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                     </div>
                     <div className="hidden md:block w-px h-20 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
                     <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                      {profile.homeInsurances.map(ins => (
-                        <Badge
-                          key={ins}
-                          variant="secondary"
-                          className="bg-primary/5 hover:bg-primary/15 border-transparent text-primary px-6 py-2.5 rounded-full text-sm font-bold shadow-sm transition-all duration-300 hover:-translate-y-1 cursor-default"
-                        >
-                          {ins}
-                        </Badge>
-                      ))}
+                      {profile.homeInsurances.map(ins => {
+                        const label = (ins === 'Other' && settings.configuration.otherInsuranceName)
+                          ? settings.configuration.otherInsuranceName
+                          : ins;
+
+                        return (
+                          <Badge
+                            key={ins}
+                            variant="secondary"
+                            className="bg-primary/5 hover:bg-primary/15 border-transparent text-primary px-6 py-2.5 rounded-full text-sm font-bold shadow-sm transition-all duration-300 hover:-translate-y-1 cursor-default"
+                          >
+                            {label}
+                          </Badge>
+                        )
+                      })}
                     </div>
                   </div>
                 </Card>

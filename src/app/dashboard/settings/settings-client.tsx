@@ -212,10 +212,12 @@ const ProfileForm = ({
 }) => {
     const [formData, setFormData] = useState(settings.companyProfile);
     const [logoUploading, setLogoUploading] = useState(false);
+    const [otherHomeName, setOtherHomeName] = useState(settings.configuration.otherInsuranceName || '');
 
     useEffect(() => {
         setFormData(settings.companyProfile);
-    }, [settings.companyProfile]);
+        setOtherHomeName(settings.configuration.otherInsuranceName || '');
+    }, [settings.companyProfile, settings.configuration]);
 
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -347,17 +349,34 @@ const ProfileForm = ({
                         </div>
                     ))}
                 </div>
+
+                {(formData.homeInsurances || []).includes('Other') && (
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                        <Label>Custom Name for "Other" Insurance</Label>
+                        <Input
+                            className="mt-2"
+                            placeholder="e.g., Local Health Plan"
+                            value={otherHomeName}
+                            onChange={(e) => setOtherHomeName(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">This name will be displayed on your Home Page/Welcome Card.</p>
+                    </div>
+                )}
             </div>
 
             <Button
-                onClick={() => onSave({ companyProfile: formData, slug: settings.slug || agencyId })}
+                onClick={() => onSave({
+                    companyProfile: formData,
+                    slug: settings.slug || agencyId,
+                    configuration: { ...settings.configuration, otherInsuranceName: otherHomeName }
+                })}
                 disabled={isPending || logoUploading}
                 className="w-full md:w-auto"
             >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Profile & Portal Address
             </Button>
-        </div>
+        </div >
     );
 };
 
