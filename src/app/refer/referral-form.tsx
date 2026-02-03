@@ -163,7 +163,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                     <span className="text-xs font-bold uppercase tracking-widest text-primary/70 w-full text-center mb-1">We Proudly Accept</span>
                                     {profile.homeInsurances.map(ins => (
                                         <Badge key={ins} variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                                            {ins}
+                                            {ins === 'Other' && settings.configuration.otherInsuranceName ? settings.configuration.otherInsuranceName : ins}
                                         </Badge>
                                     ))}
                                 </div>
