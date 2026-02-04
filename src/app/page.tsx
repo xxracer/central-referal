@@ -30,6 +30,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
     return <LandingPage />;
   }
 
+  // 1.5 Agency Not Found Check
+  // If we are NOT on the default domain, but the agency was not found in the DB.
+  if (!settings.exists) {
+    const { default: AgencyNotFound } = await import('@/components/agency-not-found');
+    return <AgencyNotFound />;
+  }
+
   // 2. Subscription Check
   if (subscription.status === 'SUSPENDED') {
     const { redirect } = await import('next/navigation');
