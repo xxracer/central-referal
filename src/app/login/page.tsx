@@ -43,14 +43,41 @@ export default function LoginPage() {
 
     const handlePostLogin = async (user: any, isNewUser: boolean) => {
         if (user && user.email) {
-            // 1. Create Server Session (COOKIE)
+
+            // 1. SECURITY: Check Agencies FIRST before creating session
+            const { agencies } = await checkUserAgencies(user.email);
+            const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+            const isAdmin = adminEmail && user.email === adminEmail;
+
+            // If no agencies and not admin, BLOCK access.
+            if (agencies.length === 0 && !isAdmin) {
+                toast({
+                    variant: 'destructive',
+                    title: "Access Denied",
+                    description: "This email is not authorized for any agency.",
+                });
+                setIsLoading(false);
+                // Optionally sign out from Firebase client
+                // await auth.signOut(); 
+                return;
+            }
+
+            // 2. Create Server Session (COOKIE)
             // Get the ID token from the user object (Firebase Client SDK)
             const idToken = await user.getIdToken();
-            await createSession(idToken);
+            const sessionResult = await createSession(idToken);
 
-            // Check if user belongs to any agencies
-            const { agencies } = await checkUserAgencies(user.email);
+            if (!sessionResult.success) {
+                toast({
+                    variant: 'destructive',
+                    title: "Login Failed",
+                    description: sessionResult.error || "Could not create session.",
+                });
+                setIsLoading(false);
+                return;
+            }
 
+            // 3. Routing
             if (agencies.length > 0) {
                 if (agencies.length === 1) {
                     // Auto-redirect if only one
@@ -65,21 +92,13 @@ export default function LoginPage() {
                 return;
             }
 
-            // No agencies found
-            // If special admin
-            const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-            if (adminEmail && user.email === adminEmail) {
+            // No agencies found but IS admin (passed the check above)
+            if (isAdmin) {
                 router.push('/super-admin');
                 return;
             }
 
-            // If truly new/no agency -> Show error instead of redirecting to subscribe (which creates dupes)
-            // router.push('/subscribe'); 
-            toast({
-                variant: 'destructive',
-                title: "No Account Found",
-                description: "This email is not associated with any active agency. Please contact your administrator.",
-            });
+            // Should be unreachable due to check above, but safe fallback
             setIsLoading(false);
         }
     };

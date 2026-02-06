@@ -35,6 +35,42 @@ export default async function DashboardLayout({
 
   // Fetch settings to validate existence and config
   const settings = await getAgencySettings(agencyId);
+  const { verifySession } = await import('@/lib/auth-actions');
+  const session = await verifySession();
+  const userEmail = session?.email;
+
+  // --- SECURITY: Verify Agency Access ---
+  const { verifyUserAccess } = await import('@/lib/access-control');
+  const hasAccess = await verifyUserAccess(userEmail, agencyId);
+
+  if (!hasAccess) {
+    console.error(`[Access Control] Denied access to ${agencyId} for user ${userEmail}`);
+    // Redirect to selection or login? 
+    // If 'default', and not admin, maybe redirect to logic that finds their actual agency?
+    // Or just hard block.
+
+    // If they are logged in but accessing wrong place:
+    return (
+      <div className="flex flex-col h-screen items-center justify-center text-center p-4 bg-muted/20">
+        <div className="bg-destructive/10 p-6 rounded-full mb-6">
+          <Ban className="h-12 w-12 text-destructive" />
+        </div>
+        <h1 className="text-2xl font-bold font-headline mb-2">Access Denied</h1>
+        <p className="text-muted-foreground max-w-md mb-8">
+          You do not have permission to access this workspace ({agencyId}).
+        </p>
+        <div className="flex gap-4">
+          <Button asChild variant="outline">
+            <Link href="/login">Switch Account</Link>
+          </Button>
+          <Button asChild>
+            <Link href="https://referralflow.health">Back Home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  // --------------------------------------
 
   // 1. Check if Agency Exists (for non-default agencies)
   if (agencyId !== 'default' && settings.exists === false) {
