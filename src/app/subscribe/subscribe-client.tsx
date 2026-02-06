@@ -22,7 +22,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
     const [finalAmount, setFinalAmount] = useState<number | null>(null);
     const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
     const [formData, setFormData] = useState({
-        agency: '',
         name: '',
         email: '',
         promoCode: ''
@@ -36,7 +35,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
             if (saved) {
                 const data = JSON.parse(saved);
                 setFormData({
-                    agency: data.agency || '',
                     name: data.name || '',
                     email: data.email || '',
                     promoCode: ''
@@ -59,7 +57,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
 
     const handleCheckout = async () => {
         const payload = {
-            agency: formData.agency.trim(),
             name: formData.name.trim(),
             email: formData.email.trim(),
             plan: "ReferralFlow Subscription",
@@ -67,8 +64,8 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
             promoCode: formData.promoCode?.trim()
         };
 
-        if (!payload.agency || !payload.name || !payload.email) {
-            alert("Please enter agency name, your name, and email.");
+        if (!payload.name || !payload.email) {
+            alert("Please enter your name and email.");
             return;
         }
 
@@ -213,17 +210,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                             {!clientSecret && finalAmount !== 0 ? (
                                 <>
                                     <div className="field" style={{ marginTop: '12px' }}>
-                                        <label htmlFor="agency">Agency Name</label>
-                                        <input
-                                            id="agency"
-                                            type="text"
-                                            placeholder="e.g., Best Home Care"
-                                            autoComplete="organization"
-                                            value={formData.agency}
-                                            onChange={e => setFormData({ ...formData, agency: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="field">
                                         <label htmlFor="name">Your Name</label>
                                         <input
                                             id="name"
@@ -299,19 +285,27 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                         id="submit-free"
                                         className="btn btn-primary w-full flex justify-center items-center gap-2"
                                         style={{ marginTop: '20px' }}
-                                        onClick={() => window.location.href = '/dashboard/settings'}
+                                        onClick={() => window.location.href = `/setup/agency?email=${encodeURIComponent(formData.email)}`}
                                     >
-                                        Subscribe Now ($0.00)
+                                        Complete Setup ($0.00)
                                     </button>
 
                                     <p className="text-xs text-muted-foreground text-center mt-2">
-                                        No payment required. Secure sign up.
+                                        No payment required. Continue to set up your workspace.
                                     </p>
                                 </div>
                             ) : (
-                                <Elements stripe={stripePromise} options={{ clientSecret: clientSecret! }}>
+                                <Elements stripe={stripePromise} options={{
+                                    clientSecret: clientSecret!,
+                                    appearance: { theme: 'stripe' }
+                                }}>
                                     <div className="animate-in fade-in" style={{ animationDuration: '0.4s' }}>
-                                        <CheckoutForm amount={finalAmount || undefined} couponCode={appliedCoupon || undefined} />
+                                        {/* Pass returnUrl to checkout form */}
+                                        <CheckoutForm
+                                            amount={finalAmount || undefined}
+                                            couponCode={appliedCoupon || undefined}
+                                            returnUrl={`${window.location.origin}/setup/agency?email=${encodeURIComponent(formData.email)}`}
+                                        />
                                     </div>
                                 </Elements>
                             )}

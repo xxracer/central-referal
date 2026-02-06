@@ -58,55 +58,12 @@ export async function POST(req: Request) {
                 return NextResponse.json({ received: true });
             }
 
-            const agencyName = customer.metadata?.agency;
-            const agencyId = customer.metadata?.agencyId; // We added this in checkout route
-            const email = customer.email;
-
-            if (agencyName && email && agencyId) {
-                console.log(`Processing successful payment for ${agencyName} (${agencyId})`);
-
-                // 1. Create Agency Settings (Idempotent-ish via set)
-                await createAgencySettings(agencyId, {
-                    companyProfile: {
-                        name: agencyName,
-                        email: email,
-                        phone: '',
-                        fax: '',
-                        homeInsurances: []
-                    },
-                    subscription: {
-                        plan: 'PRO',
-                        status: 'SUSPENDED' // Wait for manual approval or activation email
-                    },
-                    notifications: {
-                        emailRecipients: [email],
-                        enabledTypes: ['NEW_REFERRAL', 'STATUS_UPDATE'],
-                        staff: [],
-                        primaryAdminEmail: email
-                    },
-                    userAccess: {
-                        authorizedEmails: [email],
-                        authorizedDomains: []
-                    }
-                });
-
-                // 2. Send Welcome Email
-                await sendReferralNotification(agencyId, 'WELCOME_AGENCY', {
-                    firstName: invoice.customer_name?.split(' ')[0] || 'Partner',
-                    loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/settings`,
-                    referralLink: `${agencyId}.referralflow.health`
-                }, email); // FIX: Pass recipient
-
-                // ALERT OWNER (maijelcancines2@gmail.com)
-                await sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
-                    recipientOverride: 'maijelcancines2@gmail.com',
-                    referralLink: agencyId,
-                    patientName: customer.phone || 'N/A'
-                }, 'maijelcancines2@gmail.com');
-
-                console.log(`Agency created and welcome email sent for ${agencyId}`);
+            if (customer.email) {
+                console.log(`Payment succeeded for ${customer.email}. Waiting for user to complete setup at /setup/agency`);
+                // Ideally send email: "Click here to set up your workspace"
+                // For now, we rely on the redirect from Checkout to /setup/agency.
             } else {
-                console.error("Missing metadata on customer for webhook processing", { agencyName, agencyId, email });
+                console.warn("Payment succeeded but no email on customer.", invoice.id);
             }
         }
     } catch (error) {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Loader2 } from 'lucide-react';
 
-export default function CheckoutForm({ amount, couponCode }: { amount?: number, couponCode?: string }) {
+export default function CheckoutForm({ amount, couponCode, returnUrl }: { amount?: number, couponCode?: string, returnUrl?: string }) {
     const stripe = useStripe();
     const elements = useElements();
 
@@ -25,7 +25,7 @@ export default function CheckoutForm({ amount, couponCode }: { amount?: number, 
             elements,
             confirmParams: {
                 // Return to dashboard settings after payment
-                return_url: `${window.location.origin}/dashboard/settings`,
+                return_url: returnUrl || `${window.location.origin}/dashboard/settings`,
             },
         });
 

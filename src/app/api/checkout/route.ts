@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { agency, name, email, promoCode } = body;
+        const { name, email, promoCode } = body;
 
         // SECURITY: Hardcode the price to prevent client-side manipulation
         const price = 129.99;
@@ -70,19 +70,19 @@ export async function POST(request: Request) {
         }
 
         // 3. Create a Customer (Stripe)
-        const agencySlug = slugify(agency); // Generate slug for metadata
+        // No agency metadata yet -- deferred to setup
         const customer = await stripe.customers.create({
             email,
             name,
             metadata: {
-                agency,
-                agencyId: agencySlug
+                // We'll update this later in /api/agency/setup
+                pendingSetup: 'true'
             },
         });
 
         // 4. Create the Product and Price
         const product = await stripe.products.create({
-            name: 'ReferralFlow Subscription for ' + agency,
+            name: 'ReferralFlow Subscription (Pending Setup)',
         });
 
         const priceObject = await stripe.prices.create({
@@ -115,51 +115,8 @@ export async function POST(request: Request) {
 
         const invoice = subscription.latest_invoice as Stripe.Invoice;
 
-        // CHECK: If Free, trigger setup immediately. If Paid, wait for Webhook.
-        if (invoice.total === 0) {
-            try {
-                await createAgencySettings(agencySlug, {
-                    companyProfile: {
-                        name: agency,
-                        email: email,
-                        phone: '',
-                        fax: '',
-                        homeInsurances: []
-                    },
-                    subscription: {
-                        plan: 'PRO',
-                        status: 'ACTIVE'
-                    },
-                    notifications: {
-                        emailRecipients: [email],
-                        enabledTypes: ['NEW_REFERRAL', 'STATUS_UPDATE'],
-                        staff: [],
-                        primaryAdminEmail: email
-                    },
-                    userAccess: {
-                        authorizedEmails: [email],
-                        authorizedDomains: []
-                    }
-                });
-
-                await sendReferralNotification(agencySlug, 'WELCOME_AGENCY', {
-                    firstName: name.split(' ')[0],
-                    loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/settings`,
-                    referralLink: `${agencySlug}.referralflow.health`
-                }, email); // FIX: Pass recipient email
-
-                // ALERT OWNER (maijelcancines2@gmail.com)
-                await sendReferralNotification(agencySlug, 'WELCOME_ADMIN_ALERT', {
-                    recipientOverride: 'maijelcancines2@gmail.com',
-                    referralLink: agencySlug,
-                    patientName: body.phone || 'N/A'
-                }, 'maijelcancines2@gmail.com');
-            } catch (setupError) {
-                console.error("Error setting up free agency:", setupError);
-                // Continue to return success so client redirects, even if email failed (logs will show)
-            }
-        }
-
+        // CHECK: If Free, we used to create agency here. NOW WE DO NOT.
+        // We just return success and let client redirect to /setup/agency.
         const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent | null;
 
         return NextResponse.json({
