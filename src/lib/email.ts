@@ -113,20 +113,14 @@ export async function sendReferralNotification(
 
     switch (type) {
       case 'WELCOME_AGENCY':
-        subject = 'Welcome to ReferralFlow.Health';
+        subject = 'Action Required: Verify your email - ReferralFlow';
         htmlContent = `
-          <h2 style="color: #0f172a;">Welcome to ReferralFlow.Health</h2>
+          <h2 style="color: #0f172a;">Verify Your Account</h2>
           <p>Hello ${data.firstName || 'Partner'},</p>
-          <p>Welcome to ReferralFlow.Health.</p>
-          <p>Your account for <strong>${agencyName}</strong> has been successfully created. It’s time to own your referral Flow! You can now begin receiving and managing referrals with greater clarity and control.</p>
-          <p><strong>What happens next:</strong></p>
-          <ul>
-            <li>Log in to access your referral dashboard</li>
-            <li>Share your referral link with partners/referral sources</li>
-            <li>Start receiving real-time referral updates</li>
-          </ul>
-          ${button('Log in here', data.loginUrl || `${baseUrl}/login`)}
-          <p>If you have any questions or need help getting started, our team is here to support you.</p>
+          <p>Your workspace <strong>${agencyName}</strong> has been created.</p>
+          <p>To finalize your setup and begin accepting referrals, please verify your email address by clicking the button below.</p>
+          ${button('Verify Account', data.loginUrl || `${baseUrl}/login`)}
+          <p>If you did not create this account, please ignore this email.</p>
           <p>Best regards,<br/>ReferralFlow.Health</p>
         `;
         break;
@@ -301,15 +295,13 @@ export async function sendReferralNotification(
         break;
 
       case 'AGENCY_ACTIVATED':
-        subject = 'Your Account is Active! - ReferralFlow.Health';
+        subject = 'Activate Your Account - ReferralFlow';
         htmlContent = `
-            <h2 style="color: #0f172a;">Your Account is Active</h2>
+            <h2 style="color: #0f172a;">Activate Your Account</h2>
             <p>Hello ${data.firstName || 'Partner'},</p>
-            <p>Great news! Your <strong>${agencyName}</strong> account has been activated by our team.</p>
-            <p>Your portal is now live at:</p>
-            <p><a href="${data.referralLink}" style="font-size: 16px; font-weight: bold; color: #2563eb;">${data.referralLink}</a></p>
-            <p>You can now log in and start accepting referrals.</p>
-            ${button('Login to Dashboard', data.loginUrl || `${baseUrl}/login`)}
+            <p>Please use the link below to access your workspace for <strong>${agencyName}</strong>.</p>
+            <p><strong>Workspace URL:</strong> <a href="${data.referralLink}">${data.referralLink}</a></p>
+            ${button('Access Workspace', data.loginUrl || `${baseUrl}/login`)}
             <p>Welcome aboard!</p>
             <p>The ReferralFlow.Health Team</p>
           `;

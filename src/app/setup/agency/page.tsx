@@ -19,6 +19,8 @@ function AgencySetupForm() {
     const [agencyName, setAgencyName] = useState('');
     const [slug, setSlug] = useState('');
 
+    const [success, setSuccess] = useState(false);
+
     // Auto-generate slug from name
     useEffect(() => {
         if (agencyName) {
@@ -56,22 +58,8 @@ function AgencySetupForm() {
                 throw new Error(data.error || 'Failed to create workspace');
             }
 
-            toast({
-                title: "Success",
-                description: "Your workspace has been created!",
-            });
-
-            // Redirect to the new agency login or settings
-            // We can redirect to the new subdomain's settings page
-            const protocol = window.location.protocol;
-            const targetUrl = `${protocol}//${slug}.referralflow.health/dashboard/settings?setup=complete`;
-
-            // For localhost handling
-            if (window.location.hostname.includes('localhost')) {
-                router.push(`/dashboard/settings?setup=complete`);
-            } else {
-                window.location.href = targetUrl;
-            }
+            // Instead of toast and redirect, show success state
+            setSuccess(true);
 
         } catch (error: any) {
             console.error("Setup Error:", error);
@@ -83,6 +71,39 @@ function AgencySetupForm() {
             setIsLoading(false);
         }
     };
+
+    if (success) {
+        return (
+            <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                    <div className="mx-auto mb-6 flex justify-center">
+                        {/* Display Main Logo */}
+                        <div className="bg-primary/10 p-4 rounded-full">
+                            <Store className="h-10 w-10 text-primary" />
+                        </div>
+                    </div>
+                    <CardTitle className="text-2xl mb-2">Welcome to ReferralFlow</CardTitle>
+                    <CardDescription className="text-base text-foreground font-medium">
+                        Your account has been created.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-center text-muted-foreground">
+                    <p>
+                        To continue, please check your email and click the activation link to verify your account.
+                        This step is required before completing setup.
+                    </p>
+                    <p>
+                        Once verified, you can finish setting up your portal and begin receiving referrals.
+                    </p>
+                </CardContent>
+                <CardFooter className="justify-center border-t p-4 bg-muted/50">
+                    <p className="text-xs text-muted-foreground text-center">
+                        Need help? Contact support@referralflow.health
+                    </p>
+                </CardFooter>
+            </Card>
+        );
+    }
 
     return (
         <Card className="w-full max-w-md">
@@ -143,7 +164,7 @@ function AgencySetupForm() {
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                creating Workspace...
+                                Creating Workspace...
                             </>
                         ) : (
                             <>
