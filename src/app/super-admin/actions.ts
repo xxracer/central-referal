@@ -168,12 +168,17 @@ export async function sendActivationEmail(agencyId: string): Promise<{ success: 
             ? (agency.slug.includes('.') ? `http://${agency.slug}` : `http://${agency.slug}.referralflow.health`)
             : baseUrl;
 
-        await sendReferralNotification(agencyId, 'AGENCY_ACTIVATED', {
+        const result = await sendReferralNotification(agencyId, 'AGENCY_ACTIVATED', {
             firstName: agency.companyProfile.name,
             referralLink: portalUrl,
             loginUrl: loginUrl,
             recipientOverride: userEmail
         });
+
+        if (!result || !result.success) {
+            console.error("Email sending failed:", result?.error);
+            return { success: false, message: 'Email service failed to send.' };
+        }
 
         return { success: true, message: `Activation email sent to ${userEmail}` };
     } catch (error: any) {

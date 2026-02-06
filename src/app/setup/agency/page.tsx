@@ -15,11 +15,10 @@ function AgencySetupForm() {
     const { toast } = useToast();
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [email, setEmail] = useState('');
     const [agencyName, setAgencyName] = useState('');
     const [slug, setSlug] = useState('');
-
-    const [success, setSuccess] = useState(false);
 
     // Auto-generate slug from name
     useEffect(() => {
@@ -58,8 +57,12 @@ function AgencySetupForm() {
                 throw new Error(data.error || 'Failed to create workspace');
             }
 
-            // Instead of toast and redirect, show success state
-            setSuccess(true);
+            // Success: Show activation UI
+            setIsSuccess(true);
+            toast({
+                title: "Success",
+                description: "Your workspace has been created!",
+            });
 
         } catch (error: any) {
             console.error("Setup Error:", error);
@@ -72,35 +75,48 @@ function AgencySetupForm() {
         }
     };
 
-    if (success) {
+    if (isSuccess) {
         return (
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-6 flex justify-center">
-                        {/* Display Main Logo */}
-                        <div className="bg-primary/10 p-4 rounded-full">
-                            <Store className="h-10 w-10 text-primary" />
-                        </div>
+                    <div className="mx-auto mb-4 flex items-center justify-center h-16 w-16">
+                        <img src="/logo.png" alt="ReferralFlow" className="w-16 h-16 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        {/* Fallback if logo not found */}
+                        <Store className="h-10 w-10 text-primary hidden" />
                     </div>
-                    <CardTitle className="text-2xl mb-2">Welcome to ReferralFlow</CardTitle>
-                    <CardDescription className="text-base text-foreground font-medium">
-                        Your account has been created.
-                    </CardDescription>
+                    <CardTitle className="text-xl">Welcome to ReferralFlow</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 text-center text-muted-foreground">
-                    <p>
-                        To continue, please check your email and click the activation link to verify your account.
-                        This step is required before completing setup.
+                <CardContent className="text-center space-y-4">
+                    <p className="text-muted-foreground">
+                        Your account has been created.
                     </p>
-                    <p>
-                        Once verified, you can finish setting up your portal and begin receiving referrals.
+                    <p className="text-muted-foreground">
+                        To activate your account and continue with setup, please click the button below.
                     </p>
+                    <p className="text-muted-foreground">
+                        Once activated, you’ll be guided through the remaining setup steps.
+                    </p>
+
+                    <Button
+                        className="w-full mt-4"
+                        size="lg"
+                        onClick={() => {
+                            const protocol = window.location.protocol;
+                            const redirectParam = encodeURIComponent('/dashboard/settings');
+
+                            // Point to login because they are likely NOT logged in yet
+                            const targetUrl = `${protocol}//${slug}.referralflow.health/login?email=${encodeURIComponent(email)}&redirect=${redirectParam}`;
+
+                            if (window.location.hostname.includes('localhost')) {
+                                window.location.href = `/login?email=${encodeURIComponent(email)}&redirect=${redirectParam}`;
+                            } else {
+                                window.location.href = targetUrl;
+                            }
+                        }}
+                    >
+                        Activate Account
+                    </Button>
                 </CardContent>
-                <CardFooter className="justify-center border-t p-4 bg-muted/50">
-                    <p className="text-xs text-muted-foreground text-center">
-                        Need help? Contact support@referralflow.health
-                    </p>
-                </CardFooter>
             </Card>
         );
     }
@@ -164,7 +180,7 @@ function AgencySetupForm() {
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Creating Workspace...
+                                creating Workspace...
                             </>
                         ) : (
                             <>

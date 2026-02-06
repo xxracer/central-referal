@@ -1,16 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Logo from '@/components/logo';
 import { signInWithGoogle, signInWithEmail, sendPasswordReset } from '@/firebase/auth/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
 import { checkUserAgencies } from './actions';
 import { createSession } from '@/lib/auth-actions';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,9 +24,12 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+    const redirectPath = searchParams.get('redirect');
+
     const [isLoading, setIsLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [userAgencies, setUserAgencies] = useState<any[]>([]);
@@ -40,6 +42,26 @@ export default function LoginPage() {
     const [captchaValue, setCaptchaValue] = useState<string | null>(null);
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+    const handleAgencySelect = (agency: any) => {
+        toast({
+            title: "Logging in...",
+            description: `Accessing ${agency.name}`,
+        });
+
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+
+        // Check for forced password reset
+        const defaultPath = agency.requiresPasswordReset ? '/dashboard/settings?tab=access' : '/dashboard';
+        const targetPath = redirectPath || defaultPath;
+
+        if (host.includes('localhost')) {
+            router.push(targetPath);
+        } else {
+            window.location.href = `${protocol}//${agency.slug}.referralflow.health${targetPath}`;
+        }
+    };
 
     const handlePostLogin = async (user: any, isNewUser: boolean) => {
         if (user && user.email) {
@@ -57,8 +79,6 @@ export default function LoginPage() {
                     description: "This email is not authorized for any agency.",
                 });
                 setIsLoading(false);
-                // Optionally sign out from Firebase client
-                // await auth.signOut(); 
                 return;
             }
 
@@ -168,8 +188,6 @@ export default function LoginPage() {
         }
     };
 
-
-
     const handlePasswordReset = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!resetEmail) return;
@@ -191,25 +209,6 @@ export default function LoginPage() {
             });
         } finally {
             setIsResetting(false);
-        }
-    };
-
-    const handleAgencySelect = (agency: any) => {
-        toast({
-            title: "Logging in...",
-            description: `Accessing ${agency.name}`,
-        });
-
-        const protocol = window.location.protocol;
-        const host = window.location.host;
-
-        // Check for forced password reset
-        const targetPath = agency.requiresPasswordReset ? '/dashboard/settings?tab=access' : '/dashboard';
-
-        if (host.includes('localhost')) {
-            router.push(targetPath);
-        } else {
-            window.location.href = `${protocol}//${agency.slug}.referralflow.health${targetPath}`;
         }
     };
 
@@ -383,5 +382,13 @@ export default function LoginPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+            <LoginForm />
+        </Suspense>
     );
 }
