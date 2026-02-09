@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAgencySettings, getAgencySettings } from '@/lib/settings';
 import { sendReferralNotification } from '@/lib/email';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2024-12-18.acacia' as any,
@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
     try {
-        const { email, agencyName, slug } = await request.json();
+        const { email, agencyName, slug, password } = await request.json();
 
         if (!email || !agencyName || !slug) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -18,6 +18,40 @@ export async function POST(request: Request) {
 
         const normalizedEmail = email.toLowerCase().trim();
         const agencyId = slug.toLowerCase().trim();
+
+        // 0. Ensure User Exists in Firebase Auth
+        try {
+            await adminAuth.getUserByEmail(normalizedEmail);
+            // User exists, proceed
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                const isGmail = normalizedEmail.includes('@gmail.com');
+
+                if (!password && !isGmail) {
+                    return NextResponse.json({ error: 'Password required for non-Gmail accounts.' }, { status: 400 });
+                }
+
+                // Create the user
+                try {
+                    const userProps: any = {
+                        email: normalizedEmail,
+                        emailVerified: true, // Auto-verify since they just paid/subscribed
+                        displayName: agencyName
+                    };
+                    if (password) {
+                        userProps.password = password;
+                    }
+
+                    await adminAuth.createUser(userProps);
+                    console.log(`[Setup] Created new user for ${normalizedEmail} (Password: ${!!password})`);
+                } catch (createError: any) {
+                    console.error("Failed to create auth user:", createError);
+                    return NextResponse.json({ error: 'Failed to create user account: ' + createError.message }, { status: 500 });
+                }
+            } else {
+                throw error; // Rethrow other errors
+            }
+        }
 
         // 1. Verify Payment / Subscription via Stripe
         // Search for customer by email

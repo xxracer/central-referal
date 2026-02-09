@@ -13,13 +13,34 @@ type AuditEvent = {
     agencyId?: string;
     actor: string; // 'system', 'user:ID', 'public:IP'
     details?: any;
-    timestamp: FieldValue;
+    timestamp?: FieldValue;
+};
+
+// Helper to remove undefined values for Firestore compatibility
+const removeUndefined = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(removeUndefined);
+    }
+    if (obj !== null && typeof obj === 'object') {
+        const newObj: { [key: string]: any } = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const value = removeUndefined(obj[key]);
+                if (value !== undefined) {
+                    newObj[key] = value;
+                }
+            }
+        }
+        return newObj;
+    }
+    return obj;
 };
 
 async function logAudit(event: AuditEvent) {
     try {
+        const cleanEvent = removeUndefined(event);
         await adminDb.collection('audit_logs').add({
-            ...event,
+            ...cleanEvent,
             timestamp: FieldValue.serverTimestamp() // Guaranteed server time
         });
     } catch (e) {
@@ -78,11 +99,11 @@ export async function getReferrals(agencyId: string, filters?: { search?: string
     const firestore = getDb();
     let snapshot;
     try {
-        // PERF: Removed orderBy('createdAt') to bypass composite index requirement (Error 9)
-        // We will sort in memory instead. This works fine for limit(500).
+        // PERF: Ordered by createdAt to ensure recent referrals are fetched first.
+        // REQUIRES COMPOSITE INDEX in Firestore (AgencyId ASC, CreatedAt DESC)
         snapshot = await firestore.collection('referrals')
             .where('agencyId', '==', agencyId)
-            // .orderBy('createdAt', 'desc') // Removed to fix FAILED_PRECONDITION
+            .orderBy('createdAt', 'desc')
             .limit(500)
             .get();
     } catch (error: any) {
@@ -176,6 +197,14 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
     }
     if (!data.agencyId) data.agencyId = 'default';
 
+    // [HIPAA Audit] Log READ access to specific PHI
+    logAudit({
+        action: 'VIEW_REFERRAL_DETAILS',
+        resourceId: id,
+        agencyId: data.agencyId,
+        actor: `user:${user.uid}`
+    });
+
     return data as Referral;
 }
 
@@ -213,6 +242,16 @@ export async function saveReferral(referral: Referral): Promise<Referral> {
     }
 
     await docRef.set(dataToSave, { merge: true });
+
+    // [HIPAA Audit]
+    logAudit({
+        action: referral.createdAt === referral.updatedAt ? 'CREATE_REFERRAL' : 'UPDATE_REFERRAL',
+        resourceId: referral.id,
+        agencyId: referral.agencyId,
+        actor: `user:${user.uid}`,
+        details: { status: referral.status }
+    });
+
     return referral;
 }
 
@@ -238,6 +277,15 @@ export async function findReferral(id: string): Promise<Referral | undefined> {
             });
         }
         if (!data.agencyId) data.agencyId = 'default';
+
+        // [HIPAA Audit] Log READ access to specific PHI
+        logAudit({
+            action: 'VIEW_REFERRAL_DETAILS',
+            resourceId: id,
+            agencyId: data.agencyId,
+            actor: `user:${user.uid}`
+        });
+
         return data as Referral;
     }
 
@@ -250,10 +298,23 @@ export async function toggleArchiveReferral(id: string, isArchived: boolean): Pr
 
     const firestore = getDb();
     try {
+        // Fetch first to get agencyId for Audit
+        const refDoc = await firestore.collection('referrals').doc(id).get();
+        const agencyId = refDoc.exists ? refDoc.data()?.agencyId : 'unknown';
+
         await firestore.collection('referrals').doc(id).update({
             isArchived,
             updatedAt: Timestamp.now()
         });
+
+        // [HIPAA Audit]
+        logAudit({
+            action: isArchived ? 'ARCHIVE_REFERRAL' : 'UNARCHIVE_REFERRAL',
+            resourceId: id,
+            agencyId: agencyId,
+            actor: `user:${user.uid}`
+        });
+
         return true;
     } catch (e) {
         console.error("Error toggling archive:", e);
@@ -271,6 +332,14 @@ export async function markReferralAsSeen(id: string): Promise<void> {
             isSeen: true,
             hasUnreadMessages: false
         });
+
+        // [HIPAA Audit] - Less critical but good for tracing "who saw this"
+        logAudit({
+            action: 'MARK_SEEN',
+            resourceId: id,
+            actor: `user:${user.uid}`
+        });
+
     } catch (e) {
         console.error("Error marking as seen:", e);
     }

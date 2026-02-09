@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,14 @@ function LoginForm() {
     const [password, setPassword] = useState("");
     const [resetEmail, setResetEmail] = useState("");
     const [captchaValue, setCaptchaValue] = useState<string | null>(null);
+
+    // [DEV MODE] Auto-bypass captcha on localhost
+    // [DEV MODE] Auto-bypass captcha on localhost
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
+            setCaptchaValue('dev-bypass');
+        }
+    }, []);
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -348,10 +356,17 @@ function LoginForm() {
                                 />
                             </div>
                             <div className="flex justify-center">
-                                <ReCAPTCHA
-                                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                                    onChange={(val) => setCaptchaValue(val)}
-                                />
+                                {/* [DEV MODE] Bypass ReCAPTCHA on localhost */}
+                                {(typeof window !== 'undefined' && window.location.hostname.includes('localhost')) ? (
+                                    <div className="text-xs text-muted-foreground bg-secondary/20 px-3 py-1 rounded-full border border-secondary/50">
+                                        Bot Protection Bypassed (Localhost)
+                                    </div>
+                                ) : (
+                                    <ReCAPTCHA
+                                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                                        onChange={(val) => setCaptchaValue(val)}
+                                    />
+                                )}
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}

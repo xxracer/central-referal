@@ -64,10 +64,9 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
 
     const [showActivationDialog, setShowActivationDialog] = useState(false);
 
-    // Validation: Require at least one STAFF member and Primary Admin Email
-    const hasStaff = (settings.notifications.staff || []).length > 0;
+    // Validation: Primary Admin Email is the only strict requirement now
     const hasPrimaryEmail = !!(settings.notifications.primaryAdminEmail || settings.companyProfile.email);
-    const isSetupComplete = hasStaff && hasPrimaryEmail;
+    const isSetupComplete = hasPrimaryEmail;
 
     return (
         <div className="container mx-auto max-w-5xl py-6 px-4 md:px-6 space-y-8">
@@ -76,7 +75,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                     <AlertCircle className="h-5 w-5" />
                     <div>
                         <p className="font-semibold">Setup Incomplete</p>
-                        <p className="text-sm">You must add at least <strong>one Staff Member</strong> (in Access tab) and ensure a <strong>Primary Email</strong> is set before you can save other changes or use the portal.</p>
+                        <p className="text-sm">You must ensure a <strong>Primary Email</strong> is set before you can save other changes or use the portal.</p>
                     </div>
                 </div>
             )}
@@ -112,7 +111,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                                 onSave={handleSaveProfileAndSlug}
                                 // Profile is ENABLED if we are missing the primary email (so user can set it)
                                 // Only disabled if we HAVE email but NO staff (forcing staff add)
-                                isDisabled={hasPrimaryEmail && !hasStaff}
+                                isDisabled={false}
                             />
                         </CardContent>
                     </Card>
@@ -281,6 +280,39 @@ const ProfileForm = ({
         setFormData({ ...formData, [field]: formatted });
     };
 
+
+    const [newCustomIns, setNewCustomIns] = useState('');
+
+    const addCustomIns = () => {
+        if (!newCustomIns) return;
+        const current = formData.homeInsurances || [];
+        if (!current.includes(newCustomIns)) {
+            setFormData(prev => ({ ...prev, homeInsurances: [...current, newCustomIns] }));
+        }
+        setNewCustomIns('');
+    };
+
+    const removeCustomIns = (ins: string) => {
+        setFormData(prev => ({
+            ...prev,
+            homeInsurances: (prev.homeInsurances || []).filter(i => i !== ins)
+        }));
+    };
+
+    const customInsurances = (formData.homeInsurances || []).filter(i => !MASTER_INSURANCE_LIST.includes(i) && i !== 'Other');
+
+    // Auto-migrate "Other" on first visual load if legacy exists
+    useEffect(() => {
+        if ((formData.homeInsurances || []).includes('Other') && otherHomeName) {
+            // Check if we already migrated it (to avoid loop)
+            if (!(formData.homeInsurances || []).includes(otherHomeName)) {
+                // We won't auto-migrate state here to avoid flicker/loops, 
+                // but we can encourage user to add it.
+                // Actually, let's just show the new UI.
+            }
+        }
+    }, []);
+
     return (
         <div className="space-y-8">
             <div className="space-y-4">
@@ -357,7 +389,7 @@ const ProfileForm = ({
                 <h3 className="text-lg font-medium border-b pb-2">Home Page Insurances (Display only)</h3>
                 <CardDescription>Select which insurances to highlight on the Home Page welcome card.</CardDescription>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
-                    {MASTER_INSURANCE_LIST.map(ins => (
+                    {MASTER_INSURANCE_LIST.filter(ins => ins !== 'Other').map(ins => (
                         <div key={ins} className="flex items-center space-x-2">
                             <Checkbox
                                 id={`ins-home-${ins}`}
@@ -371,25 +403,48 @@ const ProfileForm = ({
                     ))}
                 </div>
 
-                {(formData.homeInsurances || []).includes('Other') && (
-                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                        <Label>Custom Name for "Other" Insurance</Label>
+                <div className="mt-4 space-y-3">
+                    <Label>Additional Insurances</Label>
+                    <div className="flex gap-2">
                         <Input
-                            className="mt-2"
-                            placeholder="e.g., Local Health Plan"
-                            value={otherHomeName}
-                            onChange={(e) => setOtherHomeName(e.target.value)}
+                            value={newCustomIns}
+                            onChange={e => setNewCustomIns(e.target.value)}
+                            placeholder="Add custom insurance (e.g., Local Plan A)"
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomIns())}
                         />
-                        <p className="text-[10px] text-muted-foreground mt-1">This name will be displayed on your Home Page/Welcome Card.</p>
+                        <Button onClick={addCustomIns} type="button" variant="secondary">Add</Button>
                     </div>
-                )}
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                        {customInsurances.map(ins => (
+                            <Badge key={ins} variant="outline" className="gap-2 pl-2 pr-1 py-1 text-sm font-normal">
+                                {ins}
+                                <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeCustomIns(ins)} />
+                            </Badge>
+                        ))}
+                    </div>
+                    {/* Legacy / Migration Notice if needed */}
+                    {(formData.homeInsurances || []).includes('Other') && otherHomeName && !customInsurances.includes(otherHomeName) && (
+                        <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded border border-yellow-100 flex items-center justify-between">
+                            <span>You have a legacy "Other" value: <strong>{otherHomeName}</strong></span>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => {
+                                // Migrate
+                                setFormData(prev => ({
+                                    ...prev,
+                                    homeInsurances: [...(prev.homeInsurances || []).filter(i => i !== 'Other'), otherHomeName]
+                                }));
+                                setOtherHomeName(''); // Clear legacy logic visually
+                            }}>Convert to new format</Button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <Button
                 onClick={() => onSave({
                     companyProfile: formData,
                     slug: settings.slug || agencyId,
-                    configuration: { ...settings.configuration, otherInsuranceName: otherHomeName }
+                    configuration: { ...settings.configuration } // We stop syncing otherInsuranceName strictly for Profile, strictly rely on array
                 })}
                 disabled={isPending || logoUploading || isDisabled}
                 className="w-full md:w-auto"
@@ -430,13 +485,34 @@ const ConfigurationForm = ({ settings, isPending, onSave, isDisabled }: { settin
         setConfig(prev => ({ ...prev, acceptedInsurances: updated }));
     };
 
+
+    const [newCustomFormIns, setNewCustomFormIns] = useState('');
+
+    const addCustomFormIns = () => {
+        if (!newCustomFormIns) return;
+        const current = config.acceptedInsurances || [];
+        if (!current.includes(newCustomFormIns)) {
+            setConfig(prev => ({ ...prev, acceptedInsurances: [...current, newCustomFormIns] }));
+        }
+        setNewCustomFormIns('');
+    };
+
+    const removeCustomFormIns = (ins: string) => {
+        setConfig(prev => ({
+            ...prev,
+            acceptedInsurances: (prev.acceptedInsurances || []).filter(i => i !== ins)
+        }));
+    };
+
+    const customInsurances = (config.acceptedInsurances || []).filter(i => !MASTER_INSURANCE_LIST.includes(i) && i !== 'Other');
+
     return (
         <div className="space-y-8">
             <div className="space-y-4">
                 <h3 className="text-lg font-medium border-b pb-2">Accepted Insurances (Referral Form)</h3>
                 <CardDescription>Select the insurances available in the "Primary Insurance" dropdown of the referral form.</CardDescription>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
-                    {MASTER_INSURANCE_LIST.map(ins => (
+                    {MASTER_INSURANCE_LIST.filter(ins => ins !== 'Other').map(ins => (
                         <div key={ins} className="flex items-center space-x-2">
                             <Checkbox
                                 id={`ins-form-${ins}`}
@@ -450,18 +526,42 @@ const ConfigurationForm = ({ settings, isPending, onSave, isDisabled }: { settin
                     ))}
                 </div>
 
-                {(config.acceptedInsurances || []).includes('Other') && (
-                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                        <Label>Custom Name for "Other" Insurance (Optional)</Label>
+                <div className="mt-4 space-y-3">
+                    <Label>Additional Insurances (Dropdown)</Label>
+                    <div className="flex gap-2">
                         <Input
-                            className="mt-2"
-                            placeholder="e.g., Local Health Plan"
-                            value={otherName}
-                            onChange={(e) => setOtherName(e.target.value)}
+                            value={newCustomFormIns}
+                            onChange={e => setNewCustomFormIns(e.target.value)}
+                            placeholder="Add custom insurance (e.g., Local Plan A)"
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomFormIns())}
                         />
-                        <p className="text-[10px] text-muted-foreground mt-1">If set, this will appear in the dropdown menu for referrers.</p>
+                        <Button onClick={addCustomFormIns} type="button" variant="secondary">Add</Button>
                     </div>
-                )}
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                        {customInsurances.map(ins => (
+                            <Badge key={ins} variant="outline" className="gap-2 pl-2 pr-1 py-1 text-sm font-normal">
+                                {ins}
+                                <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeCustomFormIns(ins)} />
+                            </Badge>
+                        ))}
+                    </div>
+
+                    {/* Legacy / Migration Notice if needed */}
+                    {(config.acceptedInsurances || []).includes('Other') && otherName && !customInsurances.includes(otherName) && (
+                        <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded border border-yellow-100 flex items-center justify-between">
+                            <span>You have a legacy "Other" value: <strong>{otherName}</strong></span>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => {
+                                // Migrate
+                                setConfig(prev => ({
+                                    ...prev,
+                                    acceptedInsurances: [...(prev.acceptedInsurances || []).filter(i => i !== 'Other'), otherName]
+                                }));
+                                setOtherName(''); // Clear legacy logic visually
+                            }}>Convert to new format</Button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-4">
@@ -481,7 +581,7 @@ const ConfigurationForm = ({ settings, isPending, onSave, isDisabled }: { settin
                 </div>
             </div>
 
-            <Button onClick={() => onSave({ ...config, otherInsuranceName: otherName })} disabled={isPending || isDisabled}>Save Configuration</Button>
+            <Button onClick={() => onSave({ ...config })} disabled={isPending || isDisabled}>Save Configuration</Button>
         </div >
     );
 };
@@ -800,29 +900,11 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
 }
 
 
+
 const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySettings, isPending: boolean, onSave: (data: any) => void }) => {
     const [access, setAccess] = useState(settings.userAccess);
     const [newDomain, setNewDomain] = useState('');
-
-    // Staff State (synced from settings.notifications.staff for management)
-    // We update settings.notifications implicitly when we add staff here.
-    // Wait, onSave in UserAccessForm usually saves 'userAccess' slice?
-    // settings-client page logic: handleSave('userAccess', data).
-    // We need to save 'notifications' slice too if we modify staff list.
-    // We might need to call a different save, or parent needs to handle multi-slice updates.
-    // HACK: We will use a special server action or just update both if we can, 
-    // BUT current architecture passes `onSave={(data) => handleSave('userAccess', data)}`.
-    // This restricts us to saving only userAccess.
-    // We should modify the parent to allow saving arbitrary partial settings from here, 
-    // OR we just use `updateAgencySettingsAction` directly here for staff.
-    // Direct action is better for "Provisioning" anyway.
-
     const [isAddingStaff, setIsAddingStaff] = useState(false);
-
-    // Password State
-    const [newPass, setNewPass] = useState('');
-    const [cPass, setCPass] = useState('');
-    const [passLoading, setPassLoading] = useState(false);
 
     useEffect(() => {
         setAccess(settings.userAccess);
@@ -830,53 +912,32 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
 
     const handleAddStaff = async (newStaff: { email: string; enabledCategories: string[]; tempPassword?: string }) => {
         try {
-            // Check duplicates
             const currentStaff = settings.notifications.staff || [];
             if (currentStaff.some(s => s.email === newStaff.email)) {
                 alert('Staff member already exists.');
                 return;
             }
 
-            if (newStaff.tempPassword) {
-                // Provision with password
-                const { provisionStaffUser } = await import('@/lib/actions');
-                const result = await provisionStaffUser(settings.id, newStaff.email, newStaff.tempPassword, newStaff.email.split('@')[0]);
-                if (!result.success) {
-                    alert('Error: ' + result.message);
-                    return;
-                }
-            } else {
-                // Custom logic to just add to DB if no password provisioning needed (rare for "staff" but maybe just listing them?)
-                // Actually provisionStaffUser handles the DB update too. 
-                // If no password, we should probably still call provision but generate one? 
-                // Or just add to settings?
-                // Let's assume for now we ALWAYS leverage provisionStaffUser for consistency, passing empty pass maybe?
-                // The definition of provisionStaffUser says passwordToUse generated if empty. Perfect.
-                const { provisionStaffUser } = await import('@/lib/actions');
-                const result = await provisionStaffUser(settings.id, newStaff.email, undefined, newStaff.email.split('@')[0]);
-                if (!result.success) {
-                    alert('Error: ' + result.message);
-                    return;
-                }
+            const { provisionStaffUser } = await import('@/lib/actions');
+            const result = await provisionStaffUser(settings.id, newStaff.email, newStaff.tempPassword, newStaff.email.split('@')[0]);
+
+            if (!result.success) {
+                alert('Error: ' + result.message);
+                return;
             }
 
             alert('Staff member added successfully.');
             setIsAddingStaff(false);
-            // Trigger refresh or router refresh?
-            window.location.reload(); // Simplest way to resync everything since we bypassed parent props
+            window.location.reload();
         } catch (e: any) {
             alert('Failed: ' + e.message);
         }
     };
 
-    // We use a direct delete action for staff to be clean
     const removeStaff = async (email: string) => {
         if (!confirm('Remove this user and their access?')) return;
         const currentStaff = settings.notifications.staff || [];
         const updatedStaff = currentStaff.filter(s => s.email !== email);
-
-        // We need to update settings.notifications
-        // And also access.authorizedEmails probably?
 
         try {
             const { updateAgencySettingsAction } = await import('@/lib/actions');
@@ -894,12 +955,11 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
 
     const addDomain = () => {
         if (!newDomain) return;
-
         const lowerDomain = newDomain.toLowerCase();
-        const bannedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com'];
+        const bannedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com']; // Sync with server list recommended
 
         if (bannedDomains.includes(lowerDomain)) {
-            alert('Security Restriction: You cannot add public email providers (Gmail, Yahoo, etc.) as authorized domains. Please use a corporate domain or add individual users via the Team Members section.');
+            alert('Security Restriction: Public email providers are not allowed as authorized domains.');
             return;
         }
 
@@ -916,151 +976,38 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
         setAccess(prev => ({ ...prev, authorizedDomains: prev.authorizedDomains.filter(x => x !== d) }));
     };
 
-    const handleUpdatePassword = async () => {
-        if (!newPass || newPass.length < 6) {
-            alert("Password must be at least 6 characters.");
-            return;
-        }
-        if (newPass !== cPass) {
-            alert("Passwords do not match.");
-            return;
-        }
-
-        setPassLoading(true);
-        try {
-            await updateUserPassword(newPass);
-
-            // Clear requireReset flag if present
-            const { getAuth } = await import('firebase/auth');
-            const auth = getAuth();
-            if (auth.currentUser && auth.currentUser.email) {
-                const { markPasswordResetComplete } = await import('@/lib/actions');
-                // We need agencyId. Passed via props to SettingsClient -> UserAccessForm
-                // UserAccessForm props: settings (has id).
-                await markPasswordResetComplete(settings.id, auth.currentUser.email);
-            }
-
-            alert("Password updated successfully.");
-            setNewPass('');
-            setCPass('');
-        } catch (error: any) {
-            alert("Failed to update password: " + error.message);
-        } finally {
-            setPassLoading(false);
-        }
-    };
+    // Derived Owner Info
+    const ownerEmail = settings.companyProfile.email || 'No Owner Filter';
+    const ownerName = settings.companyProfile.name || 'Agency Owner';
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-10">
+            {/* 1. HIERARCHY: MAIN USER / OWNER */}
             <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2 flex items-center gap-2">
-                    <Key className="h-4 w-4" />
-                    Security (Password Management)
-                </h3>
-                <CardDescription>
-                    If you signed up with Google, you can set a password here to enable email/password login.
-                </CardDescription>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
-                    <div className="space-y-2">
-                        <Label>New Password</Label>
-                        <Input
-                            type="password"
-                            value={newPass}
-                            onChange={(e) => setNewPass(e.target.value)}
-                            placeholder="New password"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Confirm Password</Label>
-                        <Input
-                            type="password"
-                            value={cPass}
-                            onChange={(e) => setCPass(e.target.value)}
-                            placeholder="Confirm password"
-                        />
-                    </div>
+                <div className="flex items-center gap-2 border-b pb-2">
+                    <Key className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Main User (Owner)</h3>
                 </div>
-                <Button
-                    onClick={handleUpdatePassword}
-                    disabled={passLoading || !newPass}
-                    variant="secondary"
-                    className="w-full md:w-auto"
-                >
-                    {passLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Set Password
-                </Button>
+
+                <UserManagementRow
+                    agencyId={settings.id}
+                    email={ownerEmail}
+                    name={ownerName}
+                    roleLabel="Owner"
+                    roleColor="default" // primary
+                    canRemove={false}
+                />
             </div>
 
+            {/* 2. HIERARCHY: STAFF MEMBERS */}
             <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2">Authorized Domains</h3>
-                <div className="bg-yellow-50 p-4 rounded border border-yellow-200 text-yellow-800 text-sm flex gap-2">
-                    <AlertCircle className="h-4 w-4 mt-0.5" />
-                    <p>Only users with emails confirming to these domains will be able to sign up or log in to your agency workspace.</p>
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Saved Email Domains</Label>
-                    <div className="flex gap-2">
-                        <Input
-                            value={newDomain}
-                            onChange={e => setNewDomain(e.target.value)}
-                            onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    addDomain();
-                                }
-                            }}
-                            placeholder="example.com"
-                        />
-                        <Button onClick={addDomain} type="button" size="icon"><Plus className="h-4 w-4" /></Button>
+                <div className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-2">
+                        <UserCheck className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-medium">Staff Members</h3>
                     </div>
-                </div>
-
-                {access.authorizedDomains.length > 0 && (
-                    <div className="space-y-3 pt-4">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saved Domains ({access.authorizedDomains.length})</Label>
-                        <div className="rounded-lg border bg-card divide-y">
-                            {access.authorizedDomains.map(d => (
-                                <div key={d} className="flex items-center justify-between p-3 text-sm transition-colors hover:bg-muted/30">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-2 w-2 rounded-full bg-green-500" />
-                                        <span className="font-medium">@{d}</span>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() => removeDomain(d)}
-                                        title="Remove domain"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                <Button onClick={() => {
-                    let finalAccess = access;
-                    onSave(finalAccess);
-                }} disabled={isPending}>Save Access Settings</Button>
-            </div>
-
-            {/* SECTION 3 — TEAM MEMBERS (Moved from Notifications) */}
-            <div className="space-y-4 pt-6 border-t">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-medium flex items-center gap-2">
-                            <UserCheck className="h-4 w-4" />
-                            Team Members
-                        </h3>
-                        <CardDescription>
-                            Manage staff accounts and login access.
-                        </CardDescription>
-                    </div>
-                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff} variant="outline">
-                        <Plus className="h-4 w-4 mr-2" /> Add Member
+                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff} variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-2" /> Add Staff
                     </Button>
                 </div>
 
@@ -1071,36 +1018,143 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
                     />
                 )}
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {(!settings.notifications.staff || settings.notifications.staff.length === 0) && !isAddingStaff && (
-                        <div className="p-4 border border-dashed rounded text-center text-sm text-muted-foreground">
-                            No additional staff members.
-                        </div>
+                        <p className="text-sm text-muted-foreground italic">No additional staff members found.</p>
                     )}
 
                     {(settings.notifications.staff || []).map(member => (
-                        <div key={member.email} className="flex items-center justify-between p-4 border rounded-lg bg-card">
-                            <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                    {(member.email && member.email.length > 0) ? member.email[0].toUpperCase() : '?'}
-                                </div>
-                                <div className="space-y-0.5">
-                                    <p className="text-sm font-medium">{member.name || 'Staff Member'}</p>
-                                    <p className="text-xs text-muted-foreground">{member.email}</p>
-                                </div>
-                            </div>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => removeStaff(member.email)}>
-                                Remove
-                            </Button>
-                        </div>
+                        <UserManagementRow
+                            key={member.email}
+                            agencyId={settings.id}
+                            email={member.email}
+                            name={member.name || 'Staff Member'}
+                            roleLabel="Staff"
+                            roleColor="secondary"
+                            canRemove={true}
+                            onRemove={() => removeStaff(member.email)}
+                        />
                     ))}
                 </div>
             </div>
 
-        </div >
+            {/* 3. CONFIG: DOMAINS (At bottom) */}
+            <div className="space-y-4 pt-6 border-t">
+                <h3 className="text-lg font-medium border-b pb-2">Authorized Domains</h3>
+                <CardDescription>
+                    Allow anyone with an email from these domains to sign up/login automatically.
+                </CardDescription>
 
+                {access.authorizedDomains.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {access.authorizedDomains.map(d => (
+                            <Badge key={d} variant="outline" className="gap-2 pl-2 pr-1 py-1">
+                                @{d}
+                                <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeDomain(d)} />
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex gap-2 max-w-sm">
+                    <Input
+                        value={newDomain}
+                        onChange={e => setNewDomain(e.target.value)}
+                        placeholder="example.com"
+                        onKeyDown={e => e.key === 'Enter' && addDomain()}
+                    />
+                    <Button onClick={addDomain} type="button" variant="secondary">Add</Button>
+                </div>
+
+                <div className="pt-2">
+                    <Button onClick={() => onSave(access)} disabled={isPending}>Save Domain Settings</Button>
+                </div>
+            </div>
+
+        </div >
     );
 };
+
+// --- Sub-component for User Rows ---
+
+function UserManagementRow({ agencyId, email, name, roleLabel, roleColor, canRemove, onRemove }: {
+    agencyId: string, email: string, name: string, roleLabel: string, roleColor: 'default' | 'secondary' | 'outline', canRemove: boolean, onRemove?: () => void
+}) {
+    const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+    const [newPass, setNewPass] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleUpdatePassword = async () => {
+        if (!newPass) return;
+        setLoading(true);
+        try {
+            const { adminUpdateUserPassword } = await import('@/lib/actions');
+            const result = await adminUpdateUserPassword(agencyId, email, newPass);
+            if (result.success) {
+                alert('Password updated successfully');
+                setNewPass('');
+                setIsPasswordOpen(false);
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="border rounded-lg p-4 bg-card shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-lg ${roleLabel === 'Owner' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        {email[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-sm md:text-base">{name}</h4>
+                            <Badge variant={roleColor as any} className="text-[10px] h-5">{roleLabel}</Badge>
+                        </div>
+                        <p className="text-xs md:text-sm text-muted-foreground">{email}</p>
+                    </div>
+                </div>
+                {canRemove && onRemove && (
+                    <Button variant="ghost" size="sm" onClick={onRemove} className="text-destructive hover:bg-destructive/10">
+                        Remove
+                    </Button>
+                )}
+            </div>
+
+            {/* Password Toggle */}
+            <div className="text-sm">
+                <button
+                    onClick={() => setIsPasswordOpen(!isPasswordOpen)}
+                    className="text-primary hover:underline flex items-center gap-1 font-medium"
+                >
+                    <Key className="h-3 w-3" />
+                    {isPasswordOpen ? 'Cancel Password Change' : 'Change Password'}
+                </button>
+
+                {isPasswordOpen && (
+                    <div className="mt-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                        <Input
+                            type="text"
+                            placeholder="Set new password..."
+                            value={newPass}
+                            onChange={e => setNewPass(e.target.value)}
+                            className="max-w-xs"
+                        />
+                        <Button size="sm" onClick={handleUpdatePassword} disabled={loading || newPass.length < 6}>
+                            {loading && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
+                            Update
+                        </Button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 const SubscriptionForm = ({ settings }: { settings: AgencySettings }) => {
     return (
@@ -1118,5 +1172,8 @@ const SubscriptionForm = ({ settings }: { settings: AgencySettings }) => {
         </div>
     );
 };
+
+
+
 
 

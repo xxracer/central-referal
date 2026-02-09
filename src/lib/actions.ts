@@ -128,6 +128,63 @@ export async function markPasswordResetComplete(agencyId: string, email: string)
     }
 }
 
+export async function adminUpdateUserPassword(agencyId: string, targetEmail: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+        // 1. Verify Caller
+        const { verifySession } = await import('./auth-actions');
+        const session = await verifySession();
+        if (!session || !session.email) {
+            return { success: false, message: 'Unauthorized' };
+        }
+
+        const callerEmail = session.email.toLowerCase();
+
+        // 2. Check Authorization (Must be Owner or Global Admin)
+        const { getAgencySettings } = await import('./settings');
+        const agency = await getAgencySettings(agencyId);
+
+        const ownerEmail = (agency.companyProfile.email || '').toLowerCase();
+        const adminEmail = (agency.notifications?.primaryAdminEmail || '').toLowerCase();
+        const globalAdmin = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').toLowerCase();
+
+        const isAuthorized = callerEmail === ownerEmail || callerEmail === adminEmail || callerEmail === globalAdmin;
+
+        if (!isAuthorized) {
+            // Allow users to change THEIR OWN password
+            if (callerEmail !== targetEmail.toLowerCase()) {
+                return { success: false, message: 'Permission denied: Only the Agency Owner can reset other users passwords.' };
+            }
+        }
+
+        if (!newPassword || newPassword.length < 6) {
+            return { success: false, message: 'Password must be at least 6 characters.' };
+        }
+
+        // 3. Update Password via Firebase Admin
+        try {
+            const userRecord = await adminAuth.getUserByEmail(targetEmail);
+            await adminAuth.updateUser(userRecord.uid, {
+                password: newPassword
+            });
+        } catch (authError: any) {
+            console.error("Firebase Auth Error:", authError);
+            if (authError.code === 'auth/user-not-found') {
+                return { success: false, message: 'User account not found. Ensure the user is registered.' };
+            }
+            return { success: false, message: 'Failed to update password in Auth system.' };
+        }
+
+        // 4. Clear Reset Flag if exists
+        await markPasswordResetComplete(agencyId, targetEmail);
+
+        return { success: true, message: 'Password updated successfully.' };
+
+    } catch (error: any) {
+        console.error("Error in adminUpdateUserPassword:", error);
+        return { success: false, message: error.message || 'Server error updating password.' };
+    }
+}
+
 export type FormState = {
     message: string;
     errors?: Record<string, string[] | undefined>;

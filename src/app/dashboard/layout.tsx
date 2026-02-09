@@ -6,10 +6,14 @@ import { Ban } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Metadata } from 'next';
+import { SessionTimeout } from '@/components/session-timeout';
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
-  const agencyId = headersList.get('x-agency-id') || 'default';
+  let agencyId = headersList.get('x-agency-id');
+  if (!agencyId || agencyId === 'undefined' || agencyId === 'null') {
+    agencyId = 'default';
+  }
 
   if (agencyId === 'default') {
     return {
@@ -31,7 +35,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const headersList = await headers();
-  const agencyId = headersList.get('x-agency-id') || 'default';
+  let agencyId = headersList.get('x-agency-id');
+
+  if (!agencyId || agencyId === 'undefined' || agencyId === 'null') {
+    agencyId = 'default';
+  }
 
   // Fetch settings to validate existence and config
   const settings = await getAgencySettings(agencyId);
@@ -44,6 +52,39 @@ export default async function DashboardLayout({
   const hasAccess = await verifyUserAccess(userEmail, agencyId);
 
   if (!hasAccess) {
+    if (agencyId === 'default' && userEmail) {
+      // User is logged in but at root/default. Try to find their agency and redirect.
+      const { findAgenciesForUser } = await import('@/lib/settings');
+      const userAgencies = await findAgenciesForUser(userEmail);
+
+      if (userAgencies.length > 0) {
+        const targetAgency = userAgencies[0];
+        const host = headersList.get('host') || 'localhost:3000';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+
+        // Construct redirect URL
+        // If localhost:9002 -> test.localhost:9002
+        // If referralflow.health -> test.referralflow.health
+        // We need to be careful not to append if already present, but here we are at 'default' which implies root or unrecognized.
+
+        let newHost = host;
+        // If host is effectively root (localhost:port or referralflow.health)
+        // We prepend the slug.
+        // check if host already start with slug? No, because middleware said it's default.
+
+        // Handle localhost special case where we might need to strictly append to "localhost" part?
+        // If host is "localhost:9002", then new is "slug.localhost:9002"
+        // If host is "referral-app.vercel.app", then new is "slug.referral-app.vercel.app" (if wildcard supported)
+        // If not, we might fail. But for localhost/custom domain it works.
+
+        newHost = `${targetAgency.slug}.${host}`;
+
+        const redirectUrl = `${protocol}://${newHost}/dashboard`;
+        console.log(`[Access Control] Redirecting ${userEmail} from default to ${redirectUrl}`);
+        redirect(redirectUrl);
+      }
+    }
+
     console.error(`[Access Control] Denied access to ${agencyId} for user ${userEmail}`);
     // Redirect to selection or login? 
     // If 'default', and not admin, maybe redirect to logic that finds their actual agency?
@@ -125,7 +166,15 @@ export default async function DashboardLayout({
 
   return (
     <DashboardShell>
+      <SessionTimeout />
       {children}
     </DashboardShell>
   );
 }
+
+// Import at the top needed? Yes.
+// Since I can't easily add import at top with replace_content on huge file without line numbers shifting easily...
+// Note: The user's file content provided earlier shows imports at top.
+// I'll add the import in a separate step or try to add it here if I include top lines?
+// No, I'll do two edits. One for import, one for usage.
+

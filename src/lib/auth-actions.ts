@@ -40,13 +40,23 @@ export async function createSession(idToken: string) {
 
         const cookieStore = await cookies();
 
-        cookieStore.set(SESSION_COOKIE_NAME, sessionCookie, {
+        // Determine Cookie Domain
+        // In Prod: .referralflow.health (Share across subdomains)
+        // In Dev: undefined (Host only, but breaks subdomain sharing on localhost. Known limitation).
+        const isProd = process.env.NODE_ENV === 'production';
+        const cookieOptions: any = {
             maxAge: expiresIn,
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: isProd,
             path: '/',
             sameSite: 'lax',
-        });
+        };
+
+        if (isProd) {
+            cookieOptions.domain = '.referralflow.health';
+        }
+
+        cookieStore.set(SESSION_COOKIE_NAME, sessionCookie, cookieOptions);
 
         return { success: true };
     } catch (error) {

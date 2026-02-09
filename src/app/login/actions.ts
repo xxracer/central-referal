@@ -27,6 +27,11 @@ export async function checkUserAgencies(email: string) {
 export async function verifyCaptcha(token: string) {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
+    // [DEV MODE] Bypass for localhost
+    if (process.env.NODE_ENV === 'development' && token === 'dev-bypass') {
+        return { success: true };
+    }
+
     if (!token) {
         return { success: false, message: 'No token provided' };
     }

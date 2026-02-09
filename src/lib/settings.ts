@@ -146,13 +146,24 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
 
     try {
         // 1. Check authorizedDomains
-        // CRITICAL SECURITY: specific allow-list or block common public domains to prevent accidental exposure
-        const bannedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com'];
+        // CRITICAL SECURITY: Block common public domains to prevent accidental exposure
+        const bannedDomains = [
+            'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'protonmail.com',
+            'mail.com', 'zoho.com', 'yandex.com', 'live.com', 'msn.com', 'me.com', 'mac.com',
+            'comcast.net', 'verizon.net', 'att.net', 'sbcglobal.net', 'cox.net', 'charter.net'
+        ];
+
         if (domain && !bannedDomains.includes(domain.toLowerCase())) {
             const domainQuery = await settingsColl.where('userAccess.authorizedDomains', 'array-contains', domain).get();
             domainQuery.docs.forEach(doc => {
+                console.log(`[Isolation Debug] Match by DOMAIN (${domain}) for Agency: ${doc.id}`);
                 const data = convertTimestamps(doc.data()) as AgencySettings;
-                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+                agenciesMap.set(doc.id, {
+                    ...DEFAULT_SETTINGS,
+                    ...data,
+                    id: doc.id,
+                    slug: data.slug || doc.id
+                });
             });
         }
 
@@ -160,23 +171,29 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
         const emailQuery = await settingsColl.where('userAccess.authorizedEmails', 'array-contains', email).get();
         emailQuery.docs.forEach(doc => {
             if (!agenciesMap.has(doc.id)) {
+                console.log(`[Isolation Debug] Match by AUTHORIZED_EMAIL for Agency: ${doc.id}`);
                 const data = convertTimestamps(doc.data()) as AgencySettings;
-                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+                agenciesMap.set(doc.id, {
+                    ...DEFAULT_SETTINGS,
+                    ...data,
+                    id: doc.id,
+                    slug: data.slug || doc.id
+                });
             }
         });
-
-        // 3. Check notifications.staff (optional/deep check - if we want to catch users added manually to staff but not authorized list?)
-        // Usually staff list implies access? Assuming yes. But staff list is array of objects.
-        // Queries for array inclusion of objects are strict.
-        // We might stick to the authorized lists explicitly for access control as per "User Access" tab.
-        // However, the primary Admin should also be found.
 
         // 4. Check primary owner
         const ownerQuery = await settingsColl.where('companyProfile.email', '==', email).get();
         ownerQuery.docs.forEach(doc => {
             if (!agenciesMap.has(doc.id)) {
+                console.log(`[Isolation Debug] Match by OWNER_EMAIL for Agency: ${doc.id}`);
                 const data = convertTimestamps(doc.data()) as AgencySettings;
-                agenciesMap.set(doc.id, { ...DEFAULT_SETTINGS, ...data, id: doc.id });
+                agenciesMap.set(doc.id, {
+                    ...DEFAULT_SETTINGS,
+                    ...data,
+                    id: doc.id,
+                    slug: data.slug || doc.id
+                });
             }
         });
 

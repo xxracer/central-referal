@@ -19,6 +19,9 @@ function AgencySetupForm() {
     const [email, setEmail] = useState('');
     const [agencyName, setAgencyName] = useState('');
     const [slug, setSlug] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
 
     // Auto-generate slug from name
     useEffect(() => {
@@ -40,7 +43,26 @@ function AgencySetupForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setPasswordError('');
+
         if (!email || !agencyName || !slug) return;
+
+        const isGmail = email.toLowerCase().includes('@gmail.com');
+
+        if (!isGmail && !password) {
+            setPasswordError('Password is required for non-Gmail accounts');
+            return;
+        }
+
+        if (password && password !== confirmPassword) {
+            setPasswordError('Passwords do not match');
+            return;
+        }
+
+        if (password && password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            return;
+        }
 
         setIsLoading(true);
 
@@ -48,7 +70,7 @@ function AgencySetupForm() {
             const response = await fetch('/api/agency/setup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, agencyName, slug }),
+                body: JSON.stringify({ email, agencyName, slug, password }),
             });
 
             const data = await response.json();
@@ -79,10 +101,12 @@ function AgencySetupForm() {
         return (
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 flex items-center justify-center h-16 w-16">
-                        <img src="/logo.png" alt="ReferralFlow" className="w-16 h-16 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                        {/* Fallback if logo not found */}
-                        <Store className="h-10 w-10 text-primary hidden" />
+                    <div className="mx-auto mb-6 flex items-center justify-center">
+                        <img
+                            src="https://static.wixstatic.com/media/c5947c_14731b6192f740d8958b7a069f361b4e~mv2.png"
+                            alt="ReferralFlow"
+                            className="h-32 w-auto object-contain"
+                        />
                     </div>
                     <CardTitle className="text-xl">Welcome to ReferralFlow</CardTitle>
                 </CardHeader>
@@ -105,6 +129,7 @@ function AgencySetupForm() {
                             const redirectParam = encodeURIComponent('/dashboard/settings');
 
                             // Point to login because they are likely NOT logged in yet
+                            // Password was just set, so they can login now.
                             const targetUrl = `${protocol}//${slug}.referralflow.health/login?email=${encodeURIComponent(email)}&redirect=${redirectParam}`;
 
                             if (window.location.hostname.includes('localhost')) {
@@ -176,11 +201,41 @@ function AgencySetupForm() {
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Create Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="******"
+                                required
+                                minLength={6}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Confirm</Label>
+                            <Input
+                                id="confirmPassword"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="******"
+                                required
+                                minLength={6}
+                            />
+                        </div>
+                    </div>
+                    {passwordError && (
+                        <p className="text-sm text-destructive font-medium">{passwordError}</p>
+                    )}
+
                     <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                creating Workspace...
+                                Converting Workspace...
                             </>
                         ) : (
                             <>

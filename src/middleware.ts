@@ -45,54 +45,55 @@ export default async function middleware(req: NextRequest) {
     }
     // ---------------------------------
 
-    // Allowed domains list (including localhost)
-    // In production, you'd add your root domain here
-    const allowedDomains = [
-        "localhost:3000",
+    const requestHeaders = new Headers(req.headers);
+
+    // Clean hostname (remove port) for logic checks
+    const cleanHost = hostname.split(':')[0];
+
+    // Root Domains that map to 'default' (Landing Page / Central Admin)
+    const rootDomains = [
+        "localhost",
         "actiniumholdings.com",
         "referral-app.vercel.app",
         "referralflow.health",
         "www.referralflow.health"
     ];
 
-    // Verify uniqueness of hostname to determine if it's a subdomain
-    // logic: if hostname is NOT in allowedDomains, treat as subdomain/custom domain
-    // But for localhost testing: "test.localhost:3000"
-
-    const isVercelDomain = hostname.includes(".vercel.app");
-    const isLocalhost = hostname.includes("localhost");
-
-    // simplistic subdomain extraction for "sub.domain.com"
-    // If localhost: test.localhost:3000 -> sub: test
-    // If prod: care.actinium.com -> sub: care
-
-    let currentHost;
-    if (process.env.NODE_ENV === "production" && isVercelDomain) {
-        currentHost = hostname.replace(`.vercel.app`, "");
-    } else if (process.env.NODE_ENV === "development" && isLocalhost) {
-        currentHost = hostname.replace(`.localhost:3000`, "");
-    } else {
-        // Custom domain or root
-        currentHost = hostname; // Needs more robust parsing if we support custom domains
-    }
-
-    // If it's the root domain (no subdomain), just let it pass or rewrite to landing?
-    // If hostname is root, we might want to show a general landing page or login.
-    // For now, let's assume if it is "localhost:3000" or "actinium.com", it is ROOT.
-
-    const requestHeaders = new Headers(req.headers);
-
-    if (allowedDomains.some(d => hostname === d) || hostname === 'localhost:3000') {
+    if (rootDomains.includes(cleanHost)) {
         requestHeaders.set('x-agency-id', 'default');
         return NextResponse.next({
             request: { headers: requestHeaders },
         });
     }
 
-    // It IS a subdomain (e.g., 'care')
-    const subdomain = currentHost.split('.')[0];
+    // Subdomain Extraction Logic
+    let agencyId = 'default';
 
-    requestHeaders.set('x-agency-id', subdomain);
+    if (cleanHost.endsWith('.referralflow.health')) {
+        agencyId = cleanHost.replace('.referralflow.health', '');
+    } else if (cleanHost.endsWith('.vercel.app')) {
+        agencyId = cleanHost.replace('.vercel.app', '');
+    } else if (cleanHost.endsWith('.localhost')) { // e.g. agency.localhost
+        agencyId = cleanHost.replace('.localhost', '');
+    } else {
+        // Fallback for custom domains or other environments
+        // If we are here, it matches "((?!api/|_next/...).*)" so it is a page request.
+        // If it isn't a known root domain, we assume it MIGHT be a custom domain mapping to an agency.
+        // For now, let's treat the whole host (minus port) as key if we supported custom domains.
+        // But simpler: just take the first part of the domain?
+        // Or if local development with different port but no subdomain? 
+        // Logic: active development might be on localhost:9002 WITHOUT subdomain.
+        // IF user is accessing localhost:9002 directly, it is effectively ROOT.
+        if (cleanHost === 'localhost' || cleanHost === '127.0.0.1') {
+            agencyId = 'default';
+        } else {
+            // Potentially a custom domain or sub.sub.domain
+            // Take the first part? 
+            agencyId = cleanHost.split('.')[0];
+        }
+    }
+
+    requestHeaders.set('x-agency-id', agencyId);
     return NextResponse.next({
         request: { headers: requestHeaders },
     });

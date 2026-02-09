@@ -43,7 +43,10 @@ export default async function DashboardPage({
 
     const { headers } = await import('next/headers');
     const headersList = await headers();
-    const agencyId = headersList.get('x-agency-id') || 'default';
+    let agencyId = headersList.get('x-agency-id');
+    if (!agencyId || agencyId === 'undefined' || agencyId === 'null') {
+        agencyId = 'default';
+    }
 
     let referrals = await getReferrals(agencyId, { startDate, endDate, isArchived: false });
 

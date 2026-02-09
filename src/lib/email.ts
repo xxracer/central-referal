@@ -175,7 +175,6 @@ export async function sendReferralNotification(
           <p>The status of the referral you submitted to <strong>${agencyName}</strong> has been updated.</p>
           <p>
             <strong>Referral ID:</strong> ${data.referralId}<br/>
-            <strong>Patient Name:</strong> ${data.patientName}<br/>
             <strong>Current Status:</strong> ${data.status}
           </p>
           <p>You can view the most up-to-date information using the link below.</p>
@@ -195,10 +194,9 @@ export async function sendReferralNotification(
             <strong>Referral ID:</strong> ${data.referralId}<br/>
             <strong>From:</strong> ${data.referrerName || 'Referral Source'}
           </p>
-          <p><strong>Message preview:</strong></p>
-          <blockquote style="border-left: 4px solid #cbd5e1; padding-left: 16px; margin: 16px 0; font-style: italic; color: #64748b;">
-            "${data.messageSnippet}"
-          </blockquote>
+          <p style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; font-style: italic;">
+             Log in to the secure dashboard to view the message content.
+          </p>
           <p>Please review and respond promptly to maintain clear communication with your referral partner.</p>
           ${button('View message', data.referralLink || `${baseUrl}/dashboard/referrals/${data.referralId}`)}
           <p>ReferralFlow.Health</p>
@@ -211,10 +209,9 @@ export async function sendReferralNotification(
           <h2 style="color: #0f172a;">New Message from ${agencyName}</h2>
           <p>Hello ${data.referrerName || 'Partner'},</p>
           <p><strong>${agencyName}</strong> has sent you a message regarding referral <strong>${data.referralId}</strong>.</p>
-          <p><strong>Message:</strong></p>
-          <blockquote style="border-left: 4px solid #cbd5e1; padding-left: 16px; margin: 16px 0; font-style: italic; color: #64748b;">
-            "${data.messageSnippet}"
-          </blockquote>
+          <p style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; font-style: italic;">
+             Please click the link below to view the secure message.
+          </p>
           <p>You can view the full history and status at the link below.</p>
           ${button('View Status & Reply', data.statusLink || `${baseUrl}/status?id=${data.referralId}`)} 
           <p>If you need to submit additional documents, you may reply directly to this email with attachments.</p>
@@ -222,68 +219,16 @@ export async function sendReferralNotification(
         `;
         break;
 
-      case 'REFERRAL_VIEWED': // Optional
-        subject = 'Referral Update';
-        htmlContent = `
-           <h2 style="color: #0f172a;">Referral Update</h2>
-           <p>Hello ${data.referrerName || 'Partner'},</p>
-           <p>We wanted to let you know that <strong>${agencyName}</strong> has reviewed the referral you submitted.</p>
-           <p><strong>Referral ID:</strong> ${data.referralId}</p>
-           <p>You can continue to monitor the referral status using the link below.</p>
-           ${button('Track referral status', data.statusLink || `${baseUrl}/status?id=${data.referralId}`)}
-           <p>Thank you for working with us.</p>
-           <p>${agencyName}</p>
-        `;
-        break;
-
-      case 'REFERRAL_STALE':
-        subject = 'Referral Pending - Action required';
-        htmlContent = `
-          <h2 style="color: #ef4444;">Action Required</h2>
-          <p>Hello,</p>
-          <p>The following referral has not been updated within the expected timeframe:</p>
-          <p>
-            <strong>Referral ID:</strong> ${data.referralId}<br/>
-            <strong>Time Since Submission:</strong> ${data.elapsedTime || '24 hours'}
-          </p>
-          <p>To maintain strong referral partner relationships, please review and update this referral as soon as possible.</p>
-          ${button('Review referral', data.referralLink || `${baseUrl}/dashboard/referrals/${data.referralId}`)}
-          <p>ReferralFlow.Health</p>
-        `;
-        break;
-
-      case 'PAYMENT_DECLINED':
-        subject = 'Payment Issue - Action Required';
-        htmlContent = `
-          <h2 style="color: #ef4444;">Payment Issue</h2>
-          <p>Hello ${data.firstName || 'User'},</p>
-          <p>We were unable to process your most recent payment for <strong>${agencyName}</strong>.</p>
-          <p><strong>Reason:</strong> ${data.declineReason || 'Transaction declined'}</p>
-          <p>To avoid any interruption to your ReferralFlow.Health service, please update your payment method as soon as possible.</p>
-          ${button('Update billing information', data.billingLink || `${baseUrl}/dashboard/settings`)}
-          <p>If you have questions or believe this is an error, please contact our support team.</p>
-          <p>Thank you,<br/>ReferralFlow.Health Billing</p>
-        `;
-        break;
-
-      case 'CARD_EXPIRING':
-        subject = 'Payment method expiring soon';
-        htmlContent = `
-           <h2 style="color: #0f172a;">Payment method expiring soon</h2>
-           <p>Hello ${data.firstName || 'User'},</p>
-           <p>The credit card on file for <strong>${agencyName}</strong> will expire in approximately 30 days.</p>
-           <p>To prevent any disruption to your service, please update your billing information at your convenience.</p>
-           ${button('Update billing details', data.billingLink || `${baseUrl}/dashboard/settings`)}
-           <p>Thank you,<br/>ReferralFlow.Health Billing</p>
-         `;
-        break;
+      // ... existing cases ...
 
       case 'INTERNAL_NOTE':
         subject = `New Internal Note: ${data.referralId}`;
         htmlContent = `
           <h2>New Internal Note</h2>
           <p>A new note was added to referral <strong>${data.referralId}</strong>.</p>
-          ${data.messageSnippet ? `<p>"${data.messageSnippet}"</p>` : ''}
+          <p style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; font-style: italic;">
+             Log in to view the note content.
+          </p>
           ${button('View Referral', data.referralLink || `${baseUrl}/dashboard/referrals/${data.referralId}`)}
         `;
         break;

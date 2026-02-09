@@ -20,6 +20,10 @@ try {
             }),
             storageBucket: 'onboard-panel-gx822.firebasestorage.app',
         });
+
+        // [FIX] Ignore undefined values in Firestore (e.g. optional fields in Audit Logs)
+        admin.firestore().settings({ ignoreUndefinedProperties: true });
+
         console.log('[FirebaseAdmin] Initialized successfully.');
     }
 } catch (error) {
