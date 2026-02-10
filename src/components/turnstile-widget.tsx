@@ -33,7 +33,8 @@ export function TurnstileWidget({ siteKey, onVerify }: TurnstileWidgetProps) {
         if (isLoaded && containerRef.current && (window as any).turnstile) {
             const isDev = process.env.NODE_ENV === 'development';
             const testingSiteKey = "1x00000000000000000000AA";
-            const effectiveSiteKey = siteKey || (isDev ? testingSiteKey : process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) || "0x4AAAAAACaQtV2HCSGPHGiQ";
+            // Force testing key in dev mode, otherwise use prop -> env -> fallback
+            const effectiveSiteKey = isDev ? testingSiteKey : (siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAACaQtV2HCSGPHGiQ");
 
             const id = (window as any).turnstile.render(containerRef.current, {
                 sitekey: effectiveSiteKey,

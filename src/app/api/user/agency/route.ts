@@ -21,7 +21,7 @@ export async function GET(request: Request) {
             });
         }
 
-        return NextResponse.json({ error: 'No agency found' }, { status: 404 });
+        return NextResponse.json({ agencyName: null, agencyId: null });
     } catch (error) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
