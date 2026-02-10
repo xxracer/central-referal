@@ -445,17 +445,22 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
     let noteAdded = false;
     if (optionalNote) {
         const now = new Date();
-        referral.externalNotes = referral.externalNotes || []; // Ensure array exists
-        referral.externalNotes.push({
+        const newNote = {
             id: `note-${Date.now()}`,
             content: optionalNote,
-            author: { name: 'Referrer/Patient', email: '', role: 'STAFF' }, // Placeholder role/email
+            author: { name: 'Referrer/Patient', email: '', role: 'STAFF' as const }, // Placeholder role/email
             createdAt: now,
             isExternal: true
-        });
+        };
+
+        referral.externalNotes = referral.externalNotes || []; // Ensure array exists
+        referral.externalNotes.push(newNote);
         referral.updatedAt = now;
         referral.hasUnreadMessages = true; // Mark as having unread messages
-        await saveReferral(referral);
+
+        // Use safe update helper to avoid overwriting internalNotes (which are missing in public object)
+        const { addPublicMessageToReferral } = await import('./data');
+        await addPublicMessageToReferral(referral.id, newNote);
 
         // Notify staff of new external message (Template 5)
         sendReferralNotification(referral.agencyId, 'NEW_EXTERNAL_MESSAGE_INTERNAL', {

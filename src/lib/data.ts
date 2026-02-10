@@ -434,3 +434,26 @@ export async function getPublicReferralStatus(referralId: string): Promise<Refer
 
     return safeData as Referral;
 }
+
+export async function addPublicMessageToReferral(referralId: string, note: any) {
+    const firestore = getDb();
+    const docRef = firestore.collection('referrals').doc(referralId);
+
+    // Ensure Note Date is a Timestamp
+    const noteToSave = {
+        ...note,
+        createdAt: note.createdAt instanceof Date ? Timestamp.fromDate(note.createdAt) : note.createdAt
+    };
+
+    await docRef.update({
+        externalNotes: FieldValue.arrayUnion(noteToSave),
+        hasUnreadMessages: true,
+        updatedAt: Timestamp.now()
+    });
+
+    logAudit({
+        action: 'PUBLIC_MESSAGE_ADDED',
+        resourceId: referralId,
+        actor: 'public'
+    } as any);
+}
