@@ -13,7 +13,6 @@ import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { checkUserAgencies } from './actions';
 import { createSession } from '@/lib/auth-actions';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -39,17 +38,6 @@ function LoginForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [resetEmail, setResetEmail] = useState("");
-    const [captchaValue, setCaptchaValue] = useState<string | null>(null);
-    const [isLocalhost, setIsLocalhost] = useState(false);
-
-    // [DEV MODE] Auto-bypass captcha on localhost
-    // [DEV MODE] Auto-bypass captcha on localhost
-    useEffect(() => {
-        if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
-            setCaptchaValue('dev-bypass');
-            setIsLocalhost(true);
-        }
-    }, []);
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -152,28 +140,6 @@ function LoginForm() {
     const handleEmailSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !password) return;
-
-        if (!captchaValue) {
-            toast({
-                variant: 'destructive',
-                title: 'Verification Required',
-                description: 'Please complete the captcha verification.'
-            });
-            return;
-        }
-
-        // Server-side verification
-        const { verifyCaptcha } = await import('./actions');
-        const verification = await verifyCaptcha(captchaValue);
-
-        if (!verification.success) {
-            toast({
-                variant: 'destructive',
-                title: 'Security Check Failed',
-                description: 'Please try the captcha again.'
-            });
-            return;
-        }
 
         setIsLoading(true);
         try {
@@ -357,19 +323,7 @@ function LoginForm() {
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
-                            <div className="flex justify-center">
-                                {/* [DEV MODE] Bypass Bot Protection on localhost */}
-                                {isLocalhost ? (
-                                    <div className="text-xs text-muted-foreground bg-secondary/20 px-3 py-1 rounded-full border border-secondary/50">
-                                        Bot Protection Bypassed (Localhost)
-                                    </div>
-                                ) : (
-                                    <TurnstileWidget
-                                        siteKey="0x4AAAAAACaQtV2HCSGPHGiQ" // Cloudflare Site Key
-                                        onVerify={(val) => setCaptchaValue(val)}
-                                    />
-                                )}
-                            </div>
+
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
                                 Sign In with Email
