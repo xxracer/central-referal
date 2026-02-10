@@ -418,20 +418,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
         return { message: 'Referral ID is required.', success: false };
     }
 
-    // Require ReCAPTCHA only for initial lookup (no note)
-    if (!token && !optionalNote) {
-        return { message: 'Please complete the reCAPTCHA verification.', success: false };
-    }
 
-    // Verify reCAPTCHA only if provided (Initial Lookup)
-    if (token) {
-        const { verifyRecaptcha } = await import('./recaptcha');
-        const isHuman = await verifyRecaptcha(token);
-
-        if (!isHuman) {
-            return { message: 'reCAPTCHA verification failed. Please try again.', success: false };
-        }
-    }
 
     // Use secure public lookup
     const { getPublicReferralStatus } = await import('./data');

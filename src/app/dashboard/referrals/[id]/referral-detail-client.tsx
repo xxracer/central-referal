@@ -356,21 +356,27 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><FileIcon className="text-primary h-5 w-5" /> Patient Documents</h3>
                                 {referral.documents.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {referral.documents.map(doc => (
-                                            <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 transition-all group">
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
-                                                        <FileIcon className="h-4 w-4 text-primary" />
+                                        {referral.documents.map(doc => {
+                                            const fileUrl = doc.url.startsWith('_private/')
+                                                ? `/api/files/${doc.url.replace('_private/', '')}`
+                                                : doc.url;
+
+                                            return (
+                                                <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 transition-all group">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+                                                            <FileIcon className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                        <span className="text-sm font-medium truncate max-w-[150px]" title={doc.name}>{doc.name}</span>
                                                     </div>
-                                                    <span className="text-sm font-medium truncate max-w-[150px]" title={doc.name}>{doc.name}</span>
+                                                    <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
+                                                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                                                            <Download className="h-4 w-4" />
+                                                        </a>
+                                                    </Button>
                                                 </div>
-                                                <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
-                                                    <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                                        <Download className="h-4 w-4" />
-                                                    </a>
-                                                </Button>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-muted text-muted-foreground text-sm">
