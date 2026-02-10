@@ -376,7 +376,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     };
 
     try {
-        await saveReferral(newReferral);
+        await saveReferral(newReferral, true);
 
         // 4. Send Email Notifications (New Logic)
         if (agencyId) {

@@ -208,9 +208,10 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
     return data as Referral;
 }
 
-export async function saveReferral(referral: Referral): Promise<Referral> {
+export async function saveReferral(referral: Referral, bypassAuth: boolean = false): Promise<Referral> {
     const user = await verifySession();
-    if (!user) throw new Error('Unauthorized');
+
+    if (!user && !bypassAuth) throw new Error('Unauthorized');
 
     const firestore = getDb();
     const docRef = firestore.collection('referrals').doc(referral.id);
@@ -248,7 +249,7 @@ export async function saveReferral(referral: Referral): Promise<Referral> {
         action: referral.createdAt === referral.updatedAt ? 'CREATE_REFERRAL' : 'UPDATE_REFERRAL',
         resourceId: referral.id,
         agencyId: referral.agencyId,
-        actor: `user:${user.uid}`,
+        actor: user ? `user:${user.uid}` : 'public',
         details: { status: referral.status }
     });
 
