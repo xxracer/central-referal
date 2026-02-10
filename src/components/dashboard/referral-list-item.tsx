@@ -61,10 +61,10 @@ function ReferralDetail({ referral }: { referral: Referral }) {
                         {referral.documents.map(doc => (
                             <li key={doc.id}>
                                 <Button variant="outline" asChild className="w-full justify-start border-primary/20 hover:bg-primary/5">
-                                    <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate">
-                                        <Download className="mr-2 h-4 w-4" />
+                                    <Link href={`/dashboard/referrals/${referral.id}`} className="truncate">
+                                        <FileText className="mr-2 h-4 w-4" />
                                         {doc.name}
-                                    </a>
+                                    </Link>
                                 </Button>
                             </li>
                         ))}
