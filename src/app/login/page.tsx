@@ -13,7 +13,7 @@ import { Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { checkUserAgencies } from './actions';
 import { createSession } from '@/lib/auth-actions';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ReCAPTCHA from "react-google-recaptcha";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -40,12 +40,14 @@ function LoginForm() {
     const [password, setPassword] = useState("");
     const [resetEmail, setResetEmail] = useState("");
     const [captchaValue, setCaptchaValue] = useState<string | null>(null);
+    const [isLocalhost, setIsLocalhost] = useState(false);
 
     // [DEV MODE] Auto-bypass captcha on localhost
     // [DEV MODE] Auto-bypass captcha on localhost
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
             setCaptchaValue('dev-bypass');
+            setIsLocalhost(true);
         }
     }, []);
 
@@ -356,15 +358,15 @@ function LoginForm() {
                                 />
                             </div>
                             <div className="flex justify-center">
-                                {/* [DEV MODE] Bypass ReCAPTCHA on localhost */}
-                                {(typeof window !== 'undefined' && window.location.hostname.includes('localhost')) ? (
+                                {/* [DEV MODE] Bypass Bot Protection on localhost */}
+                                {isLocalhost ? (
                                     <div className="text-xs text-muted-foreground bg-secondary/20 px-3 py-1 rounded-full border border-secondary/50">
                                         Bot Protection Bypassed (Localhost)
                                     </div>
                                 ) : (
-                                    <ReCAPTCHA
-                                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                                        onChange={(val) => setCaptchaValue(val)}
+                                    <TurnstileWidget
+                                        siteKey="0x4AAAAAACaQtV2HCSGPHGiQ" // Cloudflare Site Key
+                                        onVerify={(val) => setCaptchaValue(val)}
                                     />
                                 )}
                             </div>

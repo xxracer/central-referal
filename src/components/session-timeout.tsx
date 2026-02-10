@@ -4,7 +4,7 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 
-const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes total
+const TIMEOUT_MS = process.env.NODE_ENV === 'development' ? 2 * 60 * 1000 : 15 * 60 * 1000; // 2 mins in dev for testing, 15 mins in prod
 const WARNING_MS = 60 * 1000; // Show warning 60 seconds before timeout
 
 export function SessionTimeout() {

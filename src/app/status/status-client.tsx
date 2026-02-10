@@ -16,7 +16,7 @@ import { cn, formatDate } from '@/lib/utils';
 import StatusBadge from '@/components/referrals/status-badge';
 import { useFormStatus } from 'react-dom';
 import { type AgencySettings } from '@/lib/types';
-import ReCAPTCHA from "react-google-recaptcha";
+import { TurnstileWidget } from '@/components/turnstile-widget';
 import { useRef } from 'react';
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
     const searchParams = useSearchParams();
     const initialReferralId = useMemo(() => searchParams.get('id') || '', [searchParams]);
     const [referralId, setReferralId] = useState(initialReferralId);
-    const recaptchaRef = useRef<ReCAPTCHA>(null);
+    // const recaptchaRef = useRef<ReCAPTCHA>(null);
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
     const initialState: FormState = { message: '', success: false };
@@ -59,7 +59,7 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
             // No longer clearing referralId to keep it fixed
         }
         if (!formState.success && process.env.NODE_ENV !== 'development') {
-            recaptchaRef.current?.reset();
+            // recaptchaRef.current?.reset();
             setCaptchaToken(null);
         }
     }, [formState, initialReferralId]);
@@ -110,11 +110,9 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                     🚧 Dev Mode: ReCAPTCHA Bypassed
                                                 </div>
                                             ) : (
-                                                <ReCAPTCHA
-                                                    ref={recaptchaRef}
-                                                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
-                                                    onChange={(token) => setCaptchaToken(token)}
-                                                    size="normal"
+                                                <TurnstileWidget
+                                                    siteKey="0x4AAAAAACaQtV2HCSGPHGiQ"
+                                                    onVerify={(token) => setCaptchaToken(token)}
                                                 />
                                             )}
                                         </div>
@@ -202,32 +200,57 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="p-6 space-y-6">
-                                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                                            Timeline & Communication
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+                                            Message History
                                         </h4>
-                                        <ul className="space-y-8 relative">
-                                            <div className="absolute left-3 top-2 bottom-2 w-px bg-gradient-to-b from-primary/50 via-muted to-muted" />
-                                            {formState.data?.statusHistory?.slice().reverse().map((item: any, index: number) => (
-                                                <li key={index} className="flex items-start gap-6 pl-10 relative">
-                                                    <div className="absolute left-0 top-1.5 h-6 w-6 rounded-full bg-background border-2 border-primary ring-4 ring-background z-10 flex items-center justify-center shadow-sm">
-                                                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                                                    </div>
-                                                    <div className="flex-1 space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <StatusBadge status={item.status} size="sm" />
-                                                            <span className="text-[10px] sm:text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-full">
-                                                                {formatDate(item.changedAt, "PPp")}
-                                                            </span>
-                                                        </div>
-                                                        {item.notes && (
-                                                            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 text-sm italic text-foreground leading-relaxed shadow-inner">
-                                                                "{item.notes}"
+
+                                        <div className="flex flex-col gap-6">
+                                            {(!formState.data?.externalNotes || formState.data.externalNotes.length === 0) ? (
+                                                <div className="text-center py-8 text-muted-foreground italic bg-muted/20 rounded-xl border border-dashed">
+                                                    No messages yet. Start the conversation above!
+                                                </div>
+                                            ) : (
+                                                formState.data.externalNotes.map((note: any, index: number) => {
+                                                    const isMe = note.author?.role === 'PUBLIC' || note.author?.name === 'Referrer/Patient';
+                                                    const senderName = isMe ? 'You' : profile.name;
+
+                                                    return (
+                                                        <div key={note.id || index} className={cn(
+                                                            "flex w-full animate-in slide-in-from-bottom-2 duration-500",
+                                                            isMe ? "justify-end" : "justify-start"
+                                                        )}>
+                                                            <div className={cn(
+                                                                "flex flex-col max-w-[85%] md:max-w-[75%]",
+                                                                isMe ? "items-end" : "items-start"
+                                                            )}>
+                                                                <div className="flex items-center gap-2 mb-1 px-1">
+                                                                    <span className="text-xs font-semibold text-muted-foreground">
+                                                                        {senderName}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground/60">
+                                                                        {formatDate(note.createdAt, "p")}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className={cn(
+                                                                    "rounded-2xl px-5 py-3 text-sm shadow-sm relative",
+                                                                    isMe
+                                                                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                                                        : "bg-muted text-foreground rounded-tl-sm border border-border/50"
+                                                                )}>
+                                                                    <p className="whitespace-pre-wrap leading-relaxed">
+                                                                        {note.content}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-[10px] text-muted-foreground mt-1 px-1 opacity-50">
+                                                                    {formatDate(note.createdAt, "PP")}
+                                                                </div>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

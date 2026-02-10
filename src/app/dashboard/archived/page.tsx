@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/utils';
 import { FileText, User, Stethoscope, Building, Download } from 'lucide-react';
 import type { Referral } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import UnarchiveButton from '@/components/referrals/unarchive-button';
 
 // Reuse components where possible
 function ReferralDetail({ referral }: { referral: Referral }) {
@@ -104,6 +105,9 @@ export default async function ArchivedReferralsPage() {
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="p-6 bg-muted/20 border-l-4 border-muted-foreground">
+                                        <div className="flex justify-end mb-4 pb-2 border-b border-muted-foreground/10">
+                                            <UnarchiveButton referralId={referral.id} />
+                                        </div>
                                         <ReferralDetail referral={referral} />
                                     </AccordionContent>
                                 </AccordionItem>

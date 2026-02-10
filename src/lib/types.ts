@@ -19,7 +19,7 @@ export type Note = {
   author: {
     name: string;
     email: string;
-    role: 'ADMIN' | 'STAFF' | 'SYSTEM';
+    role: 'ADMIN' | 'STAFF' | 'SYSTEM' | 'PUBLIC';
   };
   createdAt: Date;
   isExternal?: boolean; // If true, visible to referrer

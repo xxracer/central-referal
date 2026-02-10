@@ -374,6 +374,44 @@ export async function getUnseenReferralCount(agencyId: string): Promise<number> 
     }
 }
 
+export async function getRecentUnseenReferrals(agencyId: string, limit: number = 5): Promise<any[]> {
+    const user = await verifySession();
+    if (!user) return [];
+
+    const firestore = getDb();
+    try {
+        // Fetch recent referrals to filter in memory
+        const snapshot = await firestore.collection('referrals')
+            .where('agencyId', '==', agencyId)
+            .orderBy('updatedAt', 'desc')
+            .limit(20) // Fetch more to filter down
+            .get();
+
+        const unseen = snapshot.docs
+            .map(d => {
+                const data = convertTimestampsToDates(d.data());
+                return {
+                    id: d.id,
+                    patientName: data.patientName || 'Unknown Patient',
+                    referrerName: data.referrerName || 'Unknown Referrer',
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                    isSeen: data.isSeen === true, // Default false/undefined -> treat as false if strict, but let's see logic.
+                    // Wait, isSeen=false means unseen.
+                    isUnseen: data.isSeen === false || data.isSeen === undefined,
+                    hasUnreadMessages: data.hasUnreadMessages === true
+                };
+            })
+            .filter(r => (r.isUnseen && !r.isSeen) || r.hasUnreadMessages)
+            .slice(0, limit);
+
+        return unseen;
+    } catch (e) {
+        console.error("Error fetching recent unseen:", e);
+        return [];
+    }
+}
+
 export async function getReferralCount(agencyId: string): Promise<number> {
     try {
         const firestore = getDb();

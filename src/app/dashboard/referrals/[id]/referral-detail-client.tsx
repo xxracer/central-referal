@@ -44,10 +44,10 @@ import {
     Printer
 } from 'lucide-react';
 import StatusBadge from '@/components/referrals/status-badge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
 import type { Referral, ReferralStatus, Note } from '@/lib/types';
 import { addInternalNote, addExternalNote, updateReferralStatus, archiveReferralAction } from '@/lib/actions';
-import { useActionState, useState, useTransition, useEffect } from 'react';
+import { useActionState, useState, useTransition, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -80,6 +80,26 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
     const [selectedStatus, setSelectedStatus] = useState<ReferralStatus>(initialReferral.status);
     const [statusNote, setStatusNote] = useState('');
     const { toast } = useToast();
+
+    // Chat Scroll Ref
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const scrollToBottom = (instant = false) => {
+        if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: instant ? "auto" : "smooth"
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (referral.externalNotes?.length > 0) {
+            // Use a slight timeout to ensure content is rendered
+            const timer = setTimeout(() => scrollToBottom(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [referral.externalNotes, selectedStatus]); // added selectedStatus to scroll when switching tabs
 
     const handleArchiveToggle = async () => {
         const newState = !referral.isArchived;
@@ -199,11 +219,11 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <h1 className="font-headline text-3xl font-bold">Referral Details</h1>
-                                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                    <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
                                         ID: <span className="font-mono text-primary font-medium">{referral.id}</span>
                                         <CopyButton textToCopy={referral.id} size="sm" className="h-6 w-6" />
                                         • Received: {formatDate(referral.createdAt)}
-                                    </p>
+                                    </div>
                                 </div>
                                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                                     <StatusBadge status={referral.status} />
@@ -412,39 +432,37 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg border-primary/10 flex flex-col h-[600px]">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-lg font-bold flex items-center justify-between">
+                    <Card className="shadow-lg border-primary/10 flex flex-col h-[550px] overflow-hidden">
+                        <CardHeader style={{ padding: '12px 24px 4px' }}>
+                            <CardTitle className="text-lg font-bold flex justify-between">
                                 <div className="flex items-center gap-2">
                                     <MessageSquare className="text-primary h-5 w-5" />
                                     Communication
                                 </div>
                             </CardTitle>
                         </CardHeader>
-                        <Tabs defaultValue="internal" className="flex-1 flex flex-col">
-                            <div className="px-6">
-                                <TabsList className="w-full grid grid-cols-2 rounded-xl h-10">
-                                    <TabsTrigger value="internal" className="rounded-lg text-xs font-bold flex items-center gap-2">
-                                        INTERNAL NOTES
-                                        {referral.internalNotes?.length > 0 && (
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] text-primary">
-                                                {referral.internalNotes.length}
-                                            </span>
-                                        )}
-                                    </TabsTrigger>
-                                    <TabsTrigger value="external" className="rounded-lg text-xs font-bold flex items-center gap-2">
-                                        EXTERNAL CHAT
-                                        {referral.externalNotes?.length > 0 && (
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                                                {referral.externalNotes.length}
-                                            </span>
-                                        )}
-                                    </TabsTrigger>
-                                </TabsList>
-                            </div>
+                        <Tabs defaultValue="internal" className="flex-1 flex flex-col min-h-0">
+                            <TabsList className="mx-6 grid grid-cols-2 rounded-xl h-10" style={{ marginBottom: 0 }}>
+                                <TabsTrigger value="internal" className="rounded-lg text-xs font-bold flex items-center gap-2">
+                                    INTERNAL NOTES
+                                    {referral.internalNotes?.length > 0 && (
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] text-primary">
+                                            {referral.internalNotes.length}
+                                        </span>
+                                    )}
+                                </TabsTrigger>
+                                <TabsTrigger value="external" className="rounded-lg text-xs font-bold flex items-center gap-2">
+                                    EXTERNAL CHAT
+                                    {referral.externalNotes?.length > 0 && (
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                            {referral.externalNotes.length}
+                                        </span>
+                                    )}
+                                </TabsTrigger>
+                            </TabsList>
 
-                            <TabsContent value="internal" className="flex-1 flex flex-col mt-4">
-                                <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                            <TabsContent value="internal" className="flex-1 min-h-0 px-6 data-[state=active]:flex data-[state=active]:flex-col" style={{ marginTop: 0 }}>
+                                <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
                                     {referral.internalNotes?.length > 0 ? (
                                         referral.internalNotes.slice().reverse().map(note => (
                                             <div key={note.id} className="bg-muted/50 p-3 rounded-2xl border border-muted flex flex-col gap-1">
@@ -469,32 +487,65 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="external" className="flex-1 flex flex-col mt-4">
-                                <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                            <TabsContent value="external" className="flex-1 min-h-0 px-6 data-[state=active]:flex data-[state=active]:flex-col" style={{ marginTop: 0 }}>
+                                <div
+                                    ref={scrollContainerRef}
+                                    className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 p-4 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800 shadow-inner scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent scroll-smooth"
+                                >
                                     {referral.externalNotes?.length > 0 ? (
-                                        referral.externalNotes.slice().reverse().map(note => (
-                                            <div key={note.id} className="bg-primary/5 p-3 rounded-2xl border border-primary/10 flex flex-col gap-1">
-                                                <p className="text-sm font-medium">{note.content}</p>
-                                                <div className="flex items-center justify-between mt-1 pt-1 border-t border-primary/5">
-                                                    <span className="text-[10px] font-bold text-primary flex items-center gap-1">
-                                                        <Building className="w-3 h-3" /> {note.author.name}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">{formatDate(note.createdAt, "PPp")}</span>
+                                        referral.externalNotes.slice().map((note, index) => {
+                                            const isMe = note.author?.role !== 'PUBLIC';
+                                            return (
+                                                <div key={note.id || index} className={cn(
+                                                    "flex w-full animate-in slide-in-from-bottom-2 duration-300",
+                                                    isMe ? "justify-end" : "justify-start"
+                                                )}>
+                                                    <div className={cn(
+                                                        "flex flex-col max-w-[85%]",
+                                                        isMe ? "items-end" : "items-start"
+                                                    )}>
+                                                        <div className={cn(
+                                                            "rounded-2xl px-4 py-2.5 text-sm shadow-sm relative break-words",
+                                                            isMe
+                                                                ? "bg-primary text-primary-foreground rounded-br-sm"
+                                                                : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-foreground rounded-bl-sm shadow-sm"
+                                                        )}>
+                                                            <p className="whitespace-pre-wrap leading-relaxed">
+                                                                {note.content}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 mt-1 px-1 opacity-60 hover:opacity-100 transition-opacity">
+                                                            <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                                                                {formatDate(note.createdAt, "p")}
+                                                                <span className="text-[8px]">•</span>
+                                                                {note.author.name}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     ) : (
-                                        <div className="text-center py-10 text-muted-foreground text-xs italic">No external messages sent yet.</div>
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3 opacity-40 select-none">
+                                            <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full">
+                                                <MessageSquare className="h-6 w-6 text-slate-400" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium">No external messages yet</p>
+                                                <p className="text-xs">Start a conversation with the referrer.</p>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                                <div className="p-4 bg-primary/5 border-t mt-auto space-y-2">
+
+                                <div className="py-2">
                                     <NoteInput
                                         onAdd={(content) => handleAddNote(true, content)}
-                                        placeholder="Msg to provider (viewable by source)..."
+                                        placeholder="Type a message to provider/patient..."
                                         isPrimary
                                     />
-                                    <p className="text-[10px] text-center text-muted-foreground italic">
-                                        Please do not include any PHI in external communications.
+                                    <p className="text-[10px] text-center text-muted-foreground/60 italic mt-1">
+                                        Messages are visible to the referrer via the Status Page. No PHI.
                                     </p>
                                 </div>
                             </TabsContent>
@@ -502,7 +553,11 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                     </Card>
 
                     <Card className="shadow-lg border-primary/10">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground"><HistoryIcon className="h-4 w-4" /> Timeline History</CardTitle></CardHeader>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
+                                <HistoryIcon className="h-4 w-4" /> Timeline History
+                            </CardTitle>
+                        </CardHeader>
                         <CardContent>
                             <ul className="space-y-4 relative">
                                 <div className="absolute left-2 top-2 bottom-2 w-px bg-muted" />

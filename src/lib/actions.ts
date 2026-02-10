@@ -448,7 +448,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
         const newNote = {
             id: `note-${Date.now()}`,
             content: optionalNote,
-            author: { name: 'Referrer/Patient', email: '', role: 'STAFF' as const }, // Placeholder role/email
+            author: { name: 'Referrer/Patient', email: '', role: 'PUBLIC' as const }, // Placeholder role/email
             createdAt: now,
             isExternal: true
         };
@@ -481,6 +481,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
             status: referral.status,
             updatedAt: referral.updatedAt,
             statusHistory: referral.statusHistory,
+            externalNotes: referral.externalNotes,
             noteAdded,
         }
     };
@@ -721,6 +722,18 @@ export async function getUnseenReferralCountAction() {
         return { count, success: true };
     } catch (e) {
         return { count: 0, success: false };
+    }
+}
+
+export async function fetchRecentUnseenReferralsAction(): Promise<{ success: boolean; data: any[] }> {
+    try {
+        const { getRecentUnseenReferrals } = await import('./data');
+        const headersList = await headers();
+        const agencyId = headersList.get('x-agency-id') || 'default';
+        const data = await getRecentUnseenReferrals(agencyId, 5);
+        return { success: true, data };
+    } catch (e) {
+        return { success: false, data: [] };
     }
 }
 

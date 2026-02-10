@@ -25,33 +25,18 @@ export async function checkUserAgencies(email: string) {
 }
 
 export async function verifyCaptcha(token: string) {
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-
-    // [DEV MODE] Bypass for localhost
-    if (process.env.NODE_ENV === 'development' && token === 'dev-bypass') {
-        return { success: true };
-    }
-
     if (!token) {
         return { success: false, message: 'No token provided' };
     }
 
     try {
-        const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `secret=${secretKey}&response=${token}`,
-        });
+        const { verifyRecaptcha } = await import('@/lib/recaptcha');
+        const success = await verifyRecaptcha(token);
 
-        const data = await response.json();
-
-        if (data.success) {
+        if (success) {
             return { success: true };
         } else {
-            console.error("Captcha verification failed:", data['error-codes']);
-            return { success: false, message: 'Captcha verification failed' };
+            return { success: false, message: 'Security check failed. Please try again.' };
         }
     } catch (error) {
         console.error("Error verifying captcha:", error);
