@@ -87,7 +87,16 @@ export async function sendReferralNotification(
     if (uniqueRecipients.length === 0) return { success: true, message: 'No recipients' };
 
     // --- TEMPLATE GENERATION ---
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const isDev = process.env.NODE_ENV === 'development';
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    if (!isDev) {
+      if (settings.slug && settings.slug !== 'default') {
+        baseUrl = `https://${settings.slug}.referralflow.health`;
+      } else {
+        baseUrl = 'https://referralflow.health';
+      }
+    }
 
     let subject = '';
     let htmlContent = '';

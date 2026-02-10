@@ -1,4 +1,4 @@
-
+﻿
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -385,7 +385,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
                 referralId,
                 referrerName: organizationName || contactName || 'Unknown',
                 dateTime: now.toLocaleString(),
-                referralLink: `https://referralflow.health/dashboard/referrals/${referralId}` // fallback if env missing
+                // referralLink generated in email.ts
             }).catch(err => console.error("Failed to send internal notification:", err));
 
             // 4b. Confirmation to Referrer (To Submitter)
@@ -394,11 +394,12 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
                     referralId,
                     referrerName: contactName || organizationName || 'Partner',
                     dateTime: now.toLocaleString(),
-                    statusLink: `https://referralflow.health/status?id=${referralId}`
+                    // statusLink generated in email.ts
                 }, newReferral.confirmationEmail).catch(err => console.error("Failed to send confirmation email:", err));
             }
         }
     } catch (e) {
+        console.error("Error saving referral:", e);
         return { message: 'Database error: Failed to save referral.', success: false, isSubmitting: false };
     }
 
@@ -411,20 +412,25 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
     const referralId = rawId ? rawId.trim().toUpperCase() : '';
     const token = formData.get('g-recaptcha-response') as string;
 
+    const optionalNote = formData.get('optionalNote') as string;
+
     if (!referralId) {
         return { message: 'Referral ID is required.', success: false };
     }
 
-    if (!token) {
+    // Require ReCAPTCHA only for initial lookup (no note)
+    if (!token && !optionalNote) {
         return { message: 'Please complete the reCAPTCHA verification.', success: false };
     }
 
-    // Verify reCAPTCHA
-    const { verifyRecaptcha } = await import('./recaptcha');
-    const isHuman = await verifyRecaptcha(token);
+    // Verify reCAPTCHA only if provided (Initial Lookup)
+    if (token) {
+        const { verifyRecaptcha } = await import('./recaptcha');
+        const isHuman = await verifyRecaptcha(token);
 
-    if (!isHuman) {
-        return { message: 'reCAPTCHA verification failed. Please try again.', success: false };
+        if (!isHuman) {
+            return { message: 'reCAPTCHA verification failed. Please try again.', success: false };
+        }
     }
 
     // Use secure public lookup
@@ -435,7 +441,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
         return { message: 'No matching record found. Please check the Referral ID.', success: false };
     }
 
-    const optionalNote = formData.get('optionalNote') as string;
+    // optionalNote is already retrieved above
     let noteAdded = false;
     if (optionalNote) {
         const now = new Date();
@@ -456,7 +462,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
             referralId: referral.id,
             referrerName: 'Referrer/Patient', // Could improve if we knew who checked status
             messageSnippet: optionalNote,
-            referralLink: `https://referralflow.health/dashboard/referrals/${referral.id}`
+            // referralLink generated in email.ts
         }).catch(err => console.error("Failed to send notification email:", err));
 
         noteAdded = true;
@@ -506,7 +512,7 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
     sendReferralNotification(referral.agencyId, 'INTERNAL_NOTE', {
         referralId: referral.id,
         messageSnippet: noteContent,
-        referralLink: `https://referralflow.health/dashboard/referrals/${referral.id}`
+
     }).catch(err => console.error("Failed to send notification email:", err));
 
     revalidatePath(`/dashboard/referrals/${referralId}`);
@@ -553,7 +559,7 @@ export async function addExternalNote(referralId: string, prevState: FormState, 
             referralId: referral.id,
             referrerName: referral.referrerName || 'Partner',
             messageSnippet: noteContent,
-            statusLink: `https://referralflow.health/status?id=${referral.id}`
+
         }, referral.confirmationEmail).catch(err => console.error("Failed to send notification email:", err));
     }
 
@@ -609,7 +615,7 @@ export async function updateReferralStatus(referralId: string, prevState: FormSt
             patientName: referral.patientName,
             status: status,
             referrerName: referral.referrerName || 'Partner',
-            statusLink: `https://referralflow.health/status?id=${referral.id}`
+
         }, referral.confirmationEmail).catch(err => console.error("Failed to send notification email:", err));
     }
 

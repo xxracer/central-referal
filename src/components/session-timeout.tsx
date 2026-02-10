@@ -1,47 +1,22 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 
-const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
-// const TIMEOUT_MS = 10000; // 10s for testing
+const TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes total
+const WARNING_MS = 60 * 1000; // Show warning 60 seconds before timeout
 
 export function SessionTimeout() {
     const router = useRouter();
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const [showWarning, setShowWarning] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(60);
 
-    const logout = useCallback(async () => {
-        // Clear cookie on server via server action? 
-        // Or just redirect to a route handler that clears it?
-        // Simple fetch to an API route is best to ensure server-side clearing.
-        // But verifySession cookie is server-side HttpOnly.
-        // We need a server action or API route.
-        // Let's use a server action if possible, but we can't import server action in client component easily without passing it down?
-        // Actually we can import server actions in client components in Next.js 14+.
-        // Let's verify existing deleteSession action.
-        // It is in src/lib/auth-actions.ts: deleteSession
-
+    const performLogout = useCallback(async () => {
         try {
-            // Dynamic import to avoid build issues if mixed environment?
-            // No, direct import of server action works.
-            // BUT, to be safe and simple, let's just push to a logout route or call the action.
-            // Let's assume we will fetch a logout api route or just redirect to login with a flag?
-            // Redirecting to login alone doesn't clear the cookie if HttpOnly.
-            // We MUST clear the cookie.
-
-            // Let's use a fetch to a standard NextJS API route if one exists, or create one.
-            // Or use the server action.
-            // Let's try importing the server action here. `deleteSession`
-
-            // Actually, let's keep it simple: redirect to /logout if it exists? 
-            // Check middleware? No specific logout path in middleware.
-            // Check app/logout/page.tsx?
-
-            // Create a server action wrapper?
-            // FOR NOW: Let's assume we'll create a dedicated /api/auth/logout route or similar?
-            // OR better: Just call `deleteSession()` imported from `auth-actions`.
-            // I will create a separate file for this component to avoid import issues.
-
+            // Call logout API to clear cookies server-side
             await fetch('/api/auth/logout', { method: 'POST' });
         } catch (e) {
             console.error("Logout failed", e);
@@ -50,29 +25,115 @@ export function SessionTimeout() {
         }
     }, [router]);
 
-    const resetTimer = useCallback(() => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(logout, TIMEOUT_MS);
-    }, [logout]);
+    const startTimers = useCallback(() => {
+        // Clear existing
+        if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+        if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
 
+        // Set Warning Timer (Total - Warning Duration)
+        warningTimerRef.current = setTimeout(() => {
+            setShowWarning(true);
+            setTimeLeft(WARNING_MS / 1000);
+        }, TIMEOUT_MS - WARNING_MS);
+
+        // Set Final Logout Timer
+        logoutTimerRef.current = setTimeout(() => {
+            performLogout();
+        }, TIMEOUT_MS);
+
+    }, [performLogout]);
+
+    const resetSession = useCallback(() => {
+        if (showWarning) {
+            setShowWarning(false);
+            // Optionally ping server to extend cookie session if needed
+            // fetch('/api/auth/extend-session'); 
+        }
+        startTimers();
+    }, [showWarning, startTimers]);
+
+    // Countdown effect for the modal
     useEffect(() => {
-        const events = ['mousedown', 'keydown', 'scroll', 'mousemove', 'touchstart'];
+        if (!showWarning) return;
 
-        // Set initial timer
-        resetTimer();
+        const interval = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
 
-        // Add listeners
-        events.forEach(event => {
-            window.addEventListener(event, resetTimer);
-        });
+        return () => clearInterval(interval);
+    }, [showWarning]);
+
+    // Activity listeners (only reset if NOT showing warning)
+    useEffect(() => {
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+
+        const handleActivity = () => {
+            // Only auto-reset if the warning isn't already shown
+            if (!showWarning) {
+                startTimers();
+            }
+        };
+
+        // Initial start
+        startTimers();
+
+        events.forEach(event => window.addEventListener(event, handleActivity));
 
         return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            events.forEach(event => {
-                window.removeEventListener(event, resetTimer);
-            });
+            if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+            if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+            events.forEach(event => window.removeEventListener(event, handleActivity));
         };
-    }, [resetTimer]);
+    }, [startTimers, showWarning]);
 
-    return null; // Invisible component
+    if (!showWarning) return null;
+
+    // Portal to ensuring high z-index visibility
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+            <div className="bg-white border rounded-2xl shadow-2xl max-w-md w-full p-8 text-center relative overflow-hidden">
+                {/* Progress bar at top */}
+                <div className="absolute top-0 left-0 h-2 bg-slate-100 w-full">
+                    <div
+                        className="h-full bg-orange-500 transition-all duration-1000 ease-linear"
+                        style={{ width: `${(timeLeft / (WARNING_MS / 1000)) * 100}%` }}
+                    />
+                </div>
+
+                <div className="mx-auto w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </div>
+
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Session Expiring</h2>
+
+                <p className="text-slate-600 mb-8">
+                    For your security, you will be automatically logged out in <span className="font-bold text-orange-600 tabular-nums">{timeLeft}</span> seconds due to inactivity.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                    <button
+                        onClick={resetSession}
+                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
+                    >
+                        Stay Logged In
+                    </button>
+
+                    <button
+                        onClick={performLogout}
+                        className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all"
+                    >
+                        Log Out Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }

@@ -49,13 +49,16 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
 
     useEffect(() => {
         setReferralId(initialReferralId);
+        if (process.env.NODE_ENV === 'development') {
+            setCaptchaToken('localhost_bypass');
+        }
     }, [initialReferralId]);
 
     useEffect(() => {
         if (formState.success && !initialReferralId) {
             // No longer clearing referralId to keep it fixed
         }
-        if (!formState.success) {
+        if (!formState.success && process.env.NODE_ENV !== 'development') {
             recaptchaRef.current?.reset();
             setCaptchaToken(null);
         }
@@ -99,15 +102,23 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                         />
                                     </div>
 
-                                    <div className="space-y-2 flex flex-col items-center">
-                                        <Input type="hidden" name="g-recaptcha-response" value={captchaToken || ''} />
-                                        <ReCAPTCHA
-                                            ref={recaptchaRef}
-                                            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"} // Test Key default
-                                            onChange={(token) => setCaptchaToken(token)}
-                                            size="normal"
-                                        />
-                                    </div>
+                                    {!showResults && (
+                                        <div className="space-y-2 flex flex-col items-center">
+                                            <input type="hidden" name="g-recaptcha-response" value={captchaToken || ''} />
+                                            {process.env.NODE_ENV === 'development' ? (
+                                                <div className="p-4 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md text-sm font-bold">
+                                                    🚧 Dev Mode: ReCAPTCHA Bypassed
+                                                </div>
+                                            ) : (
+                                                <ReCAPTCHA
+                                                    ref={recaptchaRef}
+                                                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
+                                                    onChange={(token) => setCaptchaToken(token)}
+                                                    size="normal"
+                                                />
+                                            )}
+                                        </div>
+                                    )}
                                     {showResults && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <Label htmlFor="optionalNote">Add Note for Staff</Label>
