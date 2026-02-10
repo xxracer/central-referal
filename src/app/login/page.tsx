@@ -394,9 +394,19 @@ function LoginForm() {
                         )}
                         Google
                     </Button>
+
+                    <div className="mt-6 pt-4 border-t text-center space-y-2">
+                        <div className="flex items-center justify-center gap-2 text-primary/80">
+                            <Lock className="h-4 w-4" />
+                            <span className="font-semibold text-sm">HIPAA-Compliant & Secure</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground max-w-[280px] mx-auto leading-tight">
+                            This portal uses encrypted, access-controlled systems designed for healthcare referrals.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }
 

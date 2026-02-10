@@ -55,12 +55,13 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
         return () => observer.disconnect();
     }, []);
 
+    const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+
     const handleCheckout = async () => {
         const payload = {
             name: formData.name.trim(),
             email: formData.email.trim(),
-            plan: "ReferralFlow Subscription",
-            price: 129.99,
+            planType: selectedPlan,
             promoCode: formData.promoCode?.trim()
         };
 
@@ -89,16 +90,8 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
             }
 
             if (isFree) {
-                // Subscription successful and free!
-                // Don't redirect immediately. We want to show the "Success/Free" UI state.
-                setFinalAmount(0); // This will trigger the fake UI
+                setFinalAmount(0);
                 if (appliedCode) setAppliedCoupon(appliedCode);
-
-                // We don't set clientSecret specifically, so !clientSecret remains true?
-                // Wait, if !clientSecret is true, we show the Form Inputs (Agency Name etc).
-                // My logic in the render block above says:
-                // {!clientSecret && !loading && finalAmount !== 0 ? (Inputs) : finalAmount === 0 ? (FakeUI) : (Elements)}
-                // So setting finalAmount(0) is enough to switch to FakeUI.
                 setLoading(false);
                 return;
             }
@@ -127,7 +120,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
     };
 
     const displayName = (!companyName || companyName.toLowerCase().includes('noble health')) ? "ReferralFlow.Health" : companyName;
-    // MANUAL FIX: Hardcoded logo URL as requested.
     const effectiveLogoUrl = "https://static.wixstatic.com/media/c5947c_14731b6192f740d8958b7a069f361b4e~mv2.png";
 
     return (
@@ -170,23 +162,52 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
             <main className="page">
                 <div className="container">
                     <div className="reveal">
-                        <h1>Start your subscription.</h1>
-                        <p className="subtitle">One simple plan. Built to strengthen {companyName ? `${companyName}'s` : 'referral'} intake with clarity, visibility, and trust.</p>
+                        <h1>Simple, Transparent Pricing</h1>
+                        <p className="subtitle">Everything you need to manage referrals better, in one simple plan.</p>
                     </div>
 
                     <div className="layout">
                         <section className="panel reveal">
-                            <div className="kicker"><span className="pill"></span> Limited-time offer</div>
                             <div className="pricebox">
+                                <div className="flex justify-center mb-8">
+                                    <div className="bg-gray-100 p-1.5 rounded-full inline-flex items-center relative shadow-inner">
+                                        <button
+                                            onClick={() => setSelectedPlan('monthly')}
+                                            className={`px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 ${selectedPlan === 'monthly' ? 'bg-white text-gray-900 shadow-md ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            Monthly
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedPlan('annual')}
+                                            className={`px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 flex items-center gap-2 ${selectedPlan === 'annual' ? 'bg-white text-gray-900 shadow-md ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            Annual
+                                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">-13%</span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <h2 className="plan-title">ReferralFlow Subscription</h2>
-                                <p className="plan-desc">Lightweight referral intake and tracking for agencies that want to handle referrals better without replacing existing systems.</p>
+                                <p className="plan-desc">Lightweight referral intake and tracking for agencies that want to handle referrals better.</p>
 
                                 <div className="price-row">
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
-                                            <div className="now">$129.99</div>
+                                            <div className="now animated-price">
+                                                {selectedPlan === 'annual' ? '$129.99' : '$149.99'}
+                                            </div>
                                             <div className="per">/ month</div>
                                         </div>
+                                        {selectedPlan === 'annual' && (
+                                            <div className="text-sm text-muted-foreground mt-1">
+                                                Billed $1,559.88 annually
+                                            </div>
+                                        )}
+                                        {selectedPlan === 'monthly' && (
+                                            <div className="text-sm text-muted-foreground mt-1">
+                                                Pay month-to-month. Cancel anytime.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -203,51 +224,83 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                             </div>
                         </section>
 
-                        <aside className="card reveal">
-                            <b style={{ fontSize: '14px' }}>Account details</b>
-                            <div className="fine">Pre-filled from the Get Started form</div>
+                        <aside className="card reveal" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+                            <div className="flex items-center gap-2 mb-6 border-b pb-4">
+                                <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg leading-tight">Secure Checkout</h3>
+                                    <p className="text-xs text-muted-foreground">SSL Encrypted Transaction</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-100">
+                                <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3 tracking-wider">Order Summary</h4>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-medium text-sm">ReferralFlow {selectedPlan === 'annual' ? 'Annual' : 'Monthly'}</span>
+                                    <span className="font-bold text-sm">{selectedPlan === 'annual' ? '$1,559.88' : '$149.99'}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-slate-200 pt-2 mt-2">
+                                    <span>Billing cycle</span>
+                                    <span>{selectedPlan === 'annual' ? 'Yearly' : 'Monthly'}</span>
+                                </div>
+                            </div>
 
                             {!clientSecret && finalAmount !== 0 ? (
                                 <>
-                                    <div className="field" style={{ marginTop: '12px' }}>
-                                        <label htmlFor="name">Your Name</label>
-                                        <input
-                                            id="name"
-                                            type="text"
-                                            placeholder="e.g., John Smith"
-                                            autoComplete="name"
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="field">
-                                        <label htmlFor="email">Work Email</label>
-                                        <input
-                                            id="email"
-                                            type="email"
-                                            placeholder="you@agency.com"
-                                            autoComplete="email"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="field">
-                                        <label htmlFor="promoCode">Promo Code (Optional)</label>
-                                        <input
-                                            id="promoCode"
-                                            type="text"
-                                            placeholder="Enter discount code"
-                                            autoComplete="off"
-                                            value={formData.promoCode || ''}
-                                            onChange={e => setFormData({ ...formData, promoCode: e.target.value })}
-                                            style={{ textTransform: 'uppercase' }}
-                                        />
+                                    <div className="space-y-4">
+                                        <div className="grid gap-1.5">
+                                            <label htmlFor="name" className="text-sm font-medium">Full Name</label>
+                                            <input
+                                                id="name"
+                                                type="text"
+                                                placeholder="e.g., John Smith"
+                                                autoComplete="name"
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <label htmlFor="email" className="text-sm font-medium">Work Email</label>
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                placeholder="you@company.com"
+                                                autoComplete="email"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <label htmlFor="promoCode" className="text-sm font-medium">Promo Code <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                                            <input
+                                                id="promoCode"
+                                                type="text"
+                                                placeholder="Enter code"
+                                                autoComplete="off"
+                                                value={formData.promoCode || ''}
+                                                onChange={e => setFormData({ ...formData, promoCode: e.target.value })}
+                                                style={{ textTransform: 'uppercase' }}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="modal-actions" style={{ marginTop: '10px' }}>
-                                        <button className="btn btn-primary" id="checkoutBtn" type="button" onClick={handleCheckout} disabled={loading}>
-                                            {loading ? 'Preparing Secure Checkout...' : 'Continue to Payment'}
+                                    <div className="modal-actions" style={{ marginTop: '24px' }}>
+                                        <button
+                                            className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8"
+                                            id="checkoutBtn" type="button" onClick={handleCheckout} disabled={loading}
+                                        >
+                                            {loading ? 'Processing...' : `Proceed to Payment`}
                                         </button>
+                                        <div className="w-full text-center space-y-2 mt-4">
+                                            <p className="text-xs text-muted-foreground">
+                                                {selectedPlan === 'monthly' ? 'No long-term commitment. Cancel anytime.' : '30-day money-back guarantee.'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </>
                             ) : finalAmount === 0 ? (
@@ -257,42 +310,13 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                         <span className="font-bold">✓ Coupon Applied:</span> {appliedCoupon}
                                     </div>
 
-                                    {/* Simulated Disabled Stripe Elements */}
-                                    <div className="rounded-md border border-gray-200 p-4 bg-gray-50 opacity-100 select-none">
-                                        <div className="mb-4">
-                                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Card Information</label>
-                                            <div className="bg-white border rounded p-3 text-gray-300 italic flex justify-between">
-                                                <span>•••• •••• •••• ••••</span>
-                                                <div className="flex gap-2">
-                                                    <span className="w-8 h-5 bg-gray-200 rounded"></span>
-                                                    <span className="w-8 h-5 bg-gray-200 rounded"></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Expiration</label>
-                                                <div className="bg-white border rounded p-3 text-gray-300 italic">MM / YY</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">CVC</label>
-                                                <div className="bg-white border rounded p-3 text-gray-300 italic">123</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <button
                                         id="submit-free"
-                                        className="btn btn-primary w-full flex justify-center items-center gap-2"
-                                        style={{ marginTop: '20px' }}
+                                        className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8"
                                         onClick={() => window.location.href = `/setup/agency?email=${encodeURIComponent(formData.email)}`}
                                     >
                                         Complete Setup ($0.00)
                                     </button>
-
-                                    <p className="text-xs text-muted-foreground text-center mt-2">
-                                        No payment required. Continue to set up your workspace.
-                                    </p>
                                 </div>
                             ) : (
                                 <Elements stripe={stripePromise} options={{
@@ -300,7 +324,6 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                     appearance: { theme: 'stripe' }
                                 }}>
                                     <div className="animate-in fade-in" style={{ animationDuration: '0.4s' }}>
-                                        {/* Pass returnUrl to checkout form */}
                                         <CheckoutForm
                                             amount={finalAmount || undefined}
                                             couponCode={appliedCoupon || undefined}
@@ -310,7 +333,13 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                 </Elements>
                             )}
 
-                            <div className="note"><b style={{ color: 'var(--ink)' }}>Billing:</b> Add payment decline and card-expiration alerts to avoid service interruptions.</div>
+                            <div className="mt-6 pt-4 border-t flex items-center justify-center gap-4 grayscale opacity-70">
+                                {/* Simple text footer for trust if icons unavailable */}
+                                <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    256-bit SSL Secure
+                                </span>
+                            </div>
                         </aside>
                     </div>
 

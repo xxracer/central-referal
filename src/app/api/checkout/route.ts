@@ -30,10 +30,18 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { name, email, promoCode } = body;
+        const { name, email, promoCode, planType } = body;
 
-        // SECURITY: Hardcode the price to prevent client-side manipulation
-        const price = 129.99;
+        // SECURITY: Server-side pricing
+        let price = 149.99;
+        let interval: 'month' | 'year' = 'month';
+        let productName = 'ReferralFlow Subscription (Monthly)';
+
+        if (planType === 'annual') {
+            price = 1559.88; // $129.99 * 12
+            interval = 'year';
+            productName = 'ReferralFlow Subscription (Annual)';
+        }
 
         // 1. Verify Promo Code (if provided)
         let promotionCodeId = undefined;
@@ -82,13 +90,13 @@ export async function POST(request: Request) {
 
         // 4. Create the Product and Price
         const product = await stripe.products.create({
-            name: 'ReferralFlow Subscription (Pending Setup)',
+            name: `${productName} (Pending Setup)`,
         });
 
         const priceObject = await stripe.prices.create({
             unit_amount: Math.round(price * 100),
             currency: 'usd',
-            recurring: { interval: 'month' },
+            recurring: { interval: interval },
             product: product.id,
         });
 

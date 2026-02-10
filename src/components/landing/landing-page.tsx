@@ -110,6 +110,35 @@ const LandingPage = () => {
                     </div>
                 </section>
 
+                {/* TRUST STRIP */}
+                <section style={{ borderTop: '1px solid #eaeaea', borderBottom: '1px solid #eaeaea', backgroundColor: '#f9f9f9', padding: '30px 0' }}>
+                    <div className="container">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px 30px' }}>
+                                {[
+                                    "HIPAA-Compliant Data Handling",
+                                    "Encrypted File Uploads",
+                                    "Secure Audit Logs & Timestamps",
+                                    "Role-Based Access Controls",
+                                    "No PHI Shared via Email"
+                                ].map((feature) => (
+                                    <div key={feature} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: '#444' }}>
+                                        <span style={{ color: 'green' }}>✅</span> {feature}
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ flexShrink: 0 }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="https://static.wixstatic.com/media/c5947c_8db62950d3cc49b0a64e98700781ab64~mv2.png"
+                                    alt="HIPAA Compliant"
+                                    style={{ height: '80px', width: 'auto', objectFit: 'contain' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section className="block">
                     <div className="container">
                         <div className="reveal">

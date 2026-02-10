@@ -2,7 +2,7 @@
 
 import React, { useState, useActionState, useRef, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Loader2, AlertCircle, Phone, Mail, Printer, UploadCloud, File as FileIcon, X } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, Printer, UploadCloud, File as FileIcon, X, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -306,7 +306,15 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                         </Card>
 
                         <Card>
-                            <CardHeader><CardTitle className="font-headline text-2xl">Supporting Documentation</CardTitle></CardHeader>
+                            <CardHeader>
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                    <CardTitle className="font-headline text-2xl">Supporting Documentation</CardTitle>
+                                    <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-100">
+                                        <Lock className="h-3.5 w-3.5" />
+                                        <span className="text-xs font-semibold">HIPAA-Compliant Encrypted Upload</span>
+                                    </div>
+                                </div>
+                            </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="referralDocuments">Referral Documents</Label>
