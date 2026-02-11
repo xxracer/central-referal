@@ -140,7 +140,9 @@ export async function createAgencySettings(agencyId: string, initialSettings: Pa
 }
 
 export async function findAgenciesForUser(email: string): Promise<AgencySettings[]> {
-    const domain = email.split('@')[1];
+    if (!email) return [];
+    const normalizedEmail = email.toLowerCase().trim();
+    const domain = normalizedEmail.split('@')[1];
     const settingsColl = adminDb.collection(SETTINGS_COLLECTION);
     const agenciesMap = new Map<string, AgencySettings>();
 
@@ -168,7 +170,7 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
         }
 
         // 2. Check authorizedEmails
-        const emailQuery = await settingsColl.where('userAccess.authorizedEmails', 'array-contains', email).get();
+        const emailQuery = await settingsColl.where('userAccess.authorizedEmails', 'array-contains', normalizedEmail).get();
         emailQuery.docs.forEach(doc => {
             if (!agenciesMap.has(doc.id)) {
                 console.log(`[Isolation Debug] Match by AUTHORIZED_EMAIL for Agency: ${doc.id}`);
@@ -183,7 +185,7 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
         });
 
         // 4. Check primary owner
-        const ownerQuery = await settingsColl.where('companyProfile.email', '==', email).get();
+        const ownerQuery = await settingsColl.where('companyProfile.email', '==', normalizedEmail).get();
         ownerQuery.docs.forEach(doc => {
             if (!agenciesMap.has(doc.id)) {
                 console.log(`[Isolation Debug] Match by OWNER_EMAIL for Agency: ${doc.id}`);
