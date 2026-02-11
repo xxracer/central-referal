@@ -125,10 +125,21 @@ export async function POST(request: Request) {
 
         // 5. Send Welcome Emails
         // To Agency Owner
+        // Construct Agency Specific URL
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://referralflow.health';
+        let agencyOrigin = baseUrl;
+
+        // Insert subdomain if not localhost (or even if localhost if capable)
+        // Assumption: NEXT_PUBLIC_BASE_URL does NOT have a subdomain currently (it's the root)
+        if (baseUrl.includes('://')) {
+            const [protocol, host] = baseUrl.split('://');
+            agencyOrigin = `${protocol}://${agencyId}.${host}`;
+        }
+
         await sendReferralNotification(agencyId, 'WELCOME_AGENCY', {
             firstName: (customer.name || 'Partner').split(' ')[0],
-            loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/settings`,
-            referralLink: `${agencyId}.referralflow.health`
+            loginUrl: `${agencyOrigin}/dashboard/settings`,
+            referralLink: agencyOrigin
         }, normalizedEmail);
 
         // To Super Admin

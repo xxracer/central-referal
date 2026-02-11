@@ -190,42 +190,11 @@ export type FormState = {
     errors?: Record<string, string[] | undefined>;
     success: boolean;
     data?: any;
+    fields?: Record<string, any>;
     isSubmitting?: boolean;
 };
 
-async function uploadFiles(files: File[], referralId: string, agencyId: string): Promise<Document[]> {
-    const bucket = adminStorage.bucket();
-
-    const uploadPromises = files.map(async (file) => {
-        if (!file || file.size === 0) return null;
-
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = `companies/${agencyId}/referrals/${referralId}/${file.name}`;
-        const fileRef = bucket.file(filename);
-
-        await fileRef.save(buffer, {
-            metadata: {
-                contentType: file.type,
-            },
-        });
-
-        // REMOVED: await fileRef.makePublic(); // SECURITY: Do not make PHI public
-
-        // Return a reference that our new secure-image/file component can use.
-        // We'll store the direct path, and the frontend will request /api/files/...?path=...
-        const url = `_private/${filename}`;
-
-        return {
-            id: filename,
-            name: file.name,
-            url: url,
-            size: file.size,
-        };
-    });
-
-    const results = await Promise.all(uploadPromises);
-    return results.filter((doc): doc is Document => doc !== null);
-}
+// ... (existing helper functions)
 
 export async function submitReferral(prevState: FormState, formData: FormData): Promise<FormState> {
     const submissionState: FormState = { ...prevState, isSubmitting: true, message: 'Processing...', success: false };
@@ -249,6 +218,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             errors: validatedFields.error.flatten().fieldErrors,
             success: false,
             isSubmitting: false,
+            fields: formValues, // Return submitted values to repopulate form
         };
     }
 
@@ -260,41 +230,17 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
         diagnosis
     } = validatedFields.data;
 
-    const formDataForPdf = {
-        ...rest,
-        organizationName: rest.organizationName || '',
-        contactName: rest.contactName || '',
-        phone: rest.phone || '',
-        email: rest.email || '',
-        patientFullName: rest.patientFullName || '',
-        patientDOB: rest.patientDOB || '',
-        patientZipCode: rest.patientZipCode || '',
-        primaryInsurance: rest.primaryInsurance === 'Other' && rest.otherInsurance ? rest.otherInsurance : rest.primaryInsurance,
-        memberId: rest.memberId || '',
-        insuranceType: rest.insuranceType || '',
-        planName: rest.planName || '',
-        planNumber: rest.planNumber || '',
-        groupNumber: rest.groupNumber || '',
-        servicesNeeded: servicesNeeded || [],
-        diagnosis: rest.diagnosis || '',
-        isFaxingPaperwork: !!rest.isFaxingPaperwork,
-    };
+    // ... (rest of the specific logic remains same, but wrapping error returns)
 
-    // Get Agency ID from headers (set by middleware)
+    // ... inside try/catch for file upload ...
+    // ... (lines 235-238)
     const headersList = await headers();
     const agencyId = headersList.get('x-agency-id') || 'default';
-
-    // Simplified referral code: REF-XXXX (4 character random hex)
-    // Secure Referral ID Generation: SHA-256 hash of random values, truncated to 6 chars
-    const { createHash } = await import('crypto');
-    const seed = `${Date.now()}-${Math.random()}-${organizationName || 'ref'}`;
-    const hash = createHash('sha256').update(seed).digest('hex');
-    const referralId = hash.substring(0, 6).toUpperCase();
-    // Example: "9A2B3C"
-    let allUploadedDocuments: Document[] = [];
+    const referralId = generateId(); // Helper function needed
+    const allUploadedDocuments: Document[] = [];
 
     try {
-        // 1. Upload user-provided documents from both fields
+        // 1. Upload user-provided documents ...
         if (referralDocuments) {
             const validDocs = referralDocuments.filter((d): d is File => d !== undefined);
             if (validDocs.length > 0) allUploadedDocuments.push(...await uploadFiles(validDocs, referralId, agencyId));
@@ -304,7 +250,27 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             if (validNotes.length > 0) allUploadedDocuments.push(...await uploadFiles(validNotes, referralId, agencyId));
         }
 
-        // 2. Generate PDF from form data using AI flow (only passing serializable data)
+        // 2. Generate PDF ...
+        const formDataForPdf = {
+            ...rest,
+            organizationName: rest.organizationName || '',
+            contactName: rest.contactName || '',
+            phone: rest.phone || '',
+            email: rest.email || '',
+            patientFullName: rest.patientFullName || '',
+            patientDOB: rest.patientDOB || '',
+            patientZipCode: rest.patientZipCode || '',
+            primaryInsurance: rest.primaryInsurance === 'Other' && rest.otherInsurance ? rest.otherInsurance : rest.primaryInsurance,
+            memberId: rest.memberId || '',
+            insuranceType: rest.insuranceType || '',
+            planName: rest.planName || '',
+            planNumber: rest.planNumber || '',
+            groupNumber: rest.groupNumber || '',
+            servicesNeeded: servicesNeeded || [],
+            diagnosis: rest.diagnosis || '',
+            isFaxingPaperwork: !!rest.isFaxingPaperwork,
+        };
+
         const pdfBytes = await generateReferralPdf(formDataForPdf);
         const pdfName = `Referral-Summary-${referralId}.pdf`;
 
@@ -319,10 +285,8 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             },
         });
 
-        // REMOVED: await pdfFile.makePublic(); // SECURITY: Do not make PHI public
-        // For now, we store the internal storage path. 
-        // We will create a secure proxy route to serve this file via the dashboard using signed URLs or admin SDK.
-        const pdfUrl = `_private/${pdfPath}`; // Marker for frontend component to know it needs to fetch securely
+        // REMOVED: await pdfFile.makePublic();
+        const pdfUrl = `_private/${pdfPath}`;
 
         allUploadedDocuments.push({
             id: pdfPath,
@@ -333,74 +297,72 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
 
     } catch (e) {
         console.error("Error during file upload or PDF generation:", e);
-        return { message: 'An error occurred while handling files. Please try again.', success: false, isSubmitting: false };
+        return { message: 'An error occurred while handling files. Please try again.', success: false, isSubmitting: false, fields: formValues };
     }
 
-    const now = new Date();
-    // Destructuring happened above
+    // ... (lines 339-376: creating newReferral object)
 
-    const newReferral: Referral = {
-        id: referralId,
-        agencyId, // Multi-tenancy
-        referrerName: organizationName || '',
-        contactPerson: contactName || '',
-        referrerContact: phone || '',
-        confirmationEmail: email || '',
-        patientName: patientFullName || '',
-        patientDOB: patientDOB || '',
-        patientAddress: '', // Removed from form
-        patientZipCode: patientZipCode || '',
-        isFaxingPaperwork: !!isFaxingPaperwork,
-        patientContact: '', // Not in form
-        patientInsurance: primaryInsurance === 'Other' && otherInsurance ? otherInsurance : (primaryInsurance || ''),
-        memberId: memberId || '',
-        insuranceType: insuranceType || '',
-        planName: planName || '',
-        planNumber: planNumber || '',
-        groupNumber: groupNumber || '',
-        servicesNeeded: servicesNeeded || [],
-        diagnosis: diagnosis || '',
-        examRequested: 'See Services Needed',
-        providerNpi: '', // Not in form
-        referrerFax: '', // Not in form
-        status: 'RECEIVED',
-        createdAt: now,
-        updatedAt: now,
-        documents: allUploadedDocuments,
-        statusHistory: [{ status: 'RECEIVED', changedAt: now }],
-        internalNotes: [],
-        externalNotes: [],
-        isArchived: false,
-        isSeen: false, // Initialize as unseen for notifications
-        hasUnreadMessages: false,
-    };
-
+    // ... inside try/catch for database saving ...
     try {
+        // ... (lines 379-400: saving logic)
+        const now = new Date();
+        const newReferral: Referral = {
+            id: referralId,
+            agencyId,
+            referrerName: organizationName || '',
+            contactPerson: contactName || '',
+            referrerContact: phone || '',
+            confirmationEmail: email || '',
+            patientName: patientFullName || '',
+            patientDOB: patientDOB || '',
+            patientAddress: '',
+            patientZipCode: patientZipCode || '',
+            isFaxingPaperwork: !!isFaxingPaperwork,
+            patientContact: '',
+            patientInsurance: primaryInsurance === 'Other' && otherInsurance ? otherInsurance : (primaryInsurance || ''),
+            memberId: memberId || '',
+            insuranceType: insuranceType || '',
+            planName: planName || '',
+            planNumber: planNumber || '',
+            groupNumber: groupNumber || '',
+            servicesNeeded: servicesNeeded || [],
+            diagnosis: diagnosis || '',
+            examRequested: 'See Services Needed',
+            providerNpi: '',
+            referrerFax: '',
+            status: 'RECEIVED',
+            createdAt: now,
+            updatedAt: now,
+            documents: allUploadedDocuments,
+            statusHistory: [{ status: 'RECEIVED', changedAt: now }],
+            internalNotes: [],
+            externalNotes: [],
+            isArchived: false,
+            isSeen: false,
+            hasUnreadMessages: false,
+        };
         await saveReferral(newReferral, true);
 
-        // 4. Send Email Notifications (New Logic)
+        // 4. Send Email Notifications
         if (agencyId) {
-            // 4a. Internal Notification (To Agency)
             sendReferralNotification(agencyId, 'NEW_REFERRAL_INTERNAL', {
                 referralId,
                 referrerName: organizationName || contactName || 'Unknown',
                 dateTime: now.toLocaleString(),
-                // referralLink generated in email.ts
             }).catch(err => console.error("Failed to send internal notification:", err));
 
-            // 4b. Confirmation to Referrer (To Submitter)
             if (newReferral.confirmationEmail) {
                 sendReferralNotification(agencyId, 'REFERRAL_SUBMISSION_CONFIRMATION', {
                     referralId,
                     referrerName: contactName || organizationName || 'Partner',
                     dateTime: now.toLocaleString(),
-                    // statusLink generated in email.ts
                 }, newReferral.confirmationEmail).catch(err => console.error("Failed to send confirmation email:", err));
             }
         }
+
     } catch (e) {
         console.error("Error saving referral:", e);
-        return { message: 'Database error: Failed to save referral.', success: false, isSubmitting: false };
+        return { message: 'Database error: Failed to save referral.', success: false, isSubmitting: false, fields: formValues };
     }
 
     revalidatePath('/dashboard');
@@ -756,4 +718,32 @@ export async function submitContactForm(data: any) {
         console.error("Error submitting contact form:", error);
         return { success: false, message: 'Failed to submit form' };
     }
+}
+
+function generateId(): string {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+async function uploadFiles(files: File[], referralId: string, agencyId: string): Promise<Document[]> {
+    const uploaded: Document[] = [];
+    const bucket = adminStorage.bucket();
+
+    for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const path = `companies/${agencyId}/referrals/${referralId}/${Date.now()}-${safeName}`;
+        const fileRef = bucket.file(path);
+
+        await fileRef.save(buffer, {
+            metadata: { contentType: file.type },
+        });
+
+        uploaded.push({
+            id: path,
+            name: file.name,
+            url: `_private/${path}`,
+            size: file.size
+        });
+    }
+    return uploaded;
 }
