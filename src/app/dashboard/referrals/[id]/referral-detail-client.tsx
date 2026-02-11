@@ -242,92 +242,68 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         </div>
 
                         <CardContent className="p-4 md:p-8 space-y-8 bg-card">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><Building className="text-primary h-5 w-5" /> Provider Information</h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Organization</span>
-                                            <span className="font-medium text-right">{referral.referrerName}</span>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Patient Box */}
+                                <div className="border-2 border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                        <User className="h-4 w-4" /> Patient
+                                    </h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="font-medium text-lg">{referral.patientName}</div>
+                                        <div>
+                                            <span className="font-bold">DOB:</span> {referral.patientDOB}
                                         </div>
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Contact Person</span>
-                                            <span className="font-medium text-right">{referral.contactPerson}</span>
+                                        <div className="pt-2 border-t border-dashed">
+                                            <div className="font-bold mb-1">Insurance:</div>
+                                            <div className="text-muted-foreground">{referral.patientInsurance}</div>
+                                            {referral.memberId && <div className="text-xs text-muted-foreground">ID: {referral.memberId}</div>}
                                         </div>
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</span>
-                                            <span className="font-medium text-right">{referral.referrerContact}</span>
-                                        </div>
-                                        {referral.confirmationEmail && (
-                                            <div className="flex justify-between border-b border-muted py-1">
-                                                <span className="text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> Email</span>
-                                                <span className="font-medium text-right">{referral.confirmationEmail}</span>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><User className="text-primary h-5 w-5" /> Patient Information</h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Name</span>
-                                            <span className="font-medium text-right">{referral.patientName}</span>
+                                {/* Referrer Box */}
+                                <div className="border-2 border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                        <Building className="h-4 w-4" /> Referrer
+                                    </h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div>
+                                            <span className="font-bold">Organization:</span>
+                                            <div className="text-muted-foreground">{referral.referrerName}</div>
                                         </div>
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Date of Birth</span>
-                                            <span className="font-medium text-right">{referral.patientDOB}</span>
+                                        <div>
+                                            <span className="font-bold">Contact:</span>
+                                            <div className="text-muted-foreground">{referral.contactPerson}</div>
                                         </div>
-                                        <div className="flex flex-col gap-1 border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Address</span>
-                                            <span className="font-medium">{referral.patientAddress}, {referral.patientZipCode}</span>
+                                        <div>
+                                            <span className="font-bold">Phone:</span>
+                                            <div className="text-muted-foreground">{referral.referrerContact}</div>
                                         </div>
-                                        {referral.surgeryDate && (
-                                            <div className="flex justify-between border-b border-muted py-1">
-                                                <span className="text-muted-foreground">Surgery Date</span>
-                                                <span className="font-medium text-right">{formatDate(referral.surgeryDate)}</span>
-                                            </div>
-                                        )}
                                     </div>
+                                </div>
+
+                                {/* Services Box */}
+                                <div className="border-2 border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                        <Stethoscope className="h-4 w-4" /> Services
+                                    </h3>
+                                    <ul className="space-y-1 text-sm list-disc pl-4">
+                                        {referral.servicesNeeded?.map(service => (
+                                            <li key={service} className="text-muted-foreground">
+                                                {getServiceLabel(service)}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><HeartPulse className="text-primary h-5 w-5" /> Insurance & Diagnosis</h3>
-                                <div className="grid md:grid-cols-2 gap-8">
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Payer</span>
-                                            <span className="font-bold text-primary">{referral.patientInsurance}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-muted py-1">
-                                            <span className="text-muted-foreground">Member ID</span>
-                                            <span className="font-medium">{referral.memberId}</span>
-                                        </div>
-                                        {referral.planName && (
-                                            <div className="flex justify-between border-b border-muted py-1">
-                                                <span className="text-muted-foreground">Plan</span>
-                                                <span className="font-medium">{referral.planName}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2 text-sm">
-                                        <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Diagnosis / Order Notes:</h4>
-                                        <div className="p-4 bg-muted/50 rounded-xl border border-muted italic leading-relaxed">
-                                            "{referral.diagnosis}"
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><Stethoscope className="text-primary h-5 w-5" /> Services Requested</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {referral.servicesNeeded?.map(service => (
-                                        <Badge key={service} variant="secondary" className="px-3 py-1 bg-primary/10 text-primary border-primary/20">
-                                            {getServiceLabel(service)}
-                                        </Badge>
-                                    ))}
+                            {/* Diagnosis Section (kept separate or could be integrated) */}
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                    <HeartPulse className="h-4 w-4" /> Diagnosis / Notes
+                                </h3>
+                                <div className="p-4 bg-muted/50 rounded-xl border border-muted italic text-sm">
+                                    "{referral.diagnosis}"
                                 </div>
                             </div>
 
@@ -362,12 +338,12 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                                 : doc.url;
 
                                             return (
-                                                <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 transition-all group">
+                                                <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 hover:bg-muted/50 transition-all group">
                                                     <div className="flex items-center gap-3 overflow-hidden">
                                                         <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
                                                             <FileIcon className="h-4 w-4 text-primary" />
                                                         </div>
-                                                        <span className="text-sm font-medium truncate max-w-[150px]" title={doc.name}>{doc.name}</span>
+                                                        <span className="text-sm font-medium truncate max-w-[150px] text-foreground" title={doc.name}>{doc.name}</span>
                                                     </div>
                                                     <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
                                                         <a href={fileUrl} target="_blank" rel="noopener noreferrer">

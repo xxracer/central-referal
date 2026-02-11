@@ -35,21 +35,25 @@ function ReferralDetail({ referral }: { referral: Referral }) {
     return (
         <div className="space-y-6 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
+                <div className="border-2 border-black dark:border-slate-700 rounded-xl p-4 space-y-3 bg-background">
                     <h4 className="font-semibold flex items-center gap-2 text-primary font-body uppercase text-[10px] tracking-widest"><User className="h-4 w-4" /> Patient</h4>
-                    <p><strong>Name:</strong> {referral.patientName}</p>
-                    <p><strong>DOB:</strong> {referral.patientDOB}</p>
-                    <p><strong>Insurance:</strong> {referral.patientInsurance}</p>
+                    <div className="text-foreground space-y-1 text-sm">
+                        <p><strong>Name:</strong> {referral.patientName}</p>
+                        <p><strong>DOB:</strong> {referral.patientDOB}</p>
+                        <p><strong>Insurance:</strong> {referral.patientInsurance}</p>
+                    </div>
                 </div>
-                <div className="space-y-2">
+                <div className="border-2 border-black dark:border-slate-700 rounded-xl p-4 space-y-3 bg-background">
                     <h4 className="font-semibold flex items-center gap-2 text-primary font-body uppercase text-[10px] tracking-widest"><Building className="h-4 w-4" /> Referrer</h4>
-                    <p><strong>Organization:</strong> {referral.referrerName}</p>
-                    <p><strong>Contact:</strong> {referral.contactPerson}</p>
-                    <p><strong>Phone:</strong> {referral.referrerContact}</p>
+                    <div className="text-foreground space-y-1 text-sm">
+                        <p><strong>Organization:</strong> {referral.referrerName}</p>
+                        <p><strong>Contact:</strong> {referral.contactPerson}</p>
+                        <p><strong>Phone:</strong> {referral.referrerContact}</p>
+                    </div>
                 </div>
-                <div className="space-y-2">
+                <div className="border-2 border-black dark:border-slate-700 rounded-xl p-4 space-y-3 bg-background">
                     <h4 className="font-semibold flex items-center gap-2 text-primary font-body uppercase text-[10px] tracking-widest"><Stethoscope className="h-4 w-4" /> Services</h4>
-                    <ul className="list-disc list-inside space-y-1">
+                    <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
                         {referral.servicesNeeded?.map(service => <li key={service}>{getServiceLabel(service)}</li>)}
                     </ul>
                 </div>
@@ -60,7 +64,7 @@ function ReferralDetail({ referral }: { referral: Referral }) {
                     <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                         {referral.documents.map(doc => (
                             <li key={doc.id}>
-                                <Button variant="outline" asChild className="w-full justify-start border-primary/20 hover:bg-primary/5">
+                                <Button variant="outline" asChild className="w-full justify-start border-primary/20 hover:bg-primary/5 hover:text-foreground text-foreground">
                                     <Link href={`/dashboard/referrals/${referral.id}`} className="truncate">
                                         <FileText className="mr-2 h-4 w-4" />
                                         {doc.name}

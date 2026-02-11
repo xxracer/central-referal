@@ -342,13 +342,15 @@ function LoginForm() {
                         </div>
                     </div>
 
-                    <Button onClick={handleGoogleSignIn} disabled={isLoading} variant="outline" className="w-full">
+                    <Button onClick={handleGoogleSignIn} disabled={isLoading} className="w-full bg-[#0f3460] hover:bg-[#0f3460]/90 text-white transition-colors">
                         {isLoading ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                            <GoogleIcon className="mr-2" />
+                            <div className="mr-2 bg-white rounded-full p-0.5">
+                                <GoogleIcon className="w-5 h-5" />
+                            </div>
                         )}
-                        Google
+                        Sign in with Google
                     </Button>
 
                     <div className="mt-6 pt-4 border-t text-center space-y-2">
