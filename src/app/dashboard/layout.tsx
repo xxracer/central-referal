@@ -45,7 +45,17 @@ export default async function DashboardLayout({
   const settings = await getAgencySettings(agencyId);
   const { verifySession } = await import('@/lib/auth-actions');
   const session = await verifySession();
-  const userEmail = session?.email;
+
+  if (!session) {
+    // Middleware passed, but backend verification failed (e.g. revoked/expired).
+    // Force re-login.
+    const loginUrl = agencyId !== 'default' && agencyId !== 'undefined'
+      ? `https://${agencyId}.referralflow.health/login`
+      : '/login';
+    redirect(loginUrl);
+  }
+
+  const userEmail = session.email;
 
   // --- SECURITY: Verify Agency Access ---
   const { verifyUserAccess } = await import('@/lib/access-control');
@@ -62,21 +72,7 @@ export default async function DashboardLayout({
         const host = headersList.get('host') || 'localhost:3000';
         const protocol = host.includes('localhost') ? 'http' : 'https';
 
-        // Construct redirect URL
-        // If localhost:9002 -> test.localhost:9002
-        // If referralflow.health -> test.referralflow.health
-        // We need to be careful not to append if already present, but here we are at 'default' which implies root or unrecognized.
-
         let newHost = host;
-        // If host is effectively root (localhost:port or referralflow.health)
-        // We prepend the slug.
-        // check if host already start with slug? No, because middleware said it's default.
-
-        // Handle localhost special case where we might need to strictly append to "localhost" part?
-        // If host is "localhost:9002", then new is "slug.localhost:9002"
-        // If host is "referral-app.vercel.app", then new is "slug.referral-app.vercel.app" (if wildcard supported)
-        // If not, we might fail. But for localhost/custom domain it works.
-
         newHost = `${targetAgency.slug}.${host}`;
 
         const redirectUrl = `${protocol}://${newHost}/dashboard`;
@@ -86,19 +82,15 @@ export default async function DashboardLayout({
     }
 
     console.error(`[Access Control] Denied access to ${agencyId} for user ${userEmail}`);
-    // Redirect to selection or login? 
-    // If 'default', and not admin, maybe redirect to logic that finds their actual agency?
-    // Or just hard block.
 
-    // If they are logged in but accessing wrong place:
     return (
       <div className="flex flex-col h-screen items-center justify-center text-center p-4 bg-muted/20">
         <div className="bg-destructive/10 p-6 rounded-full mb-6">
           <Ban className="h-12 w-12 text-destructive" />
         </div>
         <h1 className="text-2xl font-bold font-headline mb-2">Access Denied</h1>
-        <p className="text-muted-foreground max-w-md mb-8">
-          You do not have permission to access this workspace ({agencyId}).
+        <p className="text-muted-foreground max-w-md mb-4">
+          You are logged in as <strong>{userEmail}</strong>, but you do not have permission to access the workspace <strong>{agencyId}</strong>.
         </p>
         <div className="flex gap-4">
           <Button asChild variant="outline">
