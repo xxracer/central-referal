@@ -143,17 +143,20 @@ function LoginForm() {
 
         setIsLoading(true);
         try {
-            const { user, isNewUser } = await signInWithEmail(email, password);
+            const normalizedEmail = email.toLowerCase().trim();
+            const { user, isNewUser } = await signInWithEmail(normalizedEmail, password);
             await handlePostLogin(user, isNewUser);
         } catch (error: any) {
             console.error("Email Sign-In Error:", error);
             let message = "Failed to sign in.";
             if (error.code === 'auth/invalid-credential') {
-                message = "Invalid email or password.";
+                message = "Invalid email or password. If you used Google to sign up, please use 'Sign in with Google'.";
             } else if (error.code === 'auth/user-not-found') {
-                message = "User not found.";
+                message = "User not found. Please ensure you are using the email you signed up with.";
             } else if (error.code === 'auth/wrong-password') {
-                message = "Incorrect password.";
+                message = "Incorrect password. If you used Google to sign up, please use 'Sign in with Google'.";
+            } else if (error.code === 'auth/too-many-requests') {
+                message = "Too many failed attempts. Please reset your password or try again later.";
             }
             toast({
                 variant: "destructive",
