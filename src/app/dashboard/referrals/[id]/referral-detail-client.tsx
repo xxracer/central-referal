@@ -41,7 +41,9 @@ import {
     Send,
     UserCircle,
     Archive,
-    Printer
+    Printer,
+    FileText,
+    ShieldCheck
 } from 'lucide-react';
 import StatusBadge from '@/components/referrals/status-badge';
 import { formatDate, cn } from '@/lib/utils';
@@ -241,133 +243,182 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             </div>
                         </div>
 
-                        <CardContent className="p-4 md:p-8 space-y-8 bg-card">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {/* Patient Section */}
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-2 border-b border-border/50">
-                                        <User className="h-4 w-4" /> Patient
-                                    </h3>
-                                    <div className="space-y-1.5">
-                                        <div className="text-xl font-semibold text-foreground tracking-tight">{referral.patientName}</div>
-                                        <div className="text-sm text-muted-foreground flex flex-col gap-1">
-                                            <span className="flex items-center gap-2">
-                                                <span className="font-medium text-foreground">DOB:</span> {referral.patientDOB}
-                                            </span>
-                                            <div className="mt-2 pt-2 border-t border-border/30">
-                                                <div className="font-medium text-foreground mb-0.5">Insurance</div>
-                                                <div className="text-foreground/90">{referral.patientInsurance}</div>
-                                                {referral.memberId && <div className="text-xs text-muted-foreground mt-0.5">ID: {referral.memberId}</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Referrer Section */}
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-2 border-b border-border/50">
-                                        <Building className="h-4 w-4" /> Referrer
-                                    </h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div>
-                                            <div className="font-medium text-foreground text-base">{referral.referrerName}</div>
-                                            <div className="text-muted-foreground text-xs uppercase tracking-wider mt-0.5">Organization</div>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            <div>
-                                                <span className="font-medium text-foreground block">Contact Person</span>
-                                                <span className="text-muted-foreground">{referral.contactPerson}</span>
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-foreground block">Phone</span>
-                                                <a href={`tel:${referral.referrerContact}`} className="text-primary hover:underline">{referral.referrerContact}</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Services Section */}
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-2 border-b border-border/50">
-                                        <Stethoscope className="h-4 w-4" /> Services Requested
-                                    </h3>
-                                    <div className="bg-muted/30 rounded-lg p-3">
-                                        <ul className="space-y-2 text-sm">
-                                            {referral.servicesNeeded?.map(service => (
-                                                <li key={service} className="flex items-start gap-2 text-foreground/90">
-                                                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                                                    <span>{getServiceLabel(service)}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                        <div className="bg-white dark:bg-card border shadow-sm rounded-xl overflow-hidden">
+                            {/* Header / Title of the 'Paper' */}
+                            <div className="bg-slate-50 dark:bg-muted/50 px-6 py-4 border-b flex justify-between items-center">
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <FileText className="h-5 w-5" />
+                                    Clinical Referral Document
+                                </h2>
+                                <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                                    Confidential
                                 </div>
                             </div>
 
-                            {/* Diagnosis Section */}
-                            <div className="space-y-3 pt-4">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-2 border-b border-border/50">
-                                    <HeartPulse className="h-4 w-4" /> Diagnosis / Clinical Notes
-                                </h3>
-                                <div className="p-5 bg-muted/20 rounded-lg border border-border/40 text-sm leading-relaxed text-foreground/90">
-                                    {referral.diagnosis}
-                                </div>
-                            </div>
-
-                            {referral.aiSummary && (
-                                <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden">
-                                    <div className="bg-primary/10 px-4 py-2 flex items-center gap-2 border-b border-primary/10">
-                                        <Sparkles className="h-4 w-4 text-primary" />
-                                        <span className="text-sm font-bold text-primary uppercase tracking-tight">AI Insights</span>
+                            <div className="p-6 md:p-10 space-y-8 divide-y divide-slate-100 dark:divide-slate-800">
+                                {/* Patient Information Section */}
+                                <div className="space-y-4 pt-2 first:pt-0">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                        <User className="h-4 w-4" /> Patient Information
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Full Name</label>
+                                            <div className="text-xl md:text-2xl font-medium text-slate-900 dark:text-slate-50">{referral.patientName}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Date of Birth</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientDOB}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact Phone</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientContact || "N/A"}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Review Address</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientAddress || "Address not provided"}</div>
+                                            {referral.patientZipCode && <div className="text-sm text-slate-500">Zip: {referral.patientZipCode}</div>}
+                                        </div>
                                     </div>
-                                    <CardContent className="p-4 space-y-4">
-                                        <div>
-                                            <h4 className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1"><Tag className="h-3 w-3" /> CATEGORIES</h4>
+                                </div>
+
+                                {/* Insurance Section */}
+                                <div className="space-y-4 pt-8">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                        <ShieldCheck className="h-4 w-4" /> Insurance Details
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Primary Insurance</label>
+                                            <div className="text-lg font-medium text-slate-900 dark:text-slate-50">{referral.patientInsurance}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member ID / Policy #</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.memberId || "N/A"}</div>
+                                        </div>
+                                        {referral.groupNumber && (
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group Number</label>
+                                                <div className="text-lg text-slate-900 dark:text-slate-50">{referral.groupNumber}</div>
+                                            </div>
+                                        )}
+                                        {referral.authorizationNumber && (
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Auth Number</label>
+                                                <div className="text-lg text-slate-900 dark:text-slate-50">{referral.authorizationNumber}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Clinical Info / Services */}
+                                <div className="space-y-4 pt-8">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                        <Stethoscope className="h-4 w-4" /> Clinical Requirements
+                                    </h3>
+                                    <div className="space-y-6">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Services Requested</label>
                                             <div className="flex flex-wrap gap-2">
-                                                {referral.aiSummary.suggestedCategories.map(cat => <Badge key={cat} variant="outline" className="text-[10px] bg-background">{cat}</Badge>)}
+                                                {referral.servicesNeeded?.map(service => (
+                                                    <span key={service} className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-700 text-sm font-medium border border-blue-100">
+                                                        {getServiceLabel(service)}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1"><Lightbulb className="h-3 w-3" /> REASONING</h4>
-                                            <p className="text-sm leading-relaxed">{referral.aiSummary.reasoning}</p>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Diagnosis / Clinical Notes</label>
+                                            <div className="p-4 bg-slate-50 dark:bg-muted/30 rounded-lg border-l-4 border-blue-500 text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                                                {referral.diagnosis}
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            <div className="space-y-4 pt-4">
-                                <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><FileIcon className="text-primary h-5 w-5" /> Patient Documents</h3>
-                                {referral.documents.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {referral.documents.map(doc => {
-                                            const fileUrl = doc.url.startsWith('_private/')
-                                                ? `/api/files/${doc.url.replace('_private/', '')}`
-                                                : doc.url;
-
-                                            return (
-                                                <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 hover:bg-muted/50 transition-all group">
-                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                        <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
-                                                            <FileIcon className="h-4 w-4 text-primary" />
-                                                        </div>
-                                                        <span className="text-sm font-medium truncate max-w-[150px] text-foreground" title={doc.name}>{doc.name}</span>
-                                                    </div>
-                                                    <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
-                                                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                                                            <Download className="h-4 w-4" />
-                                                        </a>
-                                                    </Button>
-                                                </div>
-                                            )
-                                        })}
                                     </div>
-                                ) : (
-                                    <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-muted text-muted-foreground text-sm">
-                                        No documents attached to this referral.
+                                </div>
+
+                                {/* Referrer Info */}
+                                <div className="space-y-4 pt-8">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                        <Building className="h-4 w-4" /> Referring Provider
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Organization / Practice</label>
+                                            <div className="text-lg font-medium text-slate-900 dark:text-slate-50">{referral.referrerName}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact Person</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.contactPerson}</div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Phone</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">
+                                                <a href={`tel:${referral.referrerContact}`} className="hover:text-blue-600 hover:underline">{referral.referrerContact}</a>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</label>
+                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.confirmationEmail}</div>
+                                        </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        </CardContent>
+                        </div>
+
+                        {referral.aiSummary && (
+                            <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden">
+                                <div className="bg-primary/10 px-4 py-2 flex items-center gap-2 border-b border-primary/10">
+                                    <Sparkles className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-bold text-primary uppercase tracking-tight">AI Insights</span>
+                                </div>
+                                <CardContent className="p-4 space-y-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1"><Tag className="h-3 w-3" /> CATEGORIES</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {referral.aiSummary.suggestedCategories.map(cat => <Badge key={cat} variant="outline" className="text-[10px] bg-background">{cat}</Badge>)}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1"><Lightbulb className="h-3 w-3" /> REASONING</h4>
+                                        <p className="text-sm leading-relaxed">{referral.aiSummary.reasoning}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        <div className="space-y-4 pt-4">
+                            <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><FileIcon className="text-primary h-5 w-5" /> Patient Documents</h3>
+                            {referral.documents.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {referral.documents.map(doc => {
+                                        const fileUrl = doc.url.startsWith('_private/')
+                                            ? `/api/files/${doc.url.replace('_private/', '')}`
+                                            : doc.url;
+
+                                        return (
+                                            <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 hover:bg-muted/50 transition-all group">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+                                                        <FileIcon className="h-4 w-4 text-primary" />
+                                                    </div>
+                                                    <span className="text-sm font-medium truncate max-w-[150px] text-foreground" title={doc.name}>{doc.name}</span>
+                                                </div>
+                                                <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
+                                                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                                                        <Download className="h-4 w-4" />
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-muted text-muted-foreground text-sm">
+                                    No documents attached to this referral.
+                                </div>
+                            )}
+                        </div>
+
                     </Card>
                 </div>
 
@@ -570,6 +621,8 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
         </div>
     );
 }
+
+
 
 function NoteInput({ onAdd, placeholder, isPrimary = false }: {
     onAdd: (content: string) => void,
