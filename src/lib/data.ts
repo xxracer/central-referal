@@ -2,6 +2,7 @@
 'use server';
 import { adminDb } from '@/lib/firebase-admin';
 import { verifySession } from '@/lib/auth-actions';
+import { findAgenciesForUser } from './settings';
 import type { Referral } from '@/lib/types';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { createHash } from 'crypto'; // For secure DOB comparison
@@ -197,6 +198,25 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
     }
     if (!data.agencyId) data.agencyId = 'default';
 
+    // [SECURITY FIX] IDOR Protection
+    const userEmail = user.email || '';
+    const userAgencies = await findAgenciesForUser(userEmail);
+    const isAuthorized = userAgencies.some(a => a.id === data.agencyId);
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    const isAdmin = adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+
+    if (!isAuthorized && !isAdmin) {
+        console.error(`[Security] Unauthorized access attempt by ${user.uid} to referral ${id} (Agency: ${data.agencyId})`);
+        logAudit({
+            action: 'UNAUTHORIZED_ACCESS_ATTEMPT',
+            resourceId: id,
+            agencyId: data.agencyId,
+            actor: `user:${user.uid}`,
+            details: { reason: 'User not authorized to view this referral' }
+        });
+        throw new Error('Unauthorized');
+    }
+
     // [HIPAA Audit] Log READ access to specific PHI
     logAudit({
         action: 'VIEW_REFERRAL_DETAILS',
@@ -212,6 +232,22 @@ export async function saveReferral(referral: Referral, bypassAuth: boolean = fal
     const user = await verifySession();
 
     if (!user && !bypassAuth) throw new Error('Unauthorized');
+
+    // [SECURITY FIX] Check write permission for the target agency
+    if (user && !bypassAuth) {
+        const userEmail = user.email || '';
+        const userAgencies = await findAgenciesForUser(userEmail);
+        const isAuthorized = userAgencies.some(a => a.id === referral.agencyId);
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        const isAdmin = adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+
+        // Exception: If creating a NEW referral (no ID logic yet, but usually ID is passed), 
+        // ensure we are allowed to create for this agencyId.
+        if (!isAuthorized && !isAdmin) {
+            console.error(`[Security] Unauthorized write attempt by ${user.uid} to agency ${referral.agencyId}`);
+            throw new Error('Unauthorized');
+        }
+    }
 
     const firestore = getDb();
     const docRef = firestore.collection('referrals').doc(referral.id);
@@ -278,6 +314,17 @@ export async function findReferral(id: string): Promise<Referral | undefined> {
             });
         }
         if (!data.agencyId) data.agencyId = 'default';
+
+        // [SECURITY FIX] IDOR Protection
+        const userEmail = user.email || '';
+        const userAgencies = await findAgenciesForUser(userEmail);
+        const isAuthorized = userAgencies.some(a => a.id === data.agencyId);
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        const isAdmin = adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase();
+
+        if (!isAuthorized && !isAdmin) {
+            throw new Error('Unauthorized');
+        }
 
         // [HIPAA Audit] Log READ access to specific PHI
         logAudit({
