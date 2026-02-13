@@ -4,9 +4,6 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import '@/app/landing.css';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import '@/app/landing.css';
 
 interface SubscribeClientProps {
     logoUrl?: string;
