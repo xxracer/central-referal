@@ -134,7 +134,6 @@ export async function sendReferralNotification(
             <li>Share your referral link with partners/referral sources</li>
             <li>Start receiving real-time referral updates</li>
           </ul>
-          ${button('Log in here', data.loginUrl || `${baseUrl}/login`)}
           <p>If you have any questions or need help getting started, our team is here to support you.</p>
           <p>Best regards,<br/>ReferralFlow.Health</p>
         `;
