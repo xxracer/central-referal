@@ -12,7 +12,8 @@ import {
     sendPasswordResetEmail,
     type User,
     type UserCredential,
-    updatePassword
+    updatePassword,
+    onAuthStateChanged as firebaseOnAuthStateChanged
 } from 'firebase/auth';
 import { initializeFirebase } from '@/firebase';
 
@@ -92,4 +93,9 @@ export async function updateUserPassword(password: string): Promise<void> {
         console.error("Error updating password:", error);
         throw error;
     }
+}
+
+export function onAuthStateChanged(callback: (user: User | null) => void) {
+    const { auth } = initializeFirebase();
+    return firebaseOnAuthStateChanged(auth, callback);
 }

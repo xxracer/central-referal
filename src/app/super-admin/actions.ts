@@ -176,8 +176,8 @@ export async function sendActivationEmail(agencyId: string): Promise<{ success: 
         });
 
         if (!result || !result.success) {
-            console.error("Email sending failed:", result?.error);
-            return { success: false, message: 'Email service failed to send.' };
+            console.error("Email sending failed:", JSON.stringify(result?.error, null, 2));
+            return { success: false, message: `Email service failed: ${(result?.error as any)?.message || 'Unknown error'}` };
         }
 
         return { success: true, message: `Activation email sent to ${userEmail}` };

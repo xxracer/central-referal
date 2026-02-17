@@ -294,8 +294,14 @@ export async function sendReferralNotification(
         break;
     }
 
+
+
+    // Force using the verified domain or env var to ensure delivery to Yahoo/Outlook
+    // 'onboarding@resend.dev' often gets blocked or only works for the account owner email.
+    const fromAddress = process.env.RESEND_FROM_EMAIL || 'ReferralFlow <notifications@referralflow.health>';
+
     const { data: resData, error } = await resend.emails.send({
-      from: 'ReferralFlow <notifications@referralflow.health>',
+      from: fromAddress,
       to: uniqueRecipients,
       subject: subject,
       html: `<div style="${commonStyle}">${htmlContent}${footer}</div>`,

@@ -41,7 +41,58 @@ function LoginForm() {
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-    const handleAgencySelect = (agency: any) => {
+    // AUTO-REDIRECT: Check if user is already logged in
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+
+        // Dynamic import to avoid SSR issues with auth
+        import('@/firebase/auth/client').then(({ onAuthStateChanged }) => {
+            unsubscribe = onAuthStateChanged(async (user: any) => {
+                if (user) {
+                    setIsLoading(true);
+                    await handlePostLogin(user, false);
+                }
+            });
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
+    // Handle Auto-Token Login (for Localhost subdomain hopping)
+    useEffect(() => {
+        const autoToken = searchParams.get('auto_token');
+        if (autoToken) {
+            const loginWithToken = async () => {
+                setIsLoading(true);
+                toast({ title: "Auto-logging in...", description: "Verifying session token..." });
+                try {
+                    // createSession is already imported as a server action
+                    const res = await createSession(autoToken);
+                    if (res.success) {
+                        // Remove token from URL for clean look
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('auto_token');
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Refresh to ensure middleware sees the cookie
+                        window.location.reload();
+                    } else {
+                        toast({ variant: "destructive", title: "Login Failed", description: "Invalid auto-login token." });
+                        setIsLoading(false);
+                    }
+                } catch (e) {
+                    console.error("Auto-login error", e);
+                    setIsLoading(false);
+                }
+            };
+            loginWithToken();
+        }
+    }, [searchParams, toast]);
+
+
+    const handleAgencySelect = (agency: any, token?: string) => {
         toast({
             title: "Logging in...",
             description: `Accessing ${agency.name}`,
@@ -54,8 +105,30 @@ function LoginForm() {
         const defaultPath = agency.requiresPasswordReset ? '/dashboard/settings?tab=access' : '/dashboard';
         const targetPath = redirectPath || defaultPath;
 
-        if (host.includes('localhost')) {
-            router.push(targetPath);
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+            // Support local wildcard testing
+            const port = window.location.port ? `:${window.location.port}` : '';
+            // If we are already on the correct subdomain, use router.push to avoid reload
+            if (host.startsWith(`${agency.slug}.`)) {
+                router.push(targetPath);
+            } else {
+                // Force redirect to the agency subdomain on localhost
+                // Pass token to avoid double-login on localhost where cookies don't share well across subdomains
+                const tokenParam = token ? `?auto_token=${token}` : '';
+                const separator = targetPath.includes('?') ? '&' : (tokenParam ? '?' : '');
+                // Logic: Append to targetPath if it's a relative path? No, targetPath is passed to the new URL.
+                // We want: http://slug.localhost:3000/dashboard?auto_token=...
+
+                // If redirectPath (targetPath) already has params, we need to be careful.
+                // Simpler: Just append token to the MAIN url, and let the login page on that domain handle it 
+                // BUT the user wants to go to /dashboard. 
+                // If we go to /login?auto_token=...&redirect=/dashboard, the login page handles the token, sets cookie, then redirects to 'redirect'.
+
+                // Let's change strategy: Redirect to Login page of the subdomain with the token.
+                // The Login page there will set cookie and then redirect to targetPath.
+
+                window.location.href = `${protocol}//${agency.slug}.localhost${port}/login?auto_token=${token}&redirect=${encodeURIComponent(targetPath)}`;
+            }
         } else {
             window.location.href = `${protocol}//${agency.slug}.referralflow.health${targetPath}`;
         }
@@ -100,15 +173,19 @@ function LoginForm() {
                 if (agencies.length === 1) {
                     // Auto-redirect if only one
                     const agency = agencies[0];
-                    handleAgencySelect(agency);
+                    handleAgencySelect(agency, idToken); // Pass ID Token for localhost hopping
                     return;
                 }
                 // Multiple agencies found -> Show selection
+                // Store token in state if they need to select? 
+                // We might need to refresh token if they take too long, but usually fine.
+                // For now, let's just use the current one.
                 setUserAgencies(agencies);
                 setShowSelection(true);
                 setIsLoading(false);
                 return;
             }
+
 
             // No agencies found but IS admin (passed the check above)
             if (isAdmin) {

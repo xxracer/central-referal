@@ -67,10 +67,11 @@ function AgencySetupForm() {
         setIsLoading(true);
 
         try {
+            const bypass = searchParams.get('bypass') === 'true';
             const response = await fetch('/api/agency/setup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, agencyName, slug, password }),
+                body: JSON.stringify({ email, agencyName, slug, password, bypass }),
             });
 
             const data = await response.json();

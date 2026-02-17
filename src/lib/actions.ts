@@ -88,11 +88,19 @@ export async function provisionStaffUser(agencyId: string, email: string, tempPa
 
         // 3. Send Invitation Email with Credentials
         // We use 'recipientOverride' to send directly to the new user
-        await sendReferralNotification(agencyId, 'STAFF_INVITATION', {
+        const emailResult = await sendReferralNotification(agencyId, 'STAFF_INVITATION', {
             referralLink: '', // Not needed for this template really, or could be dashboard link
             loginUrl: 'https://referralflow.health/login', // Or dynamic base url
             password: passwordToUse
         }, email);
+
+        if (!emailResult.success) {
+            console.error("Failed to send staff invitation email:", emailResult.error);
+            return {
+                success: true,
+                message: `Staff member provisioned, BUT email invitation failed: ${JSON.stringify(emailResult.error)}`
+            };
+        }
 
         return { success: true, message: 'Staff member provisioned and invited successfully.' };
 

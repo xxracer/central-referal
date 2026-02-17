@@ -32,6 +32,14 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { name, email, planType } = body;
 
+        // SKIP STRIPE IN DEVELOPMENT
+        if (process.env.NODE_ENV === 'development') {
+            console.log("Dev environment detected: Skipping Stripe Checkout");
+            return NextResponse.json({
+                url: `${request.headers.get('origin')}/setup/agency?session_id=mock_session_dev&email=${encodeURIComponent(email)}&bypass=true`
+            });
+        }
+
         let priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
         if (planType === 'annual') {
             priceId = process.env.STRIPE_PRICE_ID_ANNUAL;

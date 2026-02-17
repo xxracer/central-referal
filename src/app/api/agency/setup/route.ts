@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
     try {
-        const { email, agencyName, slug, password } = await request.json();
+        const { email, agencyName, slug, password, bypass } = await request.json();
 
         if (!email || !agencyName || !slug) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -53,35 +53,50 @@ export async function POST(request: Request) {
             }
         }
 
+        let customerPhone = '';
+        let customerName = 'Partner';
+        let customerId = '';
+
         // 1. Verify Payment / Subscription via Stripe
-        // Search for customer by email
-        const customers = await stripe.customers.list({
-            email: normalizedEmail,
-            limit: 1,
-            expand: ['data.subscriptions'] // Expand to check active sub
-        });
+        if (bypass === true && process.env.NODE_ENV === 'development') {
+            console.log("Dev mode setup: Skipping Stripe verification.");
+            // Mock customer data
+            customerPhone = '555-555-5555';
+            customerName = agencyName || 'Developer';
+        } else {
+            // Search for customer by email
+            const customers = await stripe.customers.list({
+                email: normalizedEmail,
+                limit: 1,
+                expand: ['data.subscriptions'] // Expand to check active sub
+            });
 
-        if (customers.data.length === 0) {
-            return NextResponse.json({ error: 'No subscription found for this email. Please subscribe first.' }, { status: 403 });
-        }
+            if (customers.data.length === 0) {
+                return NextResponse.json({ error: 'No subscription found for this email. Please subscribe first.' }, { status: 403 });
+            }
 
-        const customer = customers.data[0];
-        // Check for active subscription or recent payment logic?
-        // For simplicity, we accept if customer exists with valid subscription-like intent.
-        // Or strictly check `customer.subscriptions.data`.
-        // If it was a "Free" one-off or trial, it might be in subscriptions too.
+            const customer = customers.data[0];
+            customerId = customer.id;
+            customerPhone = customer.phone || '';
+            customerName = customer.name || 'Partner';
 
-        const hasEffectiveSubscription = customer.subscriptions?.data.some(sub =>
-            sub.status === 'active' || sub.status === 'trialing' || sub.status === 'incomplete' // 'incomplete' usually means payment pending client action, but for setup we might be lenient or strict
-        );
+            // Check for active subscription or recent payment logic?
+            // For simplicity, we accept if customer exists with valid subscription-like intent.
+            // Or strictly check `customer.subscriptions.data`.
+            // If it was a "Free" one-off or trial, it might be in subscriptions too.
 
-        if (!hasEffectiveSubscription) {
-            // Fallback: Check checking metadata or invoices? 
-            // If we just created them in the "Free" flow, they might not have a subscription object if we didn't create one in the checkout route failure??
-            // Actually checkout route ALWAYS creates a subscription.
-            // So if no subscription, they likely didn't pay.
-            // Exception: If they are a legacy user? No, new setup.
-            return NextResponse.json({ error: 'No active subscription found. Please complete payment.' }, { status: 403 });
+            const hasEffectiveSubscription = customer.subscriptions?.data.some(sub =>
+                sub.status === 'active' || sub.status === 'trialing' || sub.status === 'incomplete' // 'incomplete' usually means payment pending client action, but for setup we might be lenient or strict
+            );
+
+            if (!hasEffectiveSubscription) {
+                // Fallback: Check checking metadata or invoices? 
+                // If we just created them in the "Free" flow, they might not have a subscription object if we didn't create one in the checkout route failure??
+                // Actually checkout route ALWAYS creates a subscription.
+                // So if no subscription, they likely didn't pay.
+                // Exception: If they are a legacy user? No, new setup.
+                return NextResponse.json({ error: 'No active subscription found. Please complete payment.' }, { status: 403 });
+            }
         }
 
         // 2. Check if Agency Slug is taken
@@ -95,7 +110,7 @@ export async function POST(request: Request) {
             companyProfile: {
                 name: agencyName,
                 email: normalizedEmail,
-                phone: customer.phone || '',
+                phone: customerPhone,
                 fax: '',
                 homeInsurances: []
             },
@@ -116,12 +131,14 @@ export async function POST(request: Request) {
         });
 
         // 4. Update Stripe Metadata (optional link back)
-        await stripe.customers.update(customer.id, {
-            metadata: {
-                agencyId: agencyId,
-                agencyName: agencyName
-            }
-        });
+        if (customerId) {
+            await stripe.customers.update(customerId, {
+                metadata: {
+                    agencyId: agencyId,
+                    agencyName: agencyName
+                }
+            });
+        }
 
         // 5. Send Welcome Emails
         // To Agency Owner
@@ -133,11 +150,13 @@ export async function POST(request: Request) {
         // Assumption: NEXT_PUBLIC_BASE_URL does NOT have a subdomain currently (it's the root)
         if (baseUrl.includes('://')) {
             const [protocol, host] = baseUrl.split('://');
+            // If it's localhost, we might want to handle it differently if no wildcards?
+            // User requested wildcard verification.
             agencyOrigin = `${protocol}://${agencyId}.${host}`;
         }
 
         await sendReferralNotification(agencyId, 'WELCOME_AGENCY', {
-            firstName: (customer.name || 'Partner').split(' ')[0],
+            firstName: customerName.split(' ')[0],
             loginUrl: `${agencyOrigin}/dashboard/settings`,
             referralLink: agencyOrigin
         }, normalizedEmail);
@@ -146,7 +165,7 @@ export async function POST(request: Request) {
         await sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
             recipientOverride: 'maijelcancines2@gmail.com',
             referralLink: agencyId,
-            patientName: customer.phone || 'N/A'
+            patientName: customerPhone || 'N/A'
         }, 'maijelcancines2@gmail.com');
 
         return NextResponse.json({ success: true, agencyId });
