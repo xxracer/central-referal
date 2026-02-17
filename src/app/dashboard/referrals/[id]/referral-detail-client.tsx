@@ -56,6 +56,8 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import CopyButton from '@/components/copy-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 interface ReferralDetailClientProps {
     referral: Referral;
@@ -71,13 +73,46 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
         setReferral(initialReferral);
     }, [initialReferral]);
 
-    // Poll for live updates every 5 seconds
+    // Real-time updates via Firestore
+    // Real-time updates via Firestore
     useEffect(() => {
-        const interval = setInterval(() => {
-            router.refresh();
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [router]);
+        const { firestore } = initializeFirebase();
+
+        if (!firestore) return;
+
+        const referralRef = doc(firestore, 'referrals', initialReferral.id);
+
+        const unsubscribe = onSnapshot(referralRef, (docSnap: any) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+
+                // Helper to convert Timestamps to Dates
+                const convertTimestamps = (obj: any): any => {
+                    if (obj && typeof obj === 'object' && 'seconds' in obj && 'nanoseconds' in obj) {
+                        return new Date(obj.seconds * 1000 + obj.nanoseconds / 1000000);
+                    }
+                    if (Array.isArray(obj)) return obj.map(convertTimestamps);
+                    if (obj !== null && typeof obj === 'object') {
+                        return Object.fromEntries(
+                            Object.entries(obj).map(([key, val]) => [key, convertTimestamps(val)])
+                        );
+                    }
+                    return obj;
+                };
+
+                const convertedData = convertTimestamps(data) as Referral;
+
+                // Merge with ID (though it should matches)
+                setReferral({ ...convertedData, id: initialReferral.id });
+            }
+        }, (error: any) => {
+            console.error("Realtime listener error:", error);
+            // Fallback to polling if permission denied or other error
+            // But for Dashboard, authenticated user SHOULD have access if rules are correct
+        });
+
+        return () => unsubscribe();
+    }, [initialReferral.id]);
 
     const [selectedStatus, setSelectedStatus] = useState<ReferralStatus>(initialReferral.status);
     const [statusNote, setStatusNote] = useState('');

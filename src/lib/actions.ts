@@ -436,6 +436,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
         success: true,
         data: {
             status: referral.status,
+            id: referral.id,
             updatedAt: referral.updatedAt,
             statusHistory: referral.statusHistory,
             externalNotes: referral.externalNotes,
@@ -445,13 +446,19 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
 }
 
 export async function addInternalNote(referralId: string, prevState: FormState, formData: FormData): Promise<FormState> {
+    const { verifySession } = await import('./auth-actions');
+    const session = await verifySession();
+    if (!session || !session.email) {
+        return { message: 'Unauthorized.', success: false };
+    }
+
     const referral = await getReferralById(referralId);
     if (!referral) {
         return { message: 'Referral not found.', success: false };
     }
 
     const noteContent = formData.get('note') as string;
-    const authorName = formData.get('authorName') as string || 'Staff';
+    const authorName = formData.get('authorName') as string || 'Staff'; // Or use session.email/name
     if (!noteContent) {
         return { message: 'Note cannot be empty.', success: false };
     }
@@ -460,7 +467,7 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
     const newNote: Note = {
         id: `note-${Date.now()}`,
         content: noteContent,
-        author: { name: authorName, email: '', role: 'STAFF' },
+        author: { name: authorName, email: session.email, role: 'STAFF' },
         createdAt: now,
         isExternal: false
     };

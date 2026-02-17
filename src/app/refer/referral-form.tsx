@@ -263,7 +263,17 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
 
                                 <div className="space-y-2">
                                     <Label htmlFor="otherInsurance">Other Insurance (if not listed above)</Label>
-                                    <Input id="otherInsurance" name="otherInsurance" placeholder="Enter insurance name" className="bg-blue-50 text-blue-900 border-blue-200 placeholder:text-blue-400 shadow-sm" defaultValue={formState.fields?.otherInsurance} />
+                                    <Input
+                                        id="otherInsurance"
+                                        name="otherInsurance"
+                                        placeholder={selectedInsurance === 'Other' ? "Enter insurance name" : "Select 'Other' above to enter name"}
+                                        className={cn(
+                                            "bg-blue-50 text-blue-900 border-blue-200 placeholder:text-blue-400 shadow-sm",
+                                            selectedInsurance !== 'Other' && "bg-muted text-muted-foreground opacity-60 cursor-not-allowed"
+                                        )}
+                                        defaultValue={formState.fields?.otherInsurance}
+                                        disabled={selectedInsurance !== 'Other'}
+                                    />
                                     {formState.errors?.otherInsurance && <p className="text-sm text-destructive">{formState.errors.otherInsurance[0]}</p>}
                                 </div>
 

@@ -18,6 +18,8 @@ import { useFormStatus } from 'react-dom';
 import { type AgencySettings } from '@/lib/types';
 
 import { useRef } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
     const { pending } = useFormStatus();
@@ -50,7 +52,44 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
         setReferralId(initialReferralId);
     }, [initialReferralId]);
 
-    const showResults = formState.success && formState.data;
+    // Real-time listener for Status Page
+    const [realtimeData, setRealtimeData] = useState<any>(null);
+
+    useEffect(() => {
+        if (formState.success && formState.data?.id) {
+            const { firestore } = initializeFirebase();
+
+            if (!firestore) return;
+
+            const docRef = doc(firestore, 'referrals', formState.data.id);
+            const unsubscribe = onSnapshot(docRef, (docSnap: any) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Convert timestamps
+                    const convertTimestamps = (obj: any): any => {
+                        if (obj && typeof obj === 'object' && 'seconds' in obj && 'nanoseconds' in obj) {
+                            return new Date(obj.seconds * 1000 + obj.nanoseconds / 1000000);
+                        }
+                        if (Array.isArray(obj)) return obj.map(convertTimestamps);
+                        if (obj !== null && typeof obj === 'object') {
+                            return Object.fromEntries(
+                                Object.entries(obj).map(([key, val]) => [key, convertTimestamps(val)])
+                            );
+                        }
+                        return obj;
+                    };
+                    setRealtimeData(convertTimestamps(data));
+                }
+            }, (err: any) => {
+                console.error("Rt error", err);
+            });
+            return () => unsubscribe();
+        }
+    }, [formState.success, formState.data?.id]);
+
+    // Use realtime data if available, otherwise fallback to server data
+    const displayData = realtimeData || formState.data;
+    const showResults = formState.success && !!displayData;
 
     return (
         <div className="flex flex-col min-h-dvh bg-muted/30">
@@ -152,15 +191,15 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <CardTitle className="flex items-center gap-2 font-headline text-xl">
                                             <Info className="w-5 h-5 text-primary" />
-                                            Referral Status: <StatusBadge status={formState.data?.status} />
+                                            Referral Status: <StatusBadge status={displayData?.status} />
                                         </CardTitle>
                                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                                             <History className="w-4 h-4" />
-                                            Last Update: {formatDate(formState.data?.updatedAt, "PPp")}
+                                            Last Update: {formatDate(displayData?.updatedAt, "PPp")}
                                         </div>
                                     </div>
 
-                                    {formState.data?.noteAdded && (
+                                    {displayData?.noteAdded && (
                                         <Alert variant="default" className="mt-4 bg-green-500/10 border-green-500/20 text-green-700">
                                             <CheckCircle className="h-4 w-4 text-green-600" />
                                             <AlertTitle className="text-green-800 font-semibold">Note Sent</AlertTitle>
@@ -177,12 +216,12 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                         </h4>
 
                                         <div className="flex flex-col gap-6">
-                                            {(!formState.data?.externalNotes || formState.data.externalNotes.length === 0) ? (
+                                            {(!displayData?.externalNotes || displayData.externalNotes.length === 0) ? (
                                                 <div className="text-center py-8 text-muted-foreground italic bg-muted/20 rounded-xl border border-dashed">
                                                     No messages yet. Start the conversation above!
                                                 </div>
                                             ) : (
-                                                formState.data.externalNotes.map((note: any, index: number) => {
+                                                displayData.externalNotes.map((note: any, index: number) => {
                                                     const isMe = note.author?.role === 'PUBLIC' || note.author?.name === 'Referrer/Patient';
                                                     const senderName = isMe ? 'You' : profile.name;
 

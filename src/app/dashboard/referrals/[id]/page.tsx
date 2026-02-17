@@ -4,7 +4,7 @@ import ReferralDetailClient from './referral-detail-client';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ReferralDetailPage({ params }: { params: { id: string } }) {
+export default async function ReferralDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!id) notFound();
 

@@ -41,24 +41,8 @@ function LoginForm() {
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-    // AUTO-REDIRECT: Check if user is already logged in
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
+    // AUTO-REDIRECT REMOVED: User requested manual login only.
 
-        // Dynamic import to avoid SSR issues with auth
-        import('@/firebase/auth/client').then(({ onAuthStateChanged }) => {
-            unsubscribe = onAuthStateChanged(async (user: any) => {
-                if (user) {
-                    setIsLoading(true);
-                    await handlePostLogin(user, false);
-                }
-            });
-        });
-
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, []);
 
     // Handle Auto-Token Login (for Localhost subdomain hopping)
     useEffect(() => {
