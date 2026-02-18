@@ -582,7 +582,7 @@ export async function updateReferralStatus(referralId: string, prevState: FormSt
     if (referral.confirmationEmail) {
         sendReferralNotification(referral.agencyId, 'STATUS_UPDATE', {
             referralId: referral.id,
-            patientName: referral.patientName,
+            // patientName removed for HIPAA
             status: status,
             referrerName: referral.referrerName || 'Partner',
 
@@ -616,7 +616,7 @@ export async function updateAgencySettingsAction(agencyId: string, settings: Par
             sendReferralNotification(agencyId, 'WELCOME_ADMIN_ALERT', {
                 referralLink: settings.slug, // Using referralLink prop for the slug
                 recipientOverride: process.env.ADMIN_EMAIL || 'maijelcancines2@gmail.com', // Fallback to existing if env missing for now
-                patientName: phone, // Reuse patientName for phone as per template.
+                // Removed patientName usage for phone to avoid confusion
             }).catch(err => console.error("Failed to send admin alert:", err));
         }
 

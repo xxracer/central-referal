@@ -248,7 +248,6 @@ export async function sendReferralNotification(
             <p><strong>Agency Name:</strong> ${agencyName}</p>
             <p><strong>Selected Domain (Slug):</strong> ${data.referralLink || 'Not set'}</p>
             <p><strong>Admin Email:</strong> ${data.recipientOverride || 'Unknown'}</p>
-            <p><strong>Phone:</strong> ${data.patientName || 'N/A'}</p>
             <p>Please review and activate this agency in the Super Admin portal.</p>
           `;
         break;

@@ -14,6 +14,10 @@ export default async function ReferralDetailPage({ params }: { params: Promise<{
     notFound();
   }
 
+  // HIPAA Audit Log
+  const { logAudit } = await import('@/lib/audit-logs');
+  await logAudit('VIEW', `referral/${id}`, { status: referral.status });
+
   return (
     <div className="container mx-auto py-6 max-w-7xl">
       <ReferralDetailClient referral={referral} />
