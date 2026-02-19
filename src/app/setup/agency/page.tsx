@@ -232,6 +232,18 @@ function AgencySetupForm() {
                         <p className="text-sm text-destructive font-medium">{passwordError}</p>
                     )}
 
+                    <div className="flex items-start space-x-2 py-3 px-3 bg-muted/30 rounded-md border border-muted text-sm">
+                        <input
+                            type="checkbox"
+                            id="termsParams"
+                            required
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="termsParams" className="font-normal leading-tight cursor-pointer">
+                            By creating an account, you agree to our <a href="/legal#terms" target="_blank" className="text-primary hover:underline font-medium">Terms of Service</a> and <a href="/legal#baa" target="_blank" className="text-primary hover:underline font-medium">Business Associate Agreement</a>.
+                        </Label>
+                    </div>
+
                     <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? (
                             <>

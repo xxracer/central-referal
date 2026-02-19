@@ -314,6 +314,18 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     try {
         // ... (lines 379-400: saving logic)
         const now = new Date();
+        // Extract IP for Audit
+        const headersList = await headers();
+        const forwardedFor = headersList.get('x-forwarded-for');
+        const ip = forwardedFor ? forwardedFor.split(',')[0] : 'UNKNOWN_IP';
+
+        // Verify Legal Consent (Checkbox is 'on' if checked)
+        const legalConsentAgreed = formData.get('legalConsent') === 'on';
+
+        if (!legalConsentAgreed) {
+            return { message: 'You must agree to the Terms of Use to submit a referral.', success: false, isSubmitting: false, fields: formValues };
+        }
+
         const newReferral: Referral = {
             id: referralId,
             agencyId,
@@ -348,6 +360,11 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             isArchived: false,
             isSeen: false,
             hasUnreadMessages: false,
+            legalConsent: {
+                agreed: true,
+                ip: ip,
+                timestamp: new Date()
+            }
         };
         await saveReferral(newReferral, true);
 

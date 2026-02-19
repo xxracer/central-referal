@@ -30,7 +30,11 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { name, email, planType } = body;
+        const { name, email, planType, legalConsent } = body;
+
+        if (!legalConsent) {
+            return NextResponse.json({ error: 'Legal consent is required.' }, { status: 400 });
+        }
 
         // SKIP STRIPE IN DEVELOPMENT
         if (process.env.NODE_ENV === 'development') {
@@ -67,7 +71,9 @@ export async function POST(request: Request) {
                 // We'll use this in the webhook to know it's a new subscription
                 email: email,
                 name: name,
-                pendingSetup: 'true'
+                pendingSetup: 'true',
+                legal_consent_ip: ip,
+                legal_consent_time: new Date().toISOString()
             }
         });
 

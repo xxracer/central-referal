@@ -8,9 +8,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2024-12-18.acacia' as any,
 });
 
+import { headers } from 'next/headers';
+
 export async function POST(request: Request) {
     try {
         const { email, agencyName, slug, password, bypass } = await request.json();
+
+        // Extract IP for Audit
+        const headersList = await headers();
+        const forwardedFor = headersList.get('x-forwarded-for');
+        const ip = forwardedFor ? forwardedFor.split(',')[0] : 'UNKNOWN_IP';
 
         if (!email || !agencyName || !slug) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -127,6 +134,11 @@ export async function POST(request: Request) {
             userAccess: {
                 authorizedEmails: [normalizedEmail],
                 authorizedDomains: [] // Explicitly empty, user access only via email list
+            },
+            legalConsent: {
+                agreed: true,
+                ip: ip,
+                timestamp: new Date()
             }
         });
 

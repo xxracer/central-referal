@@ -85,6 +85,13 @@ export type AgencySettings = {
     endDate?: Date;
     customerId?: string; // Stripe Customer ID placeholder
   };
+
+  legalConsent?: {
+    agreed: boolean;
+    ip: string;
+    timestamp: Date;
+  };
+
   exists?: boolean;
 };
 
@@ -155,4 +162,10 @@ export type Referral = {
   isArchived?: boolean;
   isSeen?: boolean;
   hasUnreadMessages?: boolean;
+
+  legalConsent?: {
+    agreed: boolean;
+    ip: string;
+    timestamp: Date;
+  };
 };

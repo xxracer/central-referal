@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import '@/app/landing.css';
 
 
@@ -46,16 +48,23 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
     }, []);
 
     const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const handleCheckout = async () => {
         const payload = {
             name: formData.name.trim(),
             email: formData.email.trim(),
-            planType: selectedPlan
+            planType: selectedPlan,
+            legalConsent: true
         };
 
         if (!payload.name || !payload.email) {
             alert("Please enter your name and email.");
+            return;
+        }
+
+        if (!termsAccepted) {
+            alert("You must agree to the Terms of Service and BAA to proceed.");
             return;
         }
 
@@ -248,10 +257,35 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                 </div>
                             </div>
 
-                            <div className="modal-actions" style={{ marginTop: '24px' }}>
+                            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50/50 p-4 shadow-sm">
+                                <div className="flex items-start space-x-3">
+                                    <Checkbox
+                                        id="terms"
+                                        checked={termsAccepted}
+                                        onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                                        className="mt-0.5 border-slate-400 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                    />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <Label
+                                            htmlFor="terms"
+                                            className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-slate-900"
+                                        >
+                                            Confirm Legal Agreement
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            I agree to the <a href="/legal#terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-primary hover:text-primary/90 font-bold">Terms of Service</a>, <a href="/legal#privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-primary hover:text-primary/90 font-bold">Privacy Policy</a>, and <a href="/legal#baa" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-primary hover:text-primary/90 font-bold">BAA</a>. I understand this action is recorded for compliance.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions" style={{ marginTop: '16px' }}>
                                 <button
                                     className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8"
-                                    id="checkoutBtn" type="button" onClick={handleCheckout} disabled={loading}
+                                    id="checkoutBtn"
+                                    type="button"
+                                    onClick={handleCheckout}
+                                    disabled={loading || !termsAccepted}
                                 >
                                     {loading ? 'Redirecting to Stripe...' : `Proceed to Payment`}
                                 </button>
@@ -281,8 +315,8 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                             </div>
                         </div>
                     </footer>
-                </div>
-            </main>
-        </div>
+                </div >
+            </main >
+        </div >
     );
 }

@@ -384,6 +384,13 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                             {formState.message && !formState.success && (<Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{formState.message}</AlertDescription></Alert>)}
                         </div>
 
+                        <div className="flex items-start space-x-2 py-4 px-4 bg-muted/30 rounded-md border border-muted">
+                            <Checkbox id="legalConsent" name="legalConsent" required className="mt-1" />
+                            <Label htmlFor="legalConsent" className="text-sm font-normal leading-tight cursor-pointer">
+                                I confirm I am authorized to submit this patient information for care coordination purposes and agree to the ReferralFlow <a href="/legal#terms" target="_blank" className="text-primary hover:underline font-medium">Terms of Use</a>.
+                            </Label>
+                        </div>
+
                         <Button type="submit" disabled={isPending || formState.isSubmitting || isOverLimit} size="lg" className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90">
                             {isPending || formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             {isPending || formState.isSubmitting ? 'Submitting & Processing Files...' : 'SUBMIT REFERRAL'}
