@@ -92,9 +92,9 @@ export default async function DashboardPage({
                 </CardHeader>
                 <CardContent>
                     <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 font-medium text-xs text-muted-foreground uppercase tracking-wider rounded-t-md">
-                        <div className="col-span-1">ID</div>
+                        <div className="col-span-2">ID</div>
                         <div className="col-span-2">Name</div>
-                        <div className="col-span-3">Source</div>
+                        <div className="col-span-2">Source</div>
                         <div className="col-span-2">Insurance</div>
                         <div className="col-span-2">Date</div>
                         <div className="col-span-2 text-right">Status</div>

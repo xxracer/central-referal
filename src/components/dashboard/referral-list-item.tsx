@@ -121,30 +121,32 @@ export default function ReferralListItem({ referral }: { referral: Referral }) {
             <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md py-4" onClick={handleExpand}>
                 <div className="flex md:grid md:grid-cols-12 gap-4 text-sm w-full items-center">
                     {/* ID */}
-                    <div className="font-bold text-primary text-left font-mono flex items-center gap-1 col-span-1">
-                        {referral.id}
-                        <div onClick={(e) => e.stopPropagation()}>
+                    <div className="font-bold text-primary text-left font-mono flex items-center gap-1 md:col-span-2 min-w-0">
+                        <span className="truncate">{referral.id}</span>
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center">
                             <CopyButton textToCopy={referral.id} className="h-6 w-6 ml-1 cursor-pointer" asDiv />
                         </div>
                     </div>
 
                     {/* Name */}
-                    <div className="flex-1 text-left font-medium flex items-center gap-2 md:col-span-2">
-                        {referral.patientName}
-                        {referral.isSeen === false && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white animate-pulse shadow-sm">
-                                NEW
-                            </span>
-                        )}
-                        {referral.hasUnreadMessages && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-500 text-white animate-pulse shadow-sm">
-                                MSG
-                            </span>
-                        )}
+                    <div className="flex-1 text-left font-medium flex items-center gap-2 md:col-span-2 min-w-0">
+                        <span className="truncate">{referral.patientName}</span>
+                        <div className="shrink-0 flex gap-1">
+                            {referral.isSeen === false && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500 text-white animate-pulse shadow-sm leading-none h-fit">
+                                    NEW
+                                </span>
+                            )}
+                            {referral.hasUnreadMessages && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500 text-white animate-pulse shadow-sm leading-none h-fit">
+                                    MSG
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Source - Hidden on mobile */}
-                    <div className="hidden md:block text-left truncate col-span-3 text-muted-foreground" title={referral.referrerName}>
+                    <div className="hidden md:block text-left truncate md:col-span-2 text-muted-foreground min-w-0" title={referral.referrerName}>
                         {referral.referrerName}
                     </div>
 
