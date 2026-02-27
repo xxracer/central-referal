@@ -42,6 +42,7 @@ export type StaffNotificationPreference = {
 export type AgencySettings = {
   id: string; // usually the subdomain
   slug?: string; // custom subdomain slug
+  lastActiveAt?: Date; // Timestamp tracking latest staff login session
   companyProfile: {
     name: string;
     phone: string;
@@ -98,6 +99,7 @@ export type AgencySettings = {
 export type Referral = {
   id: string;
   agencyId: string; // Multi-tenancy isolation
+  referralSourceId?: string; // Link to Referral Source (Ticket 5)
 
   // Referrer Info
   referrerName: string;
@@ -162,10 +164,75 @@ export type Referral = {
   isArchived?: boolean;
   isSeen?: boolean;
   hasUnreadMessages?: boolean;
+  staffIsTyping?: boolean;
 
   legalConsent?: {
     agreed: boolean;
     ip: string;
     timestamp: Date;
   };
+};
+
+// --- Referral Sources Tracker Epic ---
+
+export type ReferralSourceType = 'physician_office' | 'hospital' | 'assisted_living' | 'senior_living' | 'clinic' | 'home_visit_provider' | 'case_manager' | 'hospice' | 'self_referral' | 'family' | 'other';
+export type ReferralSourceStatus = 'prospect' | 'active' | 'cooling_off' | 'inactive' | 'lost' | 'high_priority';
+export type ReferralSourceCreatedFrom = 'manual' | 'referral_submission';
+
+export type ReferralSource = {
+  id: string; // UUID/PK
+  agencyId: string; // Tenant/Org ID (Mapped from org_id)
+  name: string;
+  nameNormalized: string; // Lowercase, trimmed, single-spaced for uniqueness
+  type: ReferralSourceType;
+  status: ReferralSourceStatus;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  createdFrom: ReferralSourceCreatedFrom;
+  createdByUserId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ReferralSourceContactType = 'in_person' | 'phone' | 'email' | 'event' | 'other';
+
+export type ReferralSourceContact = {
+  id: string;
+  agencyId: string; // Tenant/Org ID
+  referralSourceId: string; // FK
+  contactDate: Date;
+  contactType: ReferralSourceContactType;
+  summary: string;
+  contactPerson?: string | null;
+  createdByUserId?: string | null;
+  createdByName?: string | null;
+  createdAt: Date;
+  isArchived?: boolean;
+
+  // Reminder fields
+  reminderDate?: Date | null;
+  reminderEmail?: string | null;
+  reminderSent?: boolean;
+};
+
+export interface ReferralSummary {
+  id: string;
+  patientName: string;
+  createdAt: Date;
+  status: string;
+}
+
+// Computed Metrics for Ticket 2
+export interface ReferralSourceMetrics {
+  lastContactDate: Date | null;
+  latestNote?: string;
+  totalNotes: number; // Amount of contact notes
+  referralsMtd: number; // Referrals this month
+  referralsLast90Days: number;
+  lastReferralDate: Date | null;
+  totalAdmittedAllTime: number; // For conversion rate denominator
+  totalReferralsAllTime: number; // For conversion rate numerator
+  recentReferrals: ReferralSummary[];
+  insuranceStats: Record<string, number>; // Map of insurance name to referral count
 };

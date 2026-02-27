@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import LoadingModal from '@/components/loading-modal';
 import type { AgencySettings } from '@/lib/types';
+import { SourceTypeahead } from '@/components/forms/source-typeahead';
 
 // Hardcoded fallback removed, now using settings.configuration.offeredServices
 
@@ -187,10 +188,11 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                         <Card>
                             <CardHeader><CardTitle className="font-headline text-2xl">How can we contact you about this referral?</CardTitle></CardHeader>
                             <CardContent className="grid md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="organizationName">Organization / Facility Name <span className="text-destructive">*</span></Label>
-                                    <Input id="organizationName" name="organizationName" placeholder="e.g., Memorial Hermann" required className="bg-blue-50 text-blue-900 border-blue-200" defaultValue={formState.fields?.organizationName} />
-                                    {formState.errors?.organizationName && <p className="text-sm text-destructive">{formState.errors.organizationName[0]}</p>}
+                                <div className="space-y-2 relative">
+                                    <SourceTypeahead
+                                        defaultValue={formState.fields?.organizationName}
+                                        error={formState.errors?.organizationName?.[0]}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="contactName">Contact Name</Label>

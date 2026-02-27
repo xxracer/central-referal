@@ -15,8 +15,10 @@ export type NotificationType =
   | 'AGENCY_ACTIVATED'
   | 'NEW_MESSAGE_FROM_AGENCY' // Message from Agency -> Referral Source
   | 'STAFF_INVITATION' // New staff member invited
+  | 'REFUND_REQUEST' // Agency requesting a refund
   // Keep legacy for compatibility during migration if needed, or replace usage
-  | 'INTERNAL_NOTE'; // Internal staff note
+  | 'INTERNAL_NOTE' // Internal staff note
+  | 'REFERRAL_SOURCE_REMINDER'; // Reminds staff about an upcoming interaction
 
 // Email Template Data Interface
 interface EmailData {
@@ -35,6 +37,9 @@ interface EmailData {
   dateTime?: string; // For timestamps
   recipientOverride?: string; // For Admin Alert context
   password?: string; // For Staff Invitation
+  agencyId?: string; // For Refund Requests
+  notes?: string; // Generic notes content
+  scheduledAt?: string; // ISO 8601 format for Resend API scheduling
 }
 
 export async function sendReferralNotification(
@@ -54,7 +59,8 @@ export async function sendReferralNotification(
       'NEW_EXTERNAL_MESSAGE_INTERNAL',
       'REFERRAL_STALE',
       'INTERNAL_NOTE',
-      'STAFF_INVITATION'
+      'STAFF_INVITATION',
+      'REFERRAL_SOURCE_REMINDER'
     ].includes(type);
 
     if (recipientOverride) {
@@ -241,6 +247,22 @@ export async function sendReferralNotification(
         `;
         break;
 
+      case 'REFERRAL_SOURCE_REMINDER':
+        subject = `Reminder: Follow up with ${data.referrerName}`;
+        htmlContent = `
+          <h2 style="color: #0f172a;">Upcoming Interaction Reminder</h2>
+          <p>Hello,</p>
+          <p>This is an automated reminder that you have a scheduled interaction with a referral source.</p>
+          <p>
+            <strong>Referral Source:</strong> ${data.referrerName || 'N/A'}<br/>
+            <strong>Scheduled for:</strong> ${data.dateTime || 'Unknown time'}<br/>
+            <strong>Topic summary:</strong> ${data.messageSnippet || 'No summary provided.'}
+          </p>
+          <p>Please prepare accordingly for your contact.</p>
+          ${button('View Dashboard', `${baseUrl}/dashboard/referral-sources`)}
+        `;
+        break;
+
       case 'WELCOME_ADMIN_ALERT':
         subject = `New Agency Subscription: ${agencyName}`;
         htmlContent = `
@@ -249,6 +271,19 @@ export async function sendReferralNotification(
             <p><strong>Selected Domain (Slug):</strong> ${data.referralLink || 'Not set'}</p>
             <p><strong>Admin Email:</strong> ${data.recipientOverride || 'Unknown'}</p>
             <p>Please review and activate this agency in the Super Admin portal.</p>
+          `;
+        break;
+
+      case 'REFUND_REQUEST':
+        subject = `⚠️ Refund Request: ${agencyName}`;
+        htmlContent = `
+            <h2 style="color: #0f172a; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">Refund Request</h2>
+            <p>An agency has requested a refund for their subscription.</p>
+            <p><strong>Agency ID:</strong> ${data.agencyId}</p>
+            <p><strong>Name:</strong> ${agencyName}</p>
+            <p><strong>Details:</strong></p>
+            <pre style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace; white-space: pre-wrap;">${data.notes}</pre>
+            <p>Please log in to your Stripe dashboard to review the customer and process the refund if applicable.</p>
           `;
         break;
 
@@ -305,6 +340,7 @@ export async function sendReferralNotification(
       subject: subject,
       html: `<div style="${commonStyle}">${htmlContent}${footer}</div>`,
       replyTo: settings.companyProfile.email || undefined,
+      scheduledAt: data.scheduledAt || undefined,
     });
 
     if (error) {

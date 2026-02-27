@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import {
     Card,
     CardContent,
@@ -56,7 +58,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import CopyButton from '@/components/copy-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 interface ReferralDetailClientProps {
@@ -278,124 +280,164 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-card border shadow-sm rounded-xl overflow-hidden">
+                        <div className="bg-white border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl overflow-hidden relative transition-all">
                             {/* Header / Title of the 'Paper' */}
-                            <div className="bg-slate-50 dark:bg-muted/50 px-6 py-4 border-b flex justify-between items-center">
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <FileText className="h-5 w-5" />
+                            <div className="bg-gradient-to-r from-slate-50 to-white px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+                                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                        <FileText className="h-5 w-5 text-blue-600" />
+                                    </div>
                                     Clinical Referral Document
                                 </h2>
-                                <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
                                     Confidential
                                 </div>
                             </div>
 
-                            <div className="p-6 md:p-10 space-y-8 divide-y divide-slate-100 dark:divide-slate-800">
+                            <div className="p-8 md:p-12 space-y-10 divide-y divide-slate-100">
                                 {/* Patient Information Section */}
-                                <div className="space-y-4 pt-2 first:pt-0">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                <div className="space-y-5 pt-2 first:pt-0">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
                                         <User className="h-4 w-4" /> Patient Information
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Full Name</label>
-                                            <div className="text-xl md:text-2xl font-medium text-slate-900 dark:text-slate-50">{referral.patientName}</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                                            <div className="text-2xl font-bold text-slate-900 tracking-tight capitalize">{referral.patientName}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Date of Birth</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientDOB}</div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date of Birth</label>
+                                            <div className="text-lg font-medium text-slate-800">{referral.patientDOB}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact Phone</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientContact || "N/A"}</div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contact Phone</label>
+                                            <div className="text-lg font-medium text-slate-800">{referral.patientContact || "N/A"}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Review Address</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.patientAddress || "Address not provided"}</div>
-                                            {referral.patientZipCode && <div className="text-sm text-slate-500">Zip: {referral.patientZipCode}</div>}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Review Address</label>
+                                            <div className="text-lg font-medium text-slate-800">{referral.patientAddress || "Address not provided"}</div>
+                                            {referral.patientZipCode && <div className="text-sm font-medium text-slate-500 mt-1">Zip: <span className="text-slate-700">{referral.patientZipCode}</span></div>}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Insurance Section */}
-                                <div className="space-y-4 pt-8">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                <div className="space-y-5 pt-10">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
                                         <ShieldCheck className="h-4 w-4" /> Insurance Details
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Primary Insurance</label>
-                                            <div className="text-lg font-medium text-slate-900 dark:text-slate-50">{referral.patientInsurance}</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Primary Insurance</label>
+                                            <div className="text-lg font-semibold text-slate-900">{referral.patientInsurance}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member ID / Policy #</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.memberId || "N/A"}</div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Member ID / Policy #</label>
+                                            <div className="text-lg font-medium text-slate-800 font-mono tracking-tight bg-slate-50 px-2 py-0.5 rounded border border-slate-100 w-fit">{referral.memberId || "N/A"}</div>
                                         </div>
                                         {referral.groupNumber && (
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group Number</label>
-                                                <div className="text-lg text-slate-900 dark:text-slate-50">{referral.groupNumber}</div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group Number</label>
+                                                <div className="text-lg font-medium text-slate-800 font-mono tracking-tight bg-slate-50 px-2 py-0.5 rounded border border-slate-100 w-fit">{referral.groupNumber}</div>
                                             </div>
                                         )}
                                         {referral.authorizationNumber && (
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Auth Number</label>
-                                                <div className="text-lg text-slate-900 dark:text-slate-50">{referral.authorizationNumber}</div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Auth Number</label>
+                                                <div className="text-lg font-medium text-slate-800 font-mono tracking-tight bg-slate-50 px-2 py-0.5 rounded border border-slate-100 w-fit">{referral.authorizationNumber}</div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Clinical Info / Services */}
-                                <div className="space-y-4 pt-8">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                <div className="space-y-5 pt-10">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
                                         <Stethoscope className="h-4 w-4" /> Clinical Requirements
                                     </h3>
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Services Requested</label>
-                                            <div className="flex flex-wrap gap-2">
+                                    <div className="space-y-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Services Requested</label>
+                                            <div className="flex flex-wrap gap-2.5">
                                                 {referral.servicesNeeded?.map(service => (
-                                                    <span key={service} className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-700 text-sm font-medium border border-blue-100">
+                                                    <span key={service} className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-50/80 text-blue-700 text-sm font-semibold border border-blue-100 shadow-sm">
                                                         {getServiceLabel(service)}
                                                     </span>
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Diagnosis / Clinical Notes</label>
-                                            <div className="p-4 bg-slate-50 dark:bg-muted/30 rounded-lg border-l-4 border-blue-500 text-base leading-relaxed text-slate-700 dark:text-slate-300">
-                                                {referral.diagnosis}
+                                        <div className="space-y-3">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Diagnosis / Clinical Notes</label>
+                                            <div className="p-5 bg-slate-50/80 rounded-xl border border-slate-100 text-base leading-relaxed text-slate-800 shadow-inner">
+                                                {referral.diagnosis || <span className="text-slate-400 italic">No notes provided.</span>}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Referrer Info */}
-                                <div className="space-y-4 pt-8">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                <div className="space-y-5 pt-10">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
                                         <Building className="h-4 w-4" /> Referring Provider
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Organization / Practice</label>
-                                            <div className="text-lg font-medium text-slate-900 dark:text-slate-50">{referral.referrerName}</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Organization / Practice</label>
+                                            <div className="text-lg font-bold text-slate-900">{referral.referrerName}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact Person</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.contactPerson}</div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contact Person</label>
+                                            <div className="text-lg font-medium text-slate-800 capitalize">{referral.contactPerson}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Phone</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">
-                                                <a href={`tel:${referral.referrerContact}`} className="hover:text-blue-600 hover:underline">{referral.referrerContact}</a>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Phone</label>
+                                            <div className="text-lg font-medium text-blue-600">
+                                                <a href={`tel:${referral.referrerContact}`} className="hover:underline flex items-center gap-1.5"><Phone className="h-4 w-4" />{referral.referrerContact}</a>
                                             </div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</label>
-                                            <div className="text-lg text-slate-900 dark:text-slate-50">{referral.confirmationEmail}</div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Email</label>
+                                            <div className="text-lg font-medium text-blue-600">
+                                                <a href={`mailto:${referral.confirmationEmail}`} className="hover:underline flex items-center gap-1.5"><Mail className="h-4 w-4" />{referral.confirmationEmail}</a>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+                                {/* Patient Documents Section integrated perfectly inside the card */}
+                                <div className="space-y-5 pt-10">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
+                                        <FileIcon className="h-4 w-4" /> Patient Documents
+                                    </h3>
+                                    {referral.documents.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {referral.documents.map(doc => {
+                                                const fileUrl = doc.url.startsWith('_private/')
+                                                    ? `/api/files/${doc.url.replace('_private/', '')}`
+                                                    : doc.url;
+
+                                                return (
+                                                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100/60 hover:border-blue-200/60 hover:bg-white hover:shadow-md transition-all group overflow-hidden relative">
+                                                        <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-400 to-blue-200 rounded-l-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <div className="flex items-center gap-3 w-full pr-12">
+                                                            <div className="bg-blue-50/80 p-2.5 rounded-lg group-hover:bg-blue-100 transition-colors shrink-0">
+                                                                <FileIcon className="h-4 w-4 text-blue-600" />
+                                                            </div>
+                                                            <span className="text-sm font-semibold text-slate-700 truncate" title={doc.name}>{doc.name}</span>
+                                                        </div>
+                                                        <Button variant="ghost" size="icon" asChild className="rounded-full shadow-sm bg-white border border-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 h-8 w-8 absolute right-4 shrink-0 transition-all">
+                                                            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                                                                <Download className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-slate-500 italic p-6 bg-slate-50/50 rounded-xl border border-slate-100 text-center">
+                                            No documents uploaded for this referral.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -421,52 +463,21 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             </Card>
                         )}
 
-                        <div className="space-y-4 pt-4">
-                            <h3 className="text-lg font-bold flex items-center gap-2 border-b pb-2"><FileIcon className="text-primary h-5 w-5" /> Patient Documents</h3>
-                            {referral.documents.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {referral.documents.map(doc => {
-                                        const fileUrl = doc.url.startsWith('_private/')
-                                            ? `/api/files/${doc.url.replace('_private/', '')}`
-                                            : doc.url;
-
-                                        return (
-                                            <div key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-muted hover:border-primary/20 hover:bg-muted/50 transition-all group">
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
-                                                        <FileIcon className="h-4 w-4 text-primary" />
-                                                    </div>
-                                                    <span className="text-sm font-medium truncate max-w-[150px] text-foreground" title={doc.name}>{doc.name}</span>
-                                                </div>
-                                                <Button variant="ghost" size="sm" asChild className="rounded-full shadow-sm">
-                                                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                                                        <Download className="h-4 w-4" />
-                                                    </a>
-                                                </Button>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-muted text-muted-foreground text-sm">
-                                    No documents attached to this referral.
-                                </div>
-                            )}
-                        </div>
-
                     </Card>
                 </div>
 
                 <div className="space-y-6">
-                    <Card className="shadow-lg border-primary/10">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-bold flex items-center gap-2"><Tag className="text-primary h-5 w-5" /> Manage Status</CardTitle>
+                    <Card className="shadow-[0_4px_20px_rgb(0,0,0,0.04)] border-slate-200/60 rounded-2xl overflow-hidden">
+                        <CardHeader className="pb-4 bg-slate-50/50 border-b border-slate-100">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-700">
+                                <Tag className="text-blue-500 h-4 w-4" /> Manage Status
+                            </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="status-select" className="text-xs font-bold uppercase text-muted-foreground">Select New Status</Label>
+                        <CardContent className="space-y-5 pt-5">
+                            <div className="space-y-2.5">
+                                <Label htmlFor="status-select" className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Select New Status</Label>
                                 <Select onValueChange={(value) => setSelectedStatus(value as ReferralStatus)} value={selectedStatus}>
-                                    <SelectTrigger id="status-select" className="rounded-xl">
+                                    <SelectTrigger id="status-select" className="rounded-xl h-11 border-slate-200 shadow-sm focus:ring-blue-500/20">
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -480,17 +491,17 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </Select>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="status-note" className="text-xs font-bold uppercase text-muted-foreground">External Update (Visible to Referrer)</Label>
-                                <div className="space-y-1">
+                            <div className="space-y-2.5">
+                                <Label htmlFor="status-note" className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">External Update (Visible to Referrer)</Label>
+                                <div className="space-y-2">
                                     <Textarea
                                         id="status-note"
                                         placeholder="Explain the update to the source..."
-                                        className="min-h-[100px] text-sm rounded-xl"
+                                        className="min-h-[100px] text-sm rounded-xl border-slate-200 shadow-sm focus-visible:ring-blue-500/20"
                                         value={statusNote}
                                         onChange={(e) => setStatusNote(e.target.value)}
                                     />
-                                    <p className="text-[10px] text-muted-foreground italic px-1">
+                                    <p className="text-[10px] text-slate-400 italic px-1">
                                         Please do not include any PHI in external communications.
                                     </p>
                                 </div>
@@ -499,7 +510,7 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                             <Button
                                 onClick={handleStatusUpdate}
                                 disabled={isPending || selectedStatus === referral.status && !statusNote}
-                                className="w-full rounded-xl py-6 font-bold"
+                                className="w-full rounded-xl h-12 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
                             >
                                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                 Confirm Status & Send Update
@@ -507,29 +518,29 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-lg border-primary/10 flex flex-col h-[550px] overflow-hidden">
-                        <CardHeader style={{ padding: '12px 24px 4px' }}>
-                            <CardTitle className="text-lg font-bold flex justify-between">
+                    <Card className="shadow-[0_4px_20px_rgb(0,0,0,0.04)] border-slate-200/60 rounded-2xl flex flex-col h-[550px] overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-5">
+                            <CardTitle className="text-sm font-bold flex justify-between uppercase tracking-widest text-slate-700">
                                 <div className="flex items-center gap-2">
-                                    <MessageSquare className="text-primary h-5 w-5" />
+                                    <MessageSquare className="text-blue-500 h-4 w-4" />
                                     Communication
                                 </div>
                             </CardTitle>
                         </CardHeader>
-                        <Tabs defaultValue="internal" className="flex-1 flex flex-col min-h-0">
-                            <TabsList className="mx-6 grid grid-cols-2 rounded-xl h-10" style={{ marginBottom: 0 }}>
-                                <TabsTrigger value="internal" className="rounded-lg text-xs font-bold flex items-center gap-2">
-                                    INTERNAL NOTES
+                        <Tabs defaultValue="internal" className="flex-1 flex flex-col min-h-0 bg-white">
+                            <TabsList className="mx-5 mt-4 grid grid-cols-2 rounded-xl h-11 bg-slate-100/80 p-1" style={{ marginBottom: 0 }}>
+                                <TabsTrigger value="internal" className="rounded-lg text-[11px] font-bold flex items-center gap-2 uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                    Internal
                                     {referral.internalNotes?.length > 0 && (
-                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] text-primary">
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-[10px]">
                                             {referral.internalNotes.length}
                                         </span>
                                     )}
                                 </TabsTrigger>
-                                <TabsTrigger value="external" className="rounded-lg text-xs font-bold flex items-center gap-2">
-                                    EXTERNAL CHAT
+                                <TabsTrigger value="external" className="rounded-lg text-[11px] font-bold flex items-center gap-2 uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700">
+                                    External
                                     {referral.externalNotes?.length > 0 && (
-                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-[10px]">
                                             {referral.externalNotes.length}
                                         </span>
                                     )}
@@ -562,10 +573,13 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="external" className="flex-1 min-h-0 px-6 data-[state=active]:flex data-[state=active]:flex-col" style={{ marginTop: 0 }}>
+                            <TabsContent value="external" className="flex-1 min-h-0 relative data-[state=active]:flex data-[state=active]:flex-col overflow-hidden" style={{ marginTop: 0 }}>
+                                <div className="absolute inset-x-0 bottom-24 top-0 z-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
+                                    <Image src="/logo.png" alt="Watermark" width={300} height={300} className="object-contain" priority />
+                                </div>
                                 <div
                                     ref={scrollContainerRef}
-                                    className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 p-4 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800 shadow-inner scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent scroll-smooth"
+                                    className="relative z-10 flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 p-5 bg-[#f2f2f7]/60 rounded-t-2xl border-x border-t border-slate-100 shadow-inner scrollbar-thin scrollbar-thumb-slate-300 scroll-smooth pb-8"
                                 >
                                     {referral.externalNotes?.length > 0 ? (
                                         referral.externalNotes.slice().map((note, index) => {
@@ -573,41 +587,38 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                             return (
                                                 <div key={note.id || index} className={cn(
                                                     "flex w-full animate-in slide-in-from-bottom-2 duration-300",
-                                                    isMe ? "justify-end" : "justify-start"
+                                                    isMe ? "justify-end pl-12" : "justify-start pr-12"
                                                 )}>
                                                     <div className={cn(
-                                                        "flex flex-col max-w-[85%]",
+                                                        "flex flex-col relative group pb-4",
                                                         isMe ? "items-end" : "items-start"
                                                     )}>
                                                         <div className={cn(
-                                                            "rounded-2xl px-4 py-2.5 text-sm shadow-sm relative break-words",
+                                                            "px-3.5 py-2 text-[15px] shadow-sm relative break-words max-w-full leading-snug",
                                                             isMe
-                                                                ? "bg-primary text-primary-foreground rounded-br-sm"
-                                                                : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-foreground rounded-bl-sm shadow-sm"
+                                                                ? "bg-[#0b84ff] text-white rounded-[20px] rounded-br-[4px]"
+                                                                : "bg-[#e9e9eb] text-black rounded-[20px] rounded-bl-[4px]"
                                                         )}>
-                                                            <p className="whitespace-pre-wrap leading-relaxed">
-                                                                {note.content}
-                                                            </p>
+                                                            {note.content}
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 mt-1 px-1 opacity-60 hover:opacity-100 transition-opacity">
-                                                            <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                                                                {formatDate(note.createdAt, "p")}
-                                                                <span className="text-[8px]">•</span>
-                                                                {note.author.name}
-                                                            </span>
-                                                        </div>
+                                                        <span className={cn(
+                                                            "text-[10px] font-medium text-slate-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-0 whitespace-nowrap",
+                                                            isMe ? "right-1" : "left-1"
+                                                        )}>
+                                                            {formatDate(note.createdAt, "p")} • {note.author.name}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             );
                                         })
                                     ) : (
                                         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3 opacity-40 select-none">
-                                            <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full">
-                                                <MessageSquare className="h-6 w-6 text-slate-400" />
+                                            <div className="bg-slate-200 p-4 rounded-full">
+                                                <MessageSquare className="h-6 w-6 text-slate-500" />
                                             </div>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-medium">No external messages yet</p>
-                                                <p className="text-xs">Start a conversation with the referrer.</p>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-600">No external messages yet</p>
+                                                <p className="text-xs text-slate-500">Start an iMessage conversation below.</p>
                                             </div>
                                         </div>
                                     )}
@@ -616,6 +627,13 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 <div className="py-2">
                                     <NoteInput
                                         onAdd={(content) => handleAddNote(true, content)}
+                                        onTyping={(isTyping) => {
+                                            const { firestore } = initializeFirebase();
+                                            if (firestore) {
+                                                const docRef = doc(firestore, 'referrals', referral.id);
+                                                updateDoc(docRef, { staffIsTyping: isTyping }).catch(console.error);
+                                            }
+                                        }}
                                         placeholder="Type a message to provider/patient..."
                                         isPrimary
                                     />
@@ -627,24 +645,24 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                         </Tabs>
                     </Card>
 
-                    <Card className="shadow-lg border-primary/10">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
-                                <HistoryIcon className="h-4 w-4" /> Timeline History
+                    <Card className="shadow-[0_4px_20px_rgb(0,0,0,0.04)] border-slate-200/60 rounded-2xl overflow-hidden">
+                        <CardHeader className="pb-4 bg-slate-50/50 border-b border-slate-100">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-700">
+                                <HistoryIcon className="text-blue-500 h-4 w-4" /> Timeline History
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-4 relative">
-                                <div className="absolute left-2 top-2 bottom-2 w-px bg-muted" />
+                        <CardContent className="pt-6">
+                            <ul className="space-y-5 relative">
+                                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-slate-200" />
                                 {referral.statusHistory.slice().reverse().map((item, index) => (
-                                    <li key={index} className="flex items-start gap-3 pl-6 relative">
-                                        <div className="absolute left-[-2px] top-1.5 h-4 w-4 rounded-full bg-background border-2 border-primary ring-2 ring-background z-10" />
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
+                                    <li key={index} className="flex items-start gap-4 pl-8 relative">
+                                        <div className="absolute left-[-1px] top-1 h-6 w-6 rounded-full bg-white border-[3px] border-slate-200 flex items-center justify-center z-10 shadow-sm" />
+                                        <div className="space-y-1.5 pt-0.5">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <StatusBadge status={item.status} size="sm" />
-                                                <span className="text-[10px] text-muted-foreground font-medium">{formatDate(item.changedAt, "PPp")}</span>
+                                                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{formatDate(item.changedAt, "PPp")}</span>
                                             </div>
-                                            {item.notes && <p className="text-xs text-muted-foreground italic leading-tight">"{item.notes}"</p>}
+                                            {item.notes && <p className="text-[13px] text-slate-600 italic leading-snug bg-slate-50 border border-slate-100 rounded-lg p-2.5 shadow-sm mt-1">"{item.notes}"</p>}
                                         </div>
                                     </li>
                                 ))}
@@ -659,18 +677,46 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
 
 
 
-function NoteInput({ onAdd, placeholder, isPrimary = false }: {
+function NoteInput({ onAdd, onTyping, placeholder, isPrimary = false }: {
     onAdd: (content: string) => void,
+    onTyping?: (isTyping: boolean) => void,
     placeholder: string,
     isPrimary?: boolean
 }) {
     const [content, setContent] = useState('');
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleAction = () => {
         if (!content.trim()) return;
         onAdd(content);
         setContent('');
+        if (onTyping) onTyping(false); // Stop typing immediately on send
     };
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setContent(e.target.value);
+
+        if (onTyping) {
+            onTyping(true);
+
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            // If no more input after 1.5 seconds, consider them stopped typing
+            typingTimeoutRef.current = setTimeout(() => {
+                onTyping(false);
+            }, 1500);
+        }
+    };
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            // We don't dispatch false here to avoid unmounted state updates, but it's safe if we did.
+        };
+    }, []);
 
     return (
         <div className="space-y-2">
@@ -678,7 +724,7 @@ function NoteInput({ onAdd, placeholder, isPrimary = false }: {
                 <Textarea
                     placeholder={placeholder}
                     value={content}
-                    onChange={e => setContent(e.target.value)}
+                    onChange={handleChange}
                     className="text-xs min-h-[60px] pr-10 rounded-xl resize-none"
                 />
                 <Button

@@ -41,6 +41,12 @@ function LoginForm() {
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
+    // Reset activity timer when landing on login page to prevent instant-logout bug
+    // upon successful return to the dashboard.
+    useEffect(() => {
+        localStorage.setItem('rf_last_activity', Date.now().toString());
+    }, []);
+
     // AUTO-REDIRECT REMOVED: User requested manual login only.
 
 

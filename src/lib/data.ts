@@ -49,11 +49,31 @@ async function logAudit(event: AuditEvent) {
     }
 }
 
+/**
+ * Publicly fetches the last time an agency staff member was active (logged in).
+ * This is meant for public clients. It deliberately does not return the whole 
+ * agency settings document for security reasons.
+ */
+export async function getAgencyPresence(agencyId: string): Promise<Date | null> {
+    try {
+        const docSnap = await adminDb.collection('agencySettings').doc(agencyId).get();
+        if (!docSnap.exists) return null;
+
+        const data = docSnap.data();
+        if (data?.lastActiveAt && data.lastActiveAt instanceof Timestamp) {
+            return data.lastActiveAt.toDate();
+        }
+        return null; // Not active yet or field doesn't exist
+    } catch (e) {
+        console.error(`Failed to fetch presence for agency ${agencyId}:`, e);
+        return null;
+    }
+}
+
 // Helper to get db instance (consistent with previous code style, though direct export is fine)
 function getDb() {
     return adminDb;
 }
-
 
 // Converts Firestore Timestamps to JS Date objects recursively
 function convertTimestampsToDates(obj: any): any {

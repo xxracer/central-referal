@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, FilePlus, Settings, LogOut, Archive, Globe } from 'lucide-react';
+import { Home, FilePlus, Settings, LogOut, Archive, Globe, Users, CreditCard } from 'lucide-react';
 import {
     SidebarProvider,
     Sidebar,
@@ -131,6 +131,14 @@ export default function DashboardShell({
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
+                            <SidebarMenuButton asChild tooltip="Referral Sources">
+                                <Link href="/dashboard/referral-sources">
+                                    <Users />
+                                    <span>Referral Sources</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
                             <SidebarMenuButton asChild tooltip="Referral Portal (Public)">
                                 <Link href="/?portal=true" target="_blank" rel="noopener noreferrer">
                                     <Globe />
@@ -147,6 +155,14 @@ export default function DashboardShell({
                                 <Link href="/dashboard/settings">
                                     <Settings />
                                     <span>Settings</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild tooltip="Billing & Subscriptions">
+                                <Link href="/dashboard/settings/billing">
+                                    <CreditCard />
+                                    <span>Billing</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>

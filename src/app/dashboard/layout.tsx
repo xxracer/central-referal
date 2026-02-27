@@ -158,7 +158,7 @@ export default async function DashboardLayout({
 
   return (
     <DashboardShell>
-      <SessionTimeout />
+      <SessionTimeout agencyId={agencyId} />
       {children}
     </DashboardShell>
   );

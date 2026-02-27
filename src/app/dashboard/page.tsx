@@ -81,23 +81,26 @@ export default async function DashboardPage({
 
             <DashboardFilters />
 
-            <Card className="border-primary/10 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <Card className="bg-white border-slate-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] rounded-2xl overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div>
-                        <CardTitle>Active Referrals</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="text-lg font-bold text-slate-900 tracking-tight">Active Referrals</CardTitle>
+                        <CardDescription className="text-slate-500 font-medium mt-1">
                             {referrals.length === 0 ? 'No referrals found matching your criteria.' : `Showing ${referrals.length} active referrals.`}
                         </CardDescription>
                     </div>
                 </CardHeader>
-                <CardContent>
-                    <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-muted/50 font-medium text-xs text-muted-foreground uppercase tracking-wider rounded-t-md">
-                        <div className="col-span-2">ID</div>
-                        <div className="col-span-2">Name</div>
-                        <div className="col-span-2">Source</div>
-                        <div className="col-span-2">Insurance</div>
-                        <div className="col-span-2">Date</div>
-                        <div className="col-span-2 text-right">Status</div>
+                <CardContent className="p-0">
+                    <div className="hidden md:flex items-center justify-between px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 font-bold text-[11px] text-slate-400 uppercase tracking-widest">
+                        <div className="grid grid-cols-12 gap-5 w-full items-center">
+                            <div className="col-span-2">Referral ID</div>
+                            <div className="col-span-2">Patient Name</div>
+                            <div className="col-span-3">Source</div>
+                            <div className="col-span-2">Insurance</div>
+                            <div className="col-span-2">Date Received</div>
+                            <div className="col-span-1 text-right">Status</div>
+                        </div>
+                        <div className="w-4 shrink-0 ml-0 transition-transform duration-200" /> {/* Accordion chevron spacer to align columns correctly */}
                     </div>
                     {referrals.length > 0 ? (
                         <Accordion type="single" collapsible className="w-full">
@@ -106,9 +109,14 @@ export default async function DashboardPage({
                             ))}
                         </Accordion>
                     ) : (
-                        <div className="text-center h-32 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                            <FileText className="h-8 w-8 opacity-20" />
-                            <p>No referrals found.</p>
+                        <div className="text-center py-24 flex flex-col items-center justify-center text-slate-500 gap-4 bg-slate-50/30">
+                            <div className="h-16 w-16 bg-white border border-slate-100 shadow-sm rounded-full flex items-center justify-center">
+                                <FileText className="h-8 w-8 text-slate-300" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-lg font-semibold text-slate-700">No active referrals</p>
+                                <p className="text-sm">Adjust your filters or check back later.</p>
+                            </div>
                         </div>
                     )}
                 </CardContent>

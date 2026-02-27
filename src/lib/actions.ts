@@ -212,6 +212,9 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     // Checkbox handling: 'on' or present means true
     formValues.isFaxingPaperwork = formData.get('isFaxingPaperwork') === 'on';
 
+    // Referral Source handling
+    let rawReferralSourceId = formData.get('referralSourceId') as string | undefined;
+
     // Explicitly handle file inputs
     formValues.referralDocuments = formData.getAll('referralDocuments').filter((f): f is File => f instanceof File && f.size > 0);
     formValues.progressNotes = formData.getAll('progressNotes').filter((f): f is File => f instanceof File && f.size > 0);
@@ -326,9 +329,34 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             return { message: 'You must agree to the Terms of Use to submit a referral.', success: false, isSubmitting: false, fields: formValues };
         }
 
+        // --- TICKET 4: Auto-Create Referral Source ---
+        let finalReferralSourceId = rawReferralSourceId;
+
+        if (organizationName && (!finalReferralSourceId || finalReferralSourceId === 'new')) {
+            const { createReferralSource } = await import('./referral-sources-data');
+            // We use the agencyId currently loaded in submitReferral `agencyId` (val: string)
+            const result = await createReferralSource({
+                agencyId: agencyId,
+                name: organizationName,
+                type: 'other', // Default type for auto-created
+                status: 'prospect', // Default status for auto-created
+                createdFrom: 'referral_submission',
+                notes: 'Auto-created during referral submission.',
+            }, true); // skipAuthCheck = true because this is a public form submission
+
+            if (result.success && result.data) {
+                finalReferralSourceId = result.data.id;
+            } else if (result.existingId) {
+                // If it already exists (concurrent insert or typeahead missed), use the existing ID
+                finalReferralSourceId = result.existingId;
+            }
+        }
+
+
         const newReferral: Referral = {
             id: referralId,
             agencyId,
+            referralSourceId: finalReferralSourceId, // Ticket 5: Link Referral Source
             referrerName: organizationName || '',
             contactPerson: contactName || '',
             referrerContact: phone || '',
@@ -778,4 +806,42 @@ async function uploadFiles(files: File[], referralId: string, agencyId: string):
         });
     }
     return uploaded;
+}
+
+// --- TICKET 4 & 9: Public Referral Source Search for Typeahead ---
+export async function searchSourcesPublicAction(query: string): Promise<Array<{ id: string; name: string }>> {
+    const headersList = await headers();
+    let agencyId = headersList.get('x-agency-id');
+    if (!agencyId || agencyId === 'undefined') agencyId = 'default';
+
+    if (!query || query.trim().length < 2) return [];
+
+    try {
+        const { adminDb } = await import('@/lib/firebase-admin');
+        const { normalizeName } = await import('@/lib/utils');
+
+        const normalizedQuery = normalizeName(query);
+        const snapshot = await adminDb.collection('referral_sources')
+            .where('agencyId', '==', agencyId)
+            .get();
+
+        const allSources = snapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name as string,
+            nameNormalized: doc.data().nameNormalized as string
+        }));
+
+        // Filter and sort in memory to bypass composite index requirements
+        const matched = allSources
+            .filter(src => src.nameNormalized.includes(normalizedQuery))
+            .sort((a, b) => a.nameNormalized.localeCompare(b.nameNormalized));
+
+        return matched.slice(0, 8).map(src => ({
+            id: src.id,
+            name: src.name
+        }));
+    } catch (e) {
+        console.error("Error in public source search:", e);
+        return [];
+    }
 }

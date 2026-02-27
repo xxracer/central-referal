@@ -26,8 +26,9 @@ const MASTER_INSURANCE_LIST = [
 ];
 
 import { useSearchParams } from "next/navigation";
+import SubscriptionCard from "@/components/dashboard/billing/subscription-card";
 
-export default function SettingsClient({ initialSettings, agencyId }: { initialSettings: AgencySettings; agencyId: string }) {
+export default function SettingsClient({ initialSettings, agencyId, subscriptionData }: { initialSettings: AgencySettings; agencyId: string; subscriptionData?: any }) {
     const [settings, setSettings] = useState<AgencySettings>(initialSettings);
     const [isPending, startTransition] = useTransition();
     const searchParams = useSearchParams();
@@ -174,7 +175,7 @@ export default function SettingsClient({ initialSettings, agencyId }: { initialS
                             <CardDescription>Manage your plan and payment method.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <SubscriptionForm settings={settings} />
+                            <SubscriptionCard details={subscriptionData} />
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -845,55 +846,70 @@ function AddStaffForm({ onCancel, onAdd }: { onCancel: () => void, onAdd: (data:
     const isAll = cats.includes('all_comms');
 
     return (
-        <div className="p-6 border rounded-lg bg-muted/10 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <h4 className="font-semibold text-lg">Add Staff Member</h4>
-
-            <div className="space-y-2 max-w-md">
-                <Label>Email Address</Label>
-                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="name@domain.com" />
+        <div className="p-6 border border-slate-200/80 rounded-2xl bg-slate-50/50 shadow-sm space-y-7 animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-3 border-b border-slate-200/60 pb-4">
+                <div className="h-10 w-10 rounded-full bg-blue-100/80 flex items-center justify-center text-blue-600 shadow-sm border border-blue-200">
+                    <UserCheck className="h-5 w-5" />
+                </div>
+                <div>
+                    <h4 className="font-semibold text-lg text-slate-900 tracking-tight leading-tight">Provision New Staff</h4>
+                    <p className="text-sm text-slate-500">Add team members and grant administrative access</p>
+                </div>
             </div>
 
-            <div className="space-y-2 max-w-md">
-                <Label>Temporary Password (Optional)</Label>
-                <Input
-                    type="text"
-                    value={tempPass}
-                    onChange={e => setTempPass(e.target.value)}
-                    placeholder="e.g. Temp123! (Leave empty to just add email)"
-                />
-                <p className="text-[10px] text-muted-foreground">If left empty, a secure password will be generated and emailed to the user.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <Label className="text-slate-700 font-medium">Email Address</Label>
+                    <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="name@domain.com" className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-4 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 shadow-sm h-11" />
+                </div>
+
+                <div className="space-y-2">
+                    <Label className="text-slate-700 font-medium pb-1 flex justify-between">
+                        <span>Temporary Password</span>
+                        <span className="text-xs text-slate-400 font-normal">Optional</span>
+                    </Label>
+                    <Input
+                        type="text"
+                        value={tempPass}
+                        onChange={e => setTempPass(e.target.value)}
+                        placeholder="Leave empty to auto-generate"
+                        className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-4 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 shadow-sm h-11"
+                    />
+                </div>
             </div>
 
-            <div className="space-y-3">
-                <Label>Notification Access</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-4 pt-2">
+                <Label className="text-slate-800 font-semibold text-base">Notification & Access Permissions</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-xl border border-slate-200/80 shadow-sm">
                     {Object.entries(NotificationCategoryLabels).map(([key, info]) => (
-                        <div key={key} className="flex items-center space-x-2">
+                        <div key={key} className="flex items-start space-x-3 p-1">
                             <Checkbox
                                 id={`new-${key}`}
                                 checked={cats.includes(key) || isAll}
                                 onCheckedChange={() => !isAll && toggleCat(key)}
                                 disabled={isAll}
+                                className="mt-0.5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
-                            <Label htmlFor={`new-${key}`} className={isAll ? 'opacity-50' : ''}>{info.label}</Label>
+                            <Label htmlFor={`new-${key}`} className={`text-sm cursor-pointer leading-tight ${isAll ? 'opacity-50 text-slate-500' : 'text-slate-700 hover:text-slate-900 transition-colors'}`}>{info.label}</Label>
                         </div>
                     ))}
-                    <div className="flex items-center space-x-2 font-semibold">
+                    <div className="flex items-center space-x-3 font-semibold pt-4 mt-2 border-t border-slate-200 md:col-span-2">
                         <Checkbox
                             id="new-all"
                             checked={isAll}
                             onCheckedChange={() => toggleCat('all_comms')}
+                            className="border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                         />
-                        <Label htmlFor="new-all">All Communications</Label>
+                        <Label htmlFor="new-all" className="text-sm cursor-pointer text-slate-900 font-bold">All Communications & Admin Capabilities</Label>
                     </div>
                 </div>
             </div>
 
-            <div className="flex gap-2">
-                <Button onClick={() => onAdd({ email, enabledCategories: cats, tempPassword: tempPass })} disabled={!email || !email.includes('@')}>
+            <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
+                <Button onClick={() => onAdd({ email, enabledCategories: cats, tempPassword: tempPass })} disabled={!email || !email.includes('@')} className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all px-6">
                     Provision Staff
                 </Button>
-                <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+                <Button variant="ghost" onClick={onCancel} className="text-slate-500 hover:text-slate-800 hover:bg-slate-100">Cancel</Button>
             </div>
         </div>
     )
@@ -1000,14 +1016,19 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
             </div>
 
             {/* 2. HIERARCHY: STAFF MEMBERS */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                        <UserCheck className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-medium">Staff Members</h3>
+            <div className="space-y-6 pt-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center">
+                            <UserCheck className="h-5 w-5 text-slate-700" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-900 tracking-tight">Staff Members</h3>
+                            <p className="text-sm text-slate-500">Manage delegates and their platform access.</p>
+                        </div>
                     </div>
-                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff} variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-2" /> Add Staff
+                    <Button onClick={() => setIsAddingStaff(true)} disabled={isAddingStaff} variant="outline" size="sm" className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm font-medium">
+                        <Plus className="h-4 w-4 mr-2" /> Invite Staff
                     </Button>
                 </div>
 
@@ -1020,7 +1041,14 @@ const UserAccessForm = ({ settings, isPending, onSave }: { settings: AgencySetti
 
                 <div className="space-y-4">
                     {(!settings.notifications.staff || settings.notifications.staff.length === 0) && !isAddingStaff && (
-                        <p className="text-sm text-muted-foreground italic">No additional staff members found.</p>
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center flex flex-col items-center justify-center">
+                            <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 mb-3">
+                                <UserCheck className="h-6 w-6 text-slate-300" />
+                            </div>
+                            <h3 className="text-slate-900 font-semibold mb-1">No staff members yet</h3>
+                            <p className="text-sm text-slate-500">Add staff to delegate platform access to your team.</p>
+                            <Button onClick={() => setIsAddingStaff(true)} variant="link" className="text-blue-600 mt-2 p-0 h-auto">Invite your first team member &rarr;</Button>
+                        </div>
                     )}
 
                     {(settings.notifications.staff || []).map(member => (
@@ -1105,49 +1133,52 @@ function UserManagementRow({ agencyId, email, name, roleLabel, roleColor, canRem
     };
 
     return (
-        <div className="border rounded-lg p-4 bg-card shadow-sm space-y-4">
+        <div className="group relative border border-slate-200 rounded-2xl p-6 bg-white shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-blue-200 transition-all duration-300 ease-in-out space-y-4">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-lg ${roleLabel === 'Owner' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                <div className="flex items-center gap-4">
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg shadow-sm border ${roleLabel === 'Owner' ? 'bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 border-blue-200/60' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>
                         {email[0]?.toUpperCase()}
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-sm md:text-base">{name}</h4>
-                            <Badge variant={roleColor as any} className="text-[10px] h-5">{roleLabel}</Badge>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="font-semibold text-lg text-slate-900 tracking-tight">{name}</h4>
+                            <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider rounded-full px-2.5 shadow-sm border ${roleLabel === 'Owner' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{roleLabel}</Badge>
                         </div>
-                        <p className="text-xs md:text-sm text-muted-foreground">{email}</p>
+                        <p className="text-sm text-slate-500 font-medium">{email}</p>
                     </div>
                 </div>
                 {canRemove && onRemove && (
-                    <Button variant="ghost" size="sm" onClick={onRemove} className="text-destructive hover:bg-destructive/10">
+                    <Button variant="ghost" size="sm" onClick={onRemove} className="text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
                         Remove
                     </Button>
                 )}
             </div>
 
             {/* Password Toggle */}
-            <div className="text-sm">
+            <div className="relative pt-4 mt-4 border-t border-slate-100 text-sm">
                 <button
                     onClick={() => setIsPasswordOpen(!isPasswordOpen)}
-                    className="text-primary hover:underline flex items-center gap-1 font-medium"
+                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1.5 font-medium transition-colors p-1 -ml-1 rounded-md hover:bg-blue-50"
                 >
-                    <Key className="h-3 w-3" />
-                    {isPasswordOpen ? 'Cancel Password Change' : 'Change Password'}
+                    <Key className="h-3.5 w-3.5" />
+                    {isPasswordOpen ? 'Cancel Profile Options' : 'Options & Security'}
                 </button>
 
                 {isPasswordOpen && (
-                    <div className="mt-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                        <Input
-                            type="text"
-                            placeholder="Set new password..."
-                            value={newPass}
-                            onChange={e => setNewPass(e.target.value)}
-                            className="max-w-xs"
-                        />
-                        <Button size="sm" onClick={handleUpdatePassword} disabled={loading || newPass.length < 6}>
-                            {loading && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
-                            Update
+                    <div className="mt-4 p-5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-end gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-1.5 flex-1">
+                            <Label className="text-slate-700 text-xs font-bold uppercase tracking-wider">Reset Password</Label>
+                            <Input
+                                type="text"
+                                placeholder="Type a new password..."
+                                value={newPass}
+                                onChange={e => setNewPass(e.target.value)}
+                                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus-visible:ring-4 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 shadow-sm"
+                            />
+                        </div>
+                        <Button size="sm" onClick={handleUpdatePassword} disabled={loading || newPass.length < 6} className="bg-slate-900 hover:bg-slate-800 text-white shadow-md transition-all h-10 px-5">
+                            {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            Update Password
                         </Button>
                     </div>
                 )}
@@ -1156,22 +1187,7 @@ function UserManagementRow({ agencyId, email, name, roleLabel, roleColor, canRem
     );
 }
 
-const SubscriptionForm = ({ settings }: { settings: AgencySettings }) => {
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-4 border p-4 rounded-lg bg-muted/20">
-                <div className="flex-1">
-                    <h3 className="font-semibold text-lg">Current Plan: {settings.subscription.plan}</h3>
-                    <p className="text-muted-foreground">Status: {settings.subscription.status}</p>
-                </div>
-                <Button variant="outline" disabled>Manage Subscription</Button>
-            </div>
-            <CardDescription>
-                To upgrade your plan or update payment details, please contact support.
-            </CardDescription>
-        </div>
-    );
-};
+
 
 
 

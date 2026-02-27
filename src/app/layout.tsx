@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { GlobalActivityTracker } from '@/components/session-timeout';
 
 export const metadata: Metadata = {
   title: 'ReferralFlow',
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body className={cn('min-h-screen bg-background font-body antialiased')} suppressHydrationWarning>
         <FirebaseClientProvider>
+          <GlobalActivityTracker />
           {children}
 
         </FirebaseClientProvider>

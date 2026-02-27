@@ -32,9 +32,21 @@ export async function createSession(idToken: string) {
         }
         // ----------------------
 
+        // Update lastActiveAt timestamp for all agencies the user belongs to (Epic: Public "Last Seen Online")
+        if (agencies.length > 0) {
+            import('@/lib/settings').then(({ updateAgencySettings }) => {
+                const { FieldValue } = require('firebase-admin/firestore');
+                agencies.forEach(agency => {
+                    updateAgencySettings(agency.id, { lastActiveAt: FieldValue.serverTimestamp() }).catch(e => {
+                        console.error(`Failed to update lastActiveAt for agency ${agency.id}:`, e);
+                    });
+                });
+            });
+        }
+
         // Create the session cookie. This will also verify the ID token.
-        // Set session expiration to 5 days.
-        const expiresIn = 60 * 60 * 24 * 5 * 1000;
+        // Set session expiration to 5 minutes.
+        const expiresIn = 60 * 5 * 1000;
 
         const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
@@ -85,4 +97,24 @@ export async function verifySession() {
 export async function deleteSession() {
     const cookieStore = await cookies();
     cookieStore.delete(SESSION_COOKIE_NAME);
+}
+
+export async function pingPresence(agencyId?: string) {
+    if (!agencyId || agencyId === 'default') return;
+
+    const session = await verifySession();
+    if (!session || !session.email) return;
+
+    try {
+        const { verifyUserAccess } = await import('@/lib/access-control');
+        const hasAccess = await verifyUserAccess(session.email, agencyId);
+
+        if (hasAccess) {
+            const { updateAgencySettings } = await import('@/lib/settings');
+            const { FieldValue } = require('firebase-admin/firestore');
+            await updateAgencySettings(agencyId, { lastActiveAt: FieldValue.serverTimestamp() });
+        }
+    } catch (e) {
+        console.error("Ping presence failed:", e);
+    }
 }
