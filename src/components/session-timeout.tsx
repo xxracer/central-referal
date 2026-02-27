@@ -4,7 +4,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Constants for timing
-const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes inactivity
+const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes inactivity
 const WARNING_MS = 20 * 1000; // 20 seconds warning before timeout
 
 /**
