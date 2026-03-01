@@ -466,7 +466,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
 
         // Notify staff of new external message (Template 5)
         sendReferralNotification(referral.agencyId, 'NEW_EXTERNAL_MESSAGE_INTERNAL', {
-            referralId: referral.id,
+            referralId: referralId, // Use explicit referralId just in case referral.id is missing
             referrerName: 'Referrer/Patient', // Could improve if we knew who checked status
             messageSnippet: optionalNote,
             // referralLink generated in email.ts

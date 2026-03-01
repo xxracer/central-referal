@@ -207,6 +207,7 @@ export async function getReferralById(id: string): Promise<Referral | undefined>
     }
 
     const data = convertTimestampsToDates(docSnap.data());
+    data.id = docSnap.id;
     // Migration logic
     if (data.internalNotes) {
         data.internalNotes = data.internalNotes.map((n: any) => {
@@ -514,6 +515,7 @@ export async function getPublicReferralStatus(referralId: string): Promise<Refer
     }
 
     const data = convertTimestampsToDates(docSnap.data());
+    data.id = docSnap.id;
 
     // 2. Success - Log and Return LIMITED data
     logAudit({
