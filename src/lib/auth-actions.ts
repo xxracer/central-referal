@@ -45,8 +45,9 @@ export async function createSession(idToken: string) {
         }
 
         // Create the session cookie. This will also verify the ID token.
-        // Set session expiration to 5 minutes.
-        const expiresIn = 60 * 5 * 1000;
+        // Set session expiration to 14 days. The strict 5-minute inactivity
+        // timeout is handled gracefully by the client-side SessionTimeout component.
+        const expiresIn = 14 * 24 * 60 * 60 * 1000;
 
         const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 

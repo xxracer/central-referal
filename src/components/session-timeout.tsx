@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 // Constants for timing
 const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes inactivity
-const WARNING_MS = 20 * 1000; // 20 seconds warning before timeout
+const WARNING_MS = 2 * 60 * 1000; // 2 minutes warning before timeout
 
 /**
  * Placed in RootLayout.
