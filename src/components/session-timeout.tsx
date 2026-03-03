@@ -72,6 +72,8 @@ export function SessionTimeout({ agencyId }: { agencyId?: string }) {
         } catch (e) {
             console.error("Logout failed", e);
         } finally {
+            // Reset the activity timestamp so the next login doesn't instantly timeout
+            localStorage.setItem('rf_last_activity', Date.now().toString());
             router.push('/login?reason=timeout');
         }
     }, [router, isLoggingOut]);
