@@ -4,8 +4,8 @@ import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Constants for timing
-const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes inactivity
-const WARNING_MS = 2 * 60 * 1000; // 2 minutes warning before timeout
+const TIMEOUT_MS = 25 * 60 * 1000; // 25 minutes inactivity
+const WARNING_MS = 10 * 1000; // 10 seconds warning before timeout
 
 /**
  * Placed in RootLayout.
@@ -61,7 +61,7 @@ export function GlobalActivityTracker() {
 export function SessionTimeout({ agencyId }: { agencyId?: string }) {
     const router = useRouter();
     const [showWarning, setShowWarning] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(60);
+    const [timeLeft, setTimeLeft] = useState(10);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const performLogout = useCallback(async () => {
