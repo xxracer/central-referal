@@ -217,3 +217,41 @@ export async function updateContactLogAction(formData: FormData) {
     revalidatePath('/dashboard/referral-sources');
     return { success: true, message: 'Contact updated successfully.' };
 }
+
+export async function archiveReferralSourceAction(sourceId: string, isArchived: boolean) {
+    const user = await verifySession();
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const headersList = await headers();
+    const agencyId = headersList.get('x-agency-id') || 'default';
+    if (!agencyId) return { success: false, message: 'Agency not found' };
+
+    const { archiveReferralSource } = await import('@/lib/referral-sources-data');
+    const result = await archiveReferralSource(agencyId, sourceId, isArchived);
+
+    if (!result.success) {
+        return { success: false, message: result.error || 'Failed to update archive status.' };
+    }
+
+    revalidatePath('/dashboard/referral-sources');
+    return { success: true, message: isArchived ? 'Source archived.' : 'Source unarchived.' };
+}
+
+export async function deleteReferralSourceCascadeAction(sourceId: string) {
+    const user = await verifySession();
+    if (!user) return { success: false, message: 'Unauthorized' };
+
+    const headersList = await headers();
+    const agencyId = headersList.get('x-agency-id') || 'default';
+    if (!agencyId) return { success: false, message: 'Agency not found' };
+
+    const { deleteReferralSourceCascade } = await import('@/lib/referral-sources-data');
+    const result = await deleteReferralSourceCascade(agencyId, sourceId);
+
+    if (!result.success) {
+        return { success: false, message: result.error || 'Failed to permanently delete source.' };
+    }
+
+    revalidatePath('/dashboard/referral-sources');
+    return { success: true, message: 'Source permanently deleted.' };
+}

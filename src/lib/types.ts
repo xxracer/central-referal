@@ -1,4 +1,4 @@
-export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'NEED_MORE_INFO' | 'REJECTED' | 'COMPLETED';
+export type ReferralStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACCEPTED' | 'NEED_MORE_INFO' | 'REJECTED' | 'COMPLETED' | 'ADMITTED' | 'DISCHARGED';
 
 export type Document = {
   id: string;
@@ -193,6 +193,7 @@ export type ReferralSource = {
   createdByUserId?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  isArchived?: boolean;
 };
 
 export type ReferralSourceContactType = 'in_person' | 'phone' | 'email' | 'event' | 'other';

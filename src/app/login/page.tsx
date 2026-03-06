@@ -88,6 +88,10 @@ function LoginForm() {
             description: `Accessing ${agency.name}`,
         });
 
+        // Reset activity timer RIGHT before entering the app to prevent instant timeout 
+        // if user stayed on login page for >25 minutes
+        localStorage.setItem('rf_last_activity', Date.now().toString());
+
         const protocol = window.location.protocol;
         const host = window.location.host;
 
@@ -179,6 +183,7 @@ function LoginForm() {
 
             // No agencies found but IS admin (passed the check above)
             if (isAdmin) {
+                localStorage.setItem('rf_last_activity', Date.now().toString());
                 router.push('/super-admin');
                 return;
             }

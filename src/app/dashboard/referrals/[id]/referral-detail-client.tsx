@@ -45,12 +45,13 @@ import {
     Archive,
     Printer,
     FileText,
-    ShieldCheck
+    ShieldCheck,
+    Paperclip
 } from 'lucide-react';
 import StatusBadge from '@/components/referrals/status-badge';
 import { formatDate, cn } from '@/lib/utils';
 import type { Referral, ReferralStatus, Note } from '@/lib/types';
-import { addInternalNote, addExternalNote, updateReferralStatus, archiveReferralAction } from '@/lib/actions';
+import { addInternalNote, addExternalNote, updateReferralStatus, archiveReferralAction, uploadAdditionalDocument } from '@/lib/actions';
 import { useActionState, useState, useTransition, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -119,6 +120,37 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
     const [selectedStatus, setSelectedStatus] = useState<ReferralStatus>(initialReferral.status);
     const [statusNote, setStatusNote] = useState('');
     const { toast } = useToast();
+
+    // File Upload State
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !referral.id) return;
+
+        setIsUploadingDoc(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const result = await uploadAdditionalDocument(referral.id, formData, 'STAFF');
+            if (result.success && result.document) {
+                toast({ title: "Document Uploaded", description: "The document has been securely added to the patient record." });
+                setReferral(prev => ({
+                    ...prev,
+                    documents: [...prev.documents, result.document!]
+                }));
+            } else {
+                toast({ title: "Upload Failed", description: result.message, variant: "destructive" });
+            }
+        } catch (error) {
+            toast({ title: "Upload Failed", description: "An unexpected error occurred", variant: "destructive" });
+        } finally {
+            setIsUploadingDoc(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     // Chat Scroll Ref
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -405,9 +437,30 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                 </div>
                                 {/* Patient Documents Section integrated perfectly inside the card */}
                                 <div className="space-y-5 pt-10">
-                                    <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 mb-5 flex items-center gap-2">
-                                        <FileIcon className="h-4 w-4" /> Patient Documents
-                                    </h3>
+                                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600 flex items-center gap-2 m-0">
+                                            <FileIcon className="h-4 w-4" /> Patient Documents
+                                        </h3>
+                                        <div>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                                            />
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={isUploadingDoc}
+                                                className="h-8 bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm transition-all"
+                                            >
+                                                {isUploadingDoc ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin text-slate-400" /> : <Paperclip className="h-3.5 w-3.5 mr-2 text-slate-400" />}
+                                                Upload Document
+                                            </Button>
+                                        </div>
+                                    </div>
                                     {referral.documents.length > 0 ? (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {referral.documents.map(doc => {
@@ -486,7 +539,9 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
                                         <SelectItem value="ACCEPTED">Accepted</SelectItem>
                                         <SelectItem value="NEED_MORE_INFO">Need More Info</SelectItem>
                                         <SelectItem value="REJECTED">Rejected</SelectItem>
-                                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                                        <SelectItem value="COMPLETED">Intake Completed</SelectItem>
+                                        <SelectItem value="ADMITTED">Admitted</SelectItem>
+                                        <SelectItem value="DISCHARGED">Discharged</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

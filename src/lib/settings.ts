@@ -199,6 +199,36 @@ export async function findAgenciesForUser(email: string): Promise<AgencySettings
             }
         });
 
+        // 5. Fallback: Full scan for staff array if not found (Legacy compatibility & Auto-migration)
+        if (agenciesMap.size === 0) {
+            const allSettings = await settingsColl.get();
+            allSettings.docs.forEach(doc => {
+                const data = doc.data();
+                if (data.notifications?.staff?.some((s: any) => s.email?.toLowerCase() === normalizedEmail)) {
+                    if (!agenciesMap.has(doc.id)) {
+                        console.log(`[Isolation Debug] Match by STAFF_ARRAY_SCAN for Agency: ${doc.id}`);
+                        const convertedData = convertTimestamps(data) as AgencySettings;
+                        agenciesMap.set(doc.id, {
+                            ...DEFAULT_SETTINGS,
+                            ...convertedData,
+                            id: doc.id,
+                            slug: data.slug || doc.id
+                        });
+
+                        // Auto-migrate: Add to authorizedEmails for future fast queries
+                        const updatedAuthEmails = new Set(data.userAccess?.authorizedEmails || []);
+                        updatedAuthEmails.add(normalizedEmail);
+                        settingsColl.doc(doc.id).set({
+                            userAccess: {
+                                ...data.userAccess,
+                                authorizedEmails: Array.from(updatedAuthEmails)
+                            }
+                        }, { merge: true }).catch(err => console.error("Auto-migration failed:", err));
+                    }
+                }
+            });
+        }
+
         return Array.from(agenciesMap.values());
     } catch (error) {
         console.error("Error finding agencies for user:", error);

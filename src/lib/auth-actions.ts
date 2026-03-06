@@ -97,7 +97,20 @@ export async function verifySession() {
 
 export async function deleteSession() {
     const cookieStore = await cookies();
-    cookieStore.delete(SESSION_COOKIE_NAME);
+    const isProd = process.env.NODE_ENV === 'production';
+
+    // To delete a cookie properly, we must use the same domain it was set with
+    if (isProd) {
+        cookieStore.set({
+            name: SESSION_COOKIE_NAME,
+            value: '',
+            expires: new Date(0),
+            path: '/',
+            domain: '.referralflow.health'
+        });
+    } else {
+        cookieStore.delete(SESSION_COOKIE_NAME);
+    }
 }
 
 export async function pingPresence(agencyId?: string) {

@@ -22,7 +22,8 @@ const MASTER_INSURANCE_LIST = [
     "Integranet", "Molina Medicare", "UHC Medicare", "United Health Care Choice",
     "United Health Care MMP", "United Medicare Advantage", "Wellcare Medical",
     "Wellcare Texan Plus", "Wellmed-Wellpoint Medicaid", "Wellpoint Medicare",
-    "Wellpoint MMP", "Other"
+    "Wellpoint MMP", "Humana", "Healthspring", "Devoted", "Centene", "Kelsey Seybold",
+    "Other"
 ];
 
 import { useSearchParams } from "next/navigation";
@@ -318,7 +319,7 @@ const ProfileForm = ({
         <div className="space-y-8">
             <div className="space-y-4">
                 <h3 className="text-lg font-medium border-b pb-2">Public Info & Portal Address</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Agency Name</Label>
                         <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
@@ -389,7 +390,7 @@ const ProfileForm = ({
             <div className="space-y-4">
                 <h3 className="text-lg font-medium border-b pb-2">Home Page Insurances (Display only)</h3>
                 <CardDescription>Select which insurances to highlight on the Home Page welcome card.</CardDescription>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
                     {MASTER_INSURANCE_LIST.filter(ins => ins !== 'Other').map(ins => (
                         <div key={ins} className="flex items-center space-x-2">
                             <Checkbox
@@ -512,7 +513,7 @@ const ConfigurationForm = ({ settings, isPending, onSave, isDisabled }: { settin
             <div className="space-y-4">
                 <h3 className="text-lg font-medium border-b pb-2">Accepted Insurances (Referral Form)</h3>
                 <CardDescription>Select the insurances available in the "Primary Insurance" dropdown of the referral form.</CardDescription>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/10">
                     {MASTER_INSURANCE_LIST.filter(ins => ins !== 'Other').map(ins => (
                         <div key={ins} className="flex items-center space-x-2">
                             <Checkbox

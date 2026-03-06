@@ -236,7 +236,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     const { referralDocuments, progressNotes, servicesNeeded, ...rest } = validatedFields.data;
     const {
         organizationName, contactName, phone, email,
-        patientFullName, patientDOB, patientZipCode, isFaxingPaperwork,
+        patientFullName, patientDOB, patientContact, patientZipCode, isFaxingPaperwork,
         primaryInsurance, otherInsurance, memberId, insuranceType, planName, planNumber, groupNumber,
         diagnosis
     } = validatedFields.data;
@@ -270,6 +270,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             email: rest.email || '',
             patientFullName: rest.patientFullName || '',
             patientDOB: rest.patientDOB || '',
+            patientContact: rest.patientContact || '',
             patientZipCode: rest.patientZipCode || '',
             primaryInsurance: rest.primaryInsurance === 'Other' && rest.otherInsurance ? rest.otherInsurance : rest.primaryInsurance,
             memberId: rest.memberId || '',
@@ -366,7 +367,7 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             patientAddress: '',
             patientZipCode: patientZipCode || '',
             isFaxingPaperwork: !!isFaxingPaperwork,
-            patientContact: '',
+            patientContact: patientContact || '',
             patientInsurance: primaryInsurance === 'Other' && otherInsurance ? otherInsurance : (primaryInsurance || ''),
             memberId: memberId || '',
             insuranceType: insuranceType || '',
@@ -421,6 +422,8 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
     revalidatePath('/dashboard');
     redirect(`/refer/success/${referralId}`);
 }
+
+import { maskPatientName } from '@/lib/utils';
 
 export async function checkStatus(prevState: FormState, formData: FormData): Promise<FormState> {
     const rawId = formData.get('referralId') as string;
@@ -485,6 +488,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
             updatedAt: referral.updatedAt,
             statusHistory: referral.statusHistory,
             externalNotes: referral.externalNotes,
+            patientName: maskPatientName(referral.patientName),
             noteAdded,
         }
     };
@@ -535,6 +539,12 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
 }
 
 export async function addExternalNote(referralId: string, prevState: FormState, formData: FormData): Promise<FormState> {
+    const { verifySession } = await import('./auth-actions');
+    const session = await verifySession();
+    if (!session || !session.email) {
+        return { message: 'Unauthorized.', success: false };
+    }
+
     const referral = await getReferralById(referralId);
     if (!referral) {
         return { message: 'Referral not found.', success: false };
@@ -584,6 +594,12 @@ export async function addExternalNote(referralId: string, prevState: FormState, 
 }
 
 export async function updateReferralStatus(referralId: string, prevState: FormState, formData: FormData): Promise<FormState> {
+    const { verifySession } = await import('./auth-actions');
+    const session = await verifySession();
+    if (!session || !session.email) {
+        return { message: 'Unauthorized.', success: false };
+    }
+
     const status = formData.get('status') as ReferralStatus;
     const externalNote = formData.get('externalNote') as string;
     const authorName = formData.get('authorName') as string || 'Office';
@@ -645,6 +661,12 @@ import type { AgencySettings } from './types';
 
 export async function updateAgencySettingsAction(agencyId: string, settings: Partial<AgencySettings>): Promise<{ message: string; success: boolean }> {
     try {
+        const { verifySession } = await import('./auth-actions');
+        const session = await verifySession();
+        if (!session || !session.email) {
+            return { message: 'Unauthorized.', success: false };
+        }
+
         console.log(`[Action] Updating settings for ${agencyId}:`, settings);
 
         // 1. Update Database
@@ -677,6 +699,12 @@ export async function updateAgencySettingsAction(agencyId: string, settings: Par
 }
 
 export async function uploadAgencyLogoAction(agencyId: string, formData: FormData): Promise<{ url?: string; success: boolean, message?: string }> {
+    const { verifySession } = await import('./auth-actions');
+    const session = await verifySession();
+    if (!session || !session.email) {
+        return { success: false, message: 'Unauthorized.' };
+    }
+
     const file = formData.get('logo') as File;
     if (!file || file.size === 0) {
         return { success: false, message: 'No file uploaded.' };
@@ -705,6 +733,12 @@ export async function uploadAgencyLogoAction(agencyId: string, formData: FormDat
 }
 
 export async function archiveReferralAction(id: string, isArchived: boolean) {
+    const { verifySession } = await import('./auth-actions');
+    const session = await verifySession();
+    if (!session || !session.email) {
+        return { success: false };
+    }
+
     const success = await toggleArchiveReferral(id, isArchived);
     if (success) {
         revalidatePath('/dashboard');
@@ -715,6 +749,12 @@ export async function archiveReferralAction(id: string, isArchived: boolean) {
 
 export async function markReferralAsSeenAction(id: string) {
     try {
+        const { verifySession } = await import('./auth-actions');
+        const session = await verifySession();
+        if (!session || !session.email) {
+            return { success: false };
+        }
+
         await markReferralAsSeen(id);
         revalidatePath('/dashboard');
         return { success: true };
@@ -807,6 +847,88 @@ async function uploadFiles(files: File[], referralId: string, agencyId: string):
     }
     return uploaded;
 }
+
+export async function uploadAdditionalDocument(referralId: string, formData: FormData, source: 'STAFF' | 'PUBLIC'): Promise<{ success: boolean; message: string; document?: Document }> {
+    try {
+        const file = formData.get('file') as File;
+        if (!file || file.size === 0) {
+            return { success: false, message: 'No file provided.' };
+        }
+
+        const referral = await getReferralById(referralId);
+        if (!referral) {
+            return { success: false, message: 'Referral not found.' };
+        }
+
+        const uploadedDocs = await uploadFiles([file], referralId, referral.agencyId);
+        if (uploadedDocs.length === 0) {
+            return { success: false, message: 'File upload failed.' };
+        }
+
+        const newDoc = uploadedDocs[0];
+        const now = new Date();
+
+        // Add to referral documents
+        referral.documents = referral.documents || [];
+        referral.documents.push(newDoc);
+
+        // Also add a note about the newly uploaded document based on source
+        const noteContent = `Uploaded new document: ${newDoc.name}`;
+
+        if (source === 'PUBLIC') {
+            referral.externalNotes = referral.externalNotes || [];
+            referral.externalNotes.push({
+                id: `note-ext-doc-${Date.now()}`,
+                content: noteContent,
+                author: { name: 'Referrer/Patient', email: '', role: 'PUBLIC' },
+                createdAt: now,
+                isExternal: true
+            });
+            referral.hasUnreadMessages = true;
+        } else {
+            const { verifySession } = await import('./auth-actions');
+            const session = await verifySession();
+
+            if (!session || !session.email) {
+                return { success: false, message: 'Unauthorized staff action.' };
+            }
+
+            const authorName = session.email;
+
+            referral.internalNotes = referral.internalNotes || [];
+            referral.internalNotes.push({
+                id: `note-int-doc-${Date.now()}`,
+                content: noteContent,
+                author: { name: authorName, email: session.email, role: 'STAFF' },
+                createdAt: now,
+                isExternal: false
+            });
+        }
+
+        referral.updatedAt = now;
+        await saveReferral(referral);
+
+        // Trigger notification
+        if (source === 'PUBLIC') {
+            sendReferralNotification(referral.agencyId, 'NEW_EXTERNAL_MESSAGE_INTERNAL', {
+                referralId: referralId,
+                referrerName: 'Referrer/Patient',
+                messageSnippet: `[Document Uploaded] ${newDoc.name}`
+            }).catch(err => console.error("Notification error:", err));
+        }
+
+        revalidatePath(`/dashboard/referrals/${referralId}`);
+        if (source === 'PUBLIC') {
+            revalidatePath('/status');
+        }
+
+        return { success: true, message: 'Document uploaded successfully.', document: newDoc };
+    } catch (error: any) {
+        console.error("Document upload error:", error);
+        return { success: false, message: error.message || 'Failed to upload document.' };
+    }
+}
+
 
 // --- TICKET 4 & 9: Public Referral Source Search for Typeahead ---
 export async function searchSourcesPublicAction(query: string): Promise<Array<{ id: string; name: string }>> {

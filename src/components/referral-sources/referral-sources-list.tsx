@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Filter, ChevronDown, ChevronUp, Mail, Phone, User, Calendar, PlusCircle, Edit2, BarChart3, ExternalLink, RefreshCcw, Bell, Building, Stethoscope, MessageSquareText, Archive, ArchiveRestore, MapPin } from 'lucide-react';
+import { Search, Plus, Filter, ChevronDown, ChevronUp, Mail, Phone, User, Calendar, PlusCircle, Edit2, BarChart3, ExternalLink, RefreshCcw, Bell, Building, Stethoscope, MessageSquareText, Archive, ArchiveRestore, MapPin, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { cn, formatDate } from '@/lib/utils';
 import type { ReferralSource, ReferralSourceMetrics } from '@/lib/types';
 import { getReferralSourceContacts, syncLegacyReferralSources } from '@/lib/referral-sources-data';
-import { archiveContactLogAction } from '@/lib/referral-sources-actions';
+import { archiveContactLogAction, archiveReferralSourceAction, deleteReferralSourceCascadeAction } from '@/lib/referral-sources-actions';
 import type { ReferralSourceContact } from '@/lib/types';
 import AddReferralSourceModal from './referral-source-modal';
 import AddContactModal from './add-contact-modal';
@@ -84,6 +84,33 @@ export default function ReferralSourcesList({ initialSources, agencyId }: { init
         const res = await archiveContactLogAction(contactId, isArchived);
         if (res.success) {
             toggleRow(sourceId, true);
+        } else {
+            alert(res.message);
+        }
+    };
+
+    const handleArchiveSource = async (e: React.MouseEvent, sourceId: string, isArchived: boolean) => {
+        e.stopPropagation();
+        if (!confirm(isArchived ? "Archive this referral source?" : "Restore this referral source?")) return;
+
+        const res = await archiveReferralSourceAction(sourceId, isArchived);
+        if (res.success) {
+            window.location.reload();
+        } else {
+            alert(res.message);
+        }
+    };
+
+    const handleDeleteSource = async (e: React.MouseEvent, sourceId: string) => {
+        e.stopPropagation();
+        const confirmation = prompt("Are you sure you want to delete this? It will also delete all attachment and data associated with this referral or referral source. Type DELETE to confirm:");
+        if (confirmation !== "DELETE") {
+            return;
+        }
+
+        const res = await deleteReferralSourceCascadeAction(sourceId);
+        if (res.success) {
+            window.location.reload();
         } else {
             alert(res.message);
         }
@@ -242,345 +269,380 @@ export default function ReferralSourcesList({ initialSources, agencyId }: { init
                 </div>
             </div>
 
-            <div className="space-y-4">
-                {filteredSources.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Building className="h-8 w-8 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-700">No referral sources found</h3>
-                        <p className="text-slate-500 mt-1">Try adjusting your search filters.</p>
-                    </div>
-                ) : (
-                    filteredSources.map((source) => {
-                        const isExpanded = expandedRow === source.id;
-                        const total = source.metrics.totalReferralsAllTime;
-                        const admitted = source.metrics.totalAdmittedAllTime;
-                        const rate = total > 0 ? Math.round((admitted / total) * 100) : 0;
+            <Tabs defaultValue="active" className="w-full space-y-6">
+                <div className="flex border-b border-slate-200">
+                    <TabsList className="bg-transparent p-0 h-auto gap-6 flex-wrap">
+                        <TabsTrigger value="active" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 py-3 font-semibold text-slate-500 hover:text-slate-700">
+                            Active Sources
+                        </TabsTrigger>
+                        <TabsTrigger value="archived" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:text-red-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 py-3 font-semibold text-slate-500 hover:text-slate-700">
+                            Archived
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
-                        return (
-                            <div key={source.id} className={cn(
-                                "bg-white rounded-2xl border transition-all duration-300 overflow-hidden",
-                                isExpanded ? "border-blue-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] ring-1 ring-blue-100" : "border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] hover:border-slate-200"
-                            )}>
-                                {/* Card Header (Always Visible) */}
-                                <div
-                                    className="p-5 sm:p-6 cursor-pointer flex flex-col xl:flex-row gap-5 xl:items-center relative group w-full"
-                                    onClick={() => toggleRow(source.id)}
-                                >
-                                    <div className="flex items-start gap-4 flex-shrink-0 w-64">
-                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-xl p-3 border border-blue-100/50 shadow-inner shrink-0 group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
-                                            {source.type === 'hospital' ? <Building className="h-6 w-6 text-blue-600" /> :
-                                                source.type === 'clinic' ? <Stethoscope className="h-6 w-6 text-indigo-500" /> :
-                                                    <User className="h-6 w-6 text-slate-600" />}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">{source.name}</h3>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all -ml-1" onClick={(e) => { e.stopPropagation(); handleEditSource(e, source); }}>
-                                                    <Edit2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                            <div className="flex flex-col gap-1.5 mt-1.5">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <TypeBadge type={source.type} />
-                                                    <StatusBadge status={source.status} />
-                                                </div>
-                                                {(source.metrics.latestNote || source.notes) && (
-                                                    <div className="flex items-start gap-1.5 text-xs text-slate-500 mt-1 max-w-[280px]">
-                                                        <MessageSquareText className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400" />
-                                                        <span className="line-clamp-2 italic tracking-tight leading-snug">"{source.metrics.latestNote || source.notes}"</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                {['active', 'archived'].map(tab => {
+                    const currentTabSources = filteredSources.filter(s => tab === 'active' ? !s.isArchived : s.isArchived);
+                    return (
+                        <TabsContent key={tab} value={tab} className="space-y-4 m-0">
+                            {currentTabSources.length === 0 ? (
+                                <div className="text-center py-16 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                    <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Building className="h-8 w-8 text-slate-400" />
                                     </div>
-
-                                    {/* Middle Section: Phone and Address */}
-                                    {(source.phone || source.address) ? (
-                                        <div className="hidden md:flex flex-col justify-center border-l border-slate-100 ml-4 pl-6 lg:ml-8 lg:pl-8 flex-1 w-full mr-auto">
-                                            <div className="flex flex-col gap-3.5 w-full">
-                                                {source.address && (
-                                                    <div className="flex flex-col gap-1.5 cursor-pointer group/address w-full" onClick={(e) => { e.stopPropagation(); window.open(`https://maps.google.com/?q=${encodeURIComponent(source.address!)}`, '_blank'); }}>
-                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                                            <MapPin className="h-4 w-4 text-slate-400" /> Address
-                                                        </div>
-                                                        <div className="text-[15px] font-medium text-slate-700 leading-snug group-hover/address:text-blue-600 transition-colors line-clamp-3 w-full break-words">
-                                                            {source.address}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {source.phone && (
-                                                    <div className="flex flex-col gap-1.5 w-full">
-                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                                            <Phone className="h-4 w-4 text-slate-400" /> Phone
-                                                        </div>
-                                                        <a href={`tel:${source.phone}`} className="text-[15px] font-medium text-slate-700 hover:text-blue-600 transition-colors w-full" onClick={(e) => e.stopPropagation()}>
-                                                            {source.phone}
-                                                        </a>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex-1 hidden md:flex border-l border-slate-100 ml-4 pl-6 lg:ml-8 lg:pl-8"></div>
-                                    )}
-
-                                    <div className="flex flex-wrap items-center gap-6 xl:gap-8 px-2 xl:px-0 ml-auto flex-shrink-0">
-                                        {/* Notes Preview Widget */}
-                                        <div className="flex flex-col items-start border border-slate-200/80 bg-slate-50/50 rounded-xl p-3 w-[200px] xl:w-[220px] shadow-sm transition-colors hover:border-blue-200 hover:bg-slate-50">
-                                            <div className="flex items-center justify-between w-full mb-1.5 gap-2">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">History</span>
-                                                <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0 text-[10px] font-bold tracking-wider px-2 py-0 h-4">
-                                                    {source.metrics.totalNotes} {source.metrics.totalNotes === 1 ? 'Note' : 'Notes'}
-                                                </Badge>
-                                            </div>
-                                            {source.metrics.totalNotes > 0 ? (
-                                                <div className="text-xs text-slate-600 line-clamp-2 leading-snug break-words relative pl-3 border-l-2 border-blue-200" title={source.metrics.latestNote || source.notes || ''}>
-                                                    <span className="italic">"{source.metrics.latestNote || source.notes || 'Activity recorded'}"</span>
-                                                </div>
-                                            ) : (
-                                                <div className="text-[11px] text-slate-400 italic">No notes recorded yet.</div>
-                                            )}
-                                        </div>
-
-                                        {/* Conversion Stat */}
-                                        <div className="flex flex-col items-start xl:items-center border-l xl:border-l-0 border-slate-100 pl-4 sm:pl-6 xl:pl-0">
-                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Conversion</div>
-                                            {total > 0 ? (
-                                                <div className="flex items-center gap-1.5">
-                                                    <Badge variant="outline" className={cn(
-                                                        "text-[11px] font-bold tracking-wide border-0 px-2 py-0.5 shadow-sm",
-                                                        rate >= 75 ? "bg-emerald-500 text-white" : rate >= 30 ? "bg-blue-500 text-white" : "bg-slate-200 text-slate-700"
-                                                    )}>
-                                                        {rate}%
-                                                    </Badge>
-                                                    <span className="text-xs font-medium text-slate-400">({admitted}/{total})</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-[11px] font-medium text-slate-400 italic bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">No Data</span>
-                                            )}
-                                        </div>
-
-                                        {/* Velocity Stats */}
-                                        <div className="flex gap-4 sm:gap-6 border-l border-slate-100 pl-4 sm:pl-6">
-                                            <div className="flex flex-col items-start xl:items-center">
-                                                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">MTD Referrals</div>
-                                                <div className="text-base font-bold text-slate-700">{source.metrics.referralsMtd}</div>
-                                            </div>
-                                            <div className="flex flex-col items-start xl:items-center hidden sm:flex">
-                                                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">90 Days</div>
-                                                <div className="text-base font-bold text-slate-700">{source.metrics.referralsLast90Days}</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Dates */}
-                                        <div className="flex flex-col items-end border-l border-slate-100 pl-4 sm:pl-6 hidden md:flex">
-                                            <div className="text-[12.5px] font-medium text-slate-600">
-                                                <span className="text-slate-400 mr-2">Last Contact:</span>
-                                                <span className="font-semibold">{source.metrics.lastContactDate ? formatDate(source.metrics.lastContactDate, 'MMM d, yyyy') : 'Never'}</span>
-                                            </div>
-                                            <div className="text-[12.5px] font-medium text-slate-600 mt-1">
-                                                <span className="text-slate-400 mr-2">Last Referral:</span>
-                                                <span className="font-semibold">{source.metrics.lastReferralDate ? formatDate(source.metrics.lastReferralDate, 'MMM d, yyyy') : 'Never'}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="shrink-0 flex items-center justify-center p-2.5 bg-slate-50 rounded-full border border-slate-200 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors ml-auto xl:ml-0">
-                                            {isExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5 text-slate-400 group-hover:text-blue-600" />}
-                                        </div>
-                                    </div>
+                                    <h3 className="text-lg font-bold text-slate-700">No {tab} referral sources found</h3>
+                                    <p className="text-slate-500 mt-1">Try adjusting your search filters.</p>
                                 </div>
+                            ) : (
+                                currentTabSources.map((source) => {
+                                    const isExpanded = expandedRow === source.id;
+                                    const total = source.metrics.totalReferralsAllTime;
+                                    const admitted = source.metrics.totalAdmittedAllTime;
+                                    const rate = total > 0 ? Math.round((admitted / total) * 100) : 0;
 
-                                {/* Expanded Panel */}
-                                {
-                                    isExpanded && (
-                                        <div className="bg-slate-50/80 border-t border-blue-100 relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-blue-50/30 opacity-50 z-0 pointer-events-none" />
-                                            <div className="p-4 sm:p-6 md:p-8 relative z-10 animate-in slide-in-from-top-4 fade-in duration-300">
-
-                                                {source.notes && (
-                                                    <div className="mb-6 sm:mb-8 space-y-2 max-w-5xl">
-                                                        <h4 className="text-[11px] sm:text-[13px] font-bold uppercase tracking-widest text-slate-500 flex items-center justify-between">
-                                                            General Source Notes
-                                                            <Button size="sm" variant="ghost" className="h-8 -mr-3 text-blue-600 hover:text-blue-700 hover:bg-white" onClick={(e) => handleEditSource(e, source)}>
-                                                                <Edit2 className="mr-2 h-3.5 w-3.5" /> <span className="hidden sm:inline">Edit General</span>
-                                                            </Button>
-                                                        </h4>
-                                                        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/60 text-sm whitespace-pre-wrap text-slate-700 shadow-sm leading-relaxed">
-                                                            {source.notes}
+                                    return (
+                                        <div key={source.id} className={cn(
+                                            "bg-white rounded-2xl border transition-all duration-300 overflow-hidden",
+                                            source.isArchived && "opacity-60 grayscale-[0.5]",
+                                            isExpanded ? "border-blue-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)] ring-1 ring-blue-100" : "border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] hover:border-slate-200"
+                                        )}>
+                                            {/* Card Header (Always Visible) */}
+                                            <div
+                                                className="p-5 sm:p-6 cursor-pointer flex flex-col xl:flex-row gap-5 xl:items-center relative group w-full"
+                                                onClick={() => toggleRow(source.id)}
+                                            >
+                                                <div className="flex items-start gap-4 flex-shrink-0 w-full xl:w-64 xl:max-w-[16rem]">
+                                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-xl p-3 border border-blue-100/50 shadow-inner shrink-0 group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                                                        {source.type === 'hospital' ? <Building className="h-6 w-6 text-blue-600" /> :
+                                                            source.type === 'clinic' ? <Stethoscope className="h-6 w-6 text-indigo-500" /> :
+                                                                <User className="h-6 w-6 text-slate-600" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                                            <h3 className="text-base sm:text-[17px] font-semibold text-slate-900 tracking-tight truncate">{source.name}</h3>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <Button title="Edit Source" variant="ghost" size="icon" className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all" onClick={(e) => { e.stopPropagation(); handleEditSource(e, source); }}>
+                                                                    <Edit2 className="h-3 w-3" />
+                                                                </Button>
+                                                                {source.isArchived ? (
+                                                                    <>
+                                                                        <Button title="Restore Source" variant="ghost" size="icon" className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all" onClick={(e) => handleArchiveSource(e, source.id, false)}>
+                                                                            <ArchiveRestore className="h-3 w-3" />
+                                                                        </Button>
+                                                                        <Button title="Permanent Delete" variant="ghost" size="icon" className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition-all" onClick={(e) => handleDeleteSource(e, source.id)}>
+                                                                            <Trash2 className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button title="Archive Source" variant="ghost" size="icon" className="h-6 w-6 sm:opacity-0 sm:group-hover:opacity-100 text-slate-400 hover:bg-slate-100 hover:text-orange-600 transition-all" onClick={(e) => handleArchiveSource(e, source.id, true)}>
+                                                                        <Archive className="h-3 w-3" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1.5 mt-1.5 min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <TypeBadge type={source.type} />
+                                                                <StatusBadge status={source.status} />
+                                                            </div>
+                                                            {(source.metrics.latestNote || source.notes) && (
+                                                                <div className="flex items-start gap-1.5 text-xs text-slate-500 mt-1 max-w-[280px]">
+                                                                    <MessageSquareText className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400" />
+                                                                    <span className="line-clamp-2 italic tracking-tight leading-snug break-words">"{source.metrics.latestNote || source.notes}"</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                )}
+                                                </div>
 
-                                                <div className="max-w-5xl">
-                                                    {(() => {
-                                                        const sourceContacts = expandedData[source.id] || [];
-                                                        const activeContacts = sourceContacts.filter(c => c && c.id && !c.isArchived);
-                                                        const archivedContacts = sourceContacts.filter(c => c && c.id && c.isArchived);
-
-                                                        const ContactCard = ({ contact, index }: { contact: ReferralSourceContact, index: number }) => (
-                                                            <div className="relative group animate-in slide-in-from-bottom-2 fade-in duration-500 fill-mode-both" style={{ animationDelay: `${index * 50}ms` }}>
-                                                                <div className="absolute -left-[14px] sm:-left-[26px] top-4 h-4 w-4 bg-white border-[3.5px] border-blue-500 rounded-full group-hover:scale-125 group-hover:border-blue-400 group-hover:bg-blue-50 transition-all duration-300 shadow-[0_0_0_4px_rgba(59,130,246,0.1)] z-10" />
-
-                                                                <div className={`bg-white border ${contact.isArchived ? 'border-slate-200/50 bg-slate-50/50 grayscale-[0.3]' : 'border-slate-200/80'} shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-200 relative overflow-hidden`}>
-
-                                                                    <div className="absolute -left-10 -top-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors" />
-
-                                                                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
-                                                                        <div className="flex flex-col gap-1">
-                                                                            <div className="flex items-center gap-2.5">
-                                                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600">
-                                                                                    <Calendar className="h-4 w-4" />
-                                                                                </div>
-                                                                                <span className="font-bold text-[13.5px] sm:text-[15px] text-slate-800 tracking-tight">
-                                                                                    {contact.contactDate ? formatDate(contact.contactDate, 'MMMM d, yyyy - hh:mm a') : 'Unknown Date'}
-                                                                                </span>
-                                                                            </div>
-                                                                            {contact.contactPerson && (
-                                                                                <div className="flex items-center gap-1.5 pl-[42px] text-[12px] text-slate-500 font-medium mt-0.5">
-                                                                                    <User className="h-3.5 w-3.5 text-slate-400" />
-                                                                                    Contact Person: <span className="font-bold text-slate-700">{contact.contactPerson}</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="flex flex-wrap items-center gap-2 pl-10 sm:pl-0">
-                                                                            {contact.reminderDate && (
-                                                                                <Badge variant="outline" className="text-[10px] font-bold tracking-wider border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors px-2 py-0.5 shadow-sm">
-                                                                                    <Bell className="h-3 w-3 mr-1.5 inline" /> Reminder: {formatDate(contact.reminderDate, 'MMM d, h:mm a')}
-                                                                                </Badge>
-                                                                            )}
-                                                                            <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-widest rounded-md bg-indigo-50 text-indigo-700 px-2 py-0.5 shadow-sm border border-indigo-100">
-                                                                                {contact.contactType ? contact.contactType.replace('_', ' ') : 'Note'}
-                                                                            </Badge>
-                                                                        </div>
+                                                {/* Middle Section: Phone and Address */}
+                                                {(source.phone || source.address) ? (
+                                                    <div className="hidden xl:flex flex-col justify-center border-l border-slate-100 ml-4 pl-6 lg:ml-8 lg:pl-8 flex-1 w-full mr-auto">
+                                                        <div className="flex flex-col gap-3.5 w-full">
+                                                            {source.address && (
+                                                                <div className="flex flex-col gap-1.5 cursor-pointer group/address w-full" onClick={(e) => { e.stopPropagation(); window.open(`https://maps.google.com/?q=${encodeURIComponent(source.address!)}`, '_blank'); }}>
+                                                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                                        <MapPin className="h-4 w-4 text-slate-400" /> Address
                                                                     </div>
-
-                                                                    <div className="relative z-10 text-[14.5px] bg-slate-50/80 rounded-xl p-4 text-slate-700 border border-slate-100/80 leading-relaxed font-medium">
-                                                                        <span className="whitespace-pre-wrap block">
-                                                                            {contact.summary || 'Legacy empty entry.'}
-                                                                        </span>
-                                                                        {contact.reminderEmail && (
-                                                                            <div className="mt-3 text-xs text-amber-600 font-semibold bg-amber-50 p-2 rounded-md border border-amber-100 inline-block">
-                                                                                Remind To: {contact.reminderEmail}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="relative z-10 mt-4 flex items-center justify-between text-[11px] sm:text-xs">
-                                                                        <div className="flex items-center gap-2 text-slate-500 font-semibold tracking-wide uppercase">
-                                                                            <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-                                                                                <User className="h-3.5 w-3.5 opacity-60 text-slate-600" />
-                                                                            </div>
-                                                                            Logged by: {contact.createdByName || 'Staff Member'}
-                                                                        </div>
-
-                                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                            <Button size="sm" variant="ghost" className="h-7 text-xs font-bold px-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => handleEditContact(e, source.id, contact)}>
-                                                                                <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
-                                                                            </Button>
-                                                                            <Button size="sm" variant="ghost" className="h-7 text-xs font-bold px-2 text-slate-600 hover:text-red-600 hover:bg-red-50" onClick={(e) => handleArchiveContact(e, contact.id, !contact.isArchived, source.id)}>
-                                                                                {contact.isArchived ? <><ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restore</> : <><Archive className="h-3.5 w-3.5 mr-1" /> Archive</>}
-                                                                            </Button>
-                                                                        </div>
+                                                                    <div className="text-[15px] font-medium text-slate-700 leading-snug group-hover/address:text-blue-600 transition-colors line-clamp-2 w-full break-words">
+                                                                        {source.address}
                                                                     </div>
                                                                 </div>
+                                                            )}
+                                                            {source.phone && (
+                                                                <div className="flex flex-col gap-1.5 w-full">
+                                                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                                        <Phone className="h-4 w-4 text-slate-400" /> Phone
+                                                                    </div>
+                                                                    <a href={`tel:${source.phone}`} className="text-[15px] font-medium text-slate-700 hover:text-blue-600 transition-colors w-full" onClick={(e) => e.stopPropagation()}>
+                                                                        {source.phone}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 hidden xl:flex border-l border-slate-100 ml-4 pl-6 lg:ml-8 lg:pl-8"></div>
+                                                )}
+
+                                                <div className="flex flex-wrap items-center justify-between sm:justify-start gap-4 xl:gap-8 w-full xl:w-auto xl:ml-auto">
+                                                    {/* Notes Preview Widget */}
+                                                    <div className="hidden sm:flex flex-col items-start border border-slate-200/80 bg-slate-50/50 rounded-xl p-3 w-[180px] lg:w-[200px] xl:w-[220px] shadow-sm transition-colors hover:border-blue-200 hover:bg-slate-50">
+                                                        <div className="flex items-center justify-between w-full mb-1.5 gap-2">
+                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">History</span>
+                                                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0 text-[10px] font-bold tracking-wider px-2 py-0 h-4">
+                                                                {source.metrics.totalNotes} {source.metrics.totalNotes === 1 ? 'Note' : 'Notes'}
+                                                            </Badge>
+                                                        </div>
+                                                        {source.metrics.totalNotes > 0 ? (
+                                                            <div className="text-xs text-slate-600 line-clamp-2 leading-snug break-words relative pl-3 border-l-2 border-blue-200" title={source.metrics.latestNote || source.notes || ''}>
+                                                                <span className="italic">"{source.metrics.latestNote || source.notes || 'Activity recorded'}"</span>
                                                             </div>
-                                                        );
+                                                        ) : (
+                                                            <div className="text-[11px] text-slate-400 italic">No notes recorded yet.</div>
+                                                        )}
+                                                    </div>
 
-                                                        return (
-                                                            <Tabs defaultValue="contacts" className="w-full">
-                                                                <TabsList className="mb-6 h-auto flex-wrap sm:flex-nowrap justify-start overflow-x-auto p-1 bg-white border border-slate-200 rounded-xl shadow-sm">
-                                                                    <TabsTrigger value="contacts" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none">Active Notes ({activeContacts.length})</TabsTrigger>
-                                                                    <TabsTrigger value="archived" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-700 data-[state=active]:shadow-none">Archived ({archivedContacts.length})</TabsTrigger>
-                                                                    <TabsTrigger value="referrals" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none">Associated Referrals</TabsTrigger>
-                                                                </TabsList>
+                                                    {/* Conversion Stat */}
+                                                    <div className="flex flex-col items-start sm:border-l border-slate-100 sm:pl-4 xl:pl-0 shrink-0">
+                                                        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Conversion</div>
+                                                        {total > 0 ? (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Badge variant="outline" className={cn(
+                                                                    "text-[11px] font-bold tracking-wide border-0 px-2 py-0.5 shadow-sm",
+                                                                    rate >= 75 ? "bg-emerald-500 text-white" : rate >= 30 ? "bg-blue-500 text-white" : "bg-slate-200 text-slate-700"
+                                                                )}>
+                                                                    {rate}%
+                                                                </Badge>
+                                                                <span className="text-xs font-medium text-slate-400">({admitted}/{total})</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[11px] font-medium text-slate-400 italic bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">No Data</span>
+                                                        )}
+                                                    </div>
 
-                                                                <TabsContent value="contacts" className="space-y-4">
-                                                                    <div className="flex justify-end items-center mb-0">
-                                                                        <Button size="sm" variant="default" className="h-9 shadow-md bg-blue-600 hover:bg-blue-700 font-bold rounded-lg px-4" onClick={(e) => handleAddContact(e, source.id)}>
-                                                                            <PlusCircle className="mr-2 h-4 w-4" /> Log Contact
+                                                    {/* Velocity Stats */}
+                                                    <div className="flex gap-4 sm:gap-6 border-l border-slate-100 pl-4 sm:pl-6 shrink-0">
+                                                        <div className="flex flex-col items-start xl:items-center">
+                                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">MTD Ref.</div>
+                                                            <div className="text-base font-bold text-slate-700">{source.metrics.referralsMtd}</div>
+                                                        </div>
+                                                        <div className="hidden sm:flex flex-col items-start xl:items-center">
+                                                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">90 Days</div>
+                                                            <div className="text-base font-bold text-slate-700">{source.metrics.referralsLast90Days}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Dates */}
+                                                    <div className="hidden lg:flex flex-col items-end border-l border-slate-100 pl-4 lg:pl-6 shrink-0">
+                                                        <div className="text-[12.5px] font-medium text-slate-600 whitespace-nowrap">
+                                                            <span className="text-slate-400 mr-2">Last Contact:</span>
+                                                            <span className="font-semibold whitespace-nowrap">{source.metrics.lastContactDate ? formatDate(source.metrics.lastContactDate, 'MMM d, yyyy') : 'Never'}</span>
+                                                        </div>
+                                                        <div className="text-[12.5px] font-medium text-slate-600 mt-1 whitespace-nowrap">
+                                                            <span className="text-slate-400 mr-2">Last Referral:</span>
+                                                            <span className="font-semibold whitespace-nowrap">{source.metrics.lastReferralDate ? formatDate(source.metrics.lastReferralDate, 'MMM d, yyyy') : 'Never'}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 flex items-center justify-center p-2.5 bg-slate-50 rounded-full border border-slate-200 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors ml-auto sm:ml-4 lg:ml-6">
+                                                        {isExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5 text-slate-400 group-hover:text-blue-600" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded Panel */}
+                                            {
+                                                isExpanded && (
+                                                    <div className="bg-slate-50/80 border-t border-blue-100 relative overflow-hidden">
+                                                        <div className="absolute inset-0 bg-blue-50/30 opacity-50 z-0 pointer-events-none" />
+                                                        <div className="p-4 sm:p-6 md:p-8 relative z-10 animate-in slide-in-from-top-4 fade-in duration-300">
+
+                                                            {source.notes && (
+                                                                <div className="mb-6 sm:mb-8 space-y-2 max-w-5xl">
+                                                                    <h4 className="text-[11px] sm:text-[13px] font-bold uppercase tracking-widest text-slate-500 flex items-center justify-between">
+                                                                        General Source Notes
+                                                                        <Button size="sm" variant="ghost" className="h-8 -mr-3 text-blue-600 hover:text-blue-700 hover:bg-white" onClick={(e) => handleEditSource(e, source)}>
+                                                                            <Edit2 className="mr-2 h-3.5 w-3.5" /> <span className="hidden sm:inline">Edit General</span>
                                                                         </Button>
+                                                                    </h4>
+                                                                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/60 text-sm whitespace-pre-wrap text-slate-700 shadow-sm leading-relaxed">
+                                                                        {source.notes}
                                                                     </div>
+                                                                </div>
+                                                            )}
 
-                                                                    <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
-                                                                        {!expandedData[source.id] ? (
-                                                                            <div className="text-center py-4 text-xs text-muted-foreground animate-pulse">Loading contacts...</div>
-                                                                        ) : activeContacts.length === 0 ? (
-                                                                            <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
-                                                                                No active contact history recorded.
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="relative pl-10 sm:pl-12 space-y-6 mt-4">
-                                                                                <div className="absolute left-[20px] sm:left-[24px] top-3 bottom-0 w-[2px] bg-gradient-to-b from-blue-300 via-slate-200 to-transparent" />
-                                                                                {activeContacts.map((contact, index) => (
-                                                                                    <ContactCard key={contact.id} contact={contact} index={index} />
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </TabsContent>
+                                                            <div className="max-w-5xl">
+                                                                {(() => {
+                                                                    const sourceContacts = expandedData[source.id] || [];
+                                                                    const activeContacts = sourceContacts.filter(c => c && c.id && !c.isArchived);
+                                                                    const archivedContacts = sourceContacts.filter(c => c && c.id && c.isArchived);
 
-                                                                <TabsContent value="archived" className="space-y-4">
-                                                                    <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
-                                                                        {!expandedData[source.id] ? (
-                                                                            <div className="text-center py-4 text-xs text-muted-foreground animate-pulse">Loading contacts...</div>
-                                                                        ) : archivedContacts.length === 0 ? (
-                                                                            <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
-                                                                                No archived notes.
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="relative pl-10 sm:pl-12 space-y-6 mt-4 opacity-80">
-                                                                                <div className="absolute left-[20px] sm:left-[24px] top-3 bottom-0 w-[2px] bg-gradient-to-b from-slate-300 via-slate-200 to-transparent" />
-                                                                                {archivedContacts.map((contact, index) => (
-                                                                                    <ContactCard key={contact.id} contact={contact} index={index} />
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </TabsContent>
+                                                                    const ContactCard = ({ contact, index }: { contact: ReferralSourceContact, index: number }) => (
+                                                                        <div className="relative group animate-in slide-in-from-bottom-2 fade-in duration-500 fill-mode-both" style={{ animationDelay: `${index * 50}ms` }}>
+                                                                            <div className="absolute -left-[14px] sm:-left-[26px] top-4 h-4 w-4 bg-white border-[3.5px] border-blue-500 rounded-full group-hover:scale-125 group-hover:border-blue-400 group-hover:bg-blue-50 transition-all duration-300 shadow-[0_0_0_4px_rgba(59,130,246,0.1)] z-10" />
 
-                                                                <TabsContent value="referrals" className="space-y-4">
-                                                                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
-                                                                        {source.metrics.recentReferrals.length === 0 ? (
-                                                                            <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
-                                                                                No active referrals associated with this source.
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                                {source.metrics.recentReferrals.map(ref => (
-                                                                                    <div key={ref.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
-                                                                                        <div className="flex justify-between items-start mb-3">
-                                                                                            <div className="font-bold text-[15px] text-slate-900 capitalize tracking-tight">{ref.patientName}</div>
-                                                                                            <StatusBadge status={ref.status} />
+                                                                            <div className={`bg-white border ${contact.isArchived ? 'border-slate-200/50 bg-slate-50/50 grayscale-[0.3]' : 'border-slate-200/80'} shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-200 relative overflow-hidden`}>
+
+                                                                                <div className="absolute -left-10 -top-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors" />
+
+                                                                                <div className="relative z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        <div className="flex items-center gap-2.5">
+                                                                                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600">
+                                                                                                <Calendar className="h-4 w-4" />
+                                                                                            </div>
+                                                                                            <span className="font-bold text-[13.5px] sm:text-[15px] text-slate-800 tracking-tight">
+                                                                                                {contact.contactDate ? formatDate(contact.contactDate, 'MMMM d, yyyy - hh:mm a') : 'Unknown Date'}
+                                                                                            </span>
                                                                                         </div>
-                                                                                        <div className="text-xs font-semibold text-slate-500 flex items-center gap-2 mb-4 bg-slate-50 w-fit px-2 py-1 rounded-md border border-slate-100">
-                                                                                            <Calendar className="h-3 w-3" />
-                                                                                            {formatDate(ref.createdAt, 'MMM d, yyyy')}
+                                                                                        {contact.contactPerson && (
+                                                                                            <div className="flex items-center gap-1.5 pl-[42px] text-[12px] text-slate-500 font-medium mt-0.5">
+                                                                                                <User className="h-3.5 w-3.5 text-slate-400" />
+                                                                                                Contact Person: <span className="font-bold text-slate-700">{contact.contactPerson}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="flex flex-wrap items-center gap-2 pl-10 sm:pl-0">
+                                                                                        {contact.reminderDate && (
+                                                                                            <Badge variant="outline" className="text-[10px] font-bold tracking-wider border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors px-2 py-0.5 shadow-sm">
+                                                                                                <Bell className="h-3 w-3 mr-1.5 inline" /> Reminder: {formatDate(contact.reminderDate, 'MMM d, h:mm a')}
+                                                                                            </Badge>
+                                                                                        )}
+                                                                                        <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-widest rounded-md bg-indigo-50 text-indigo-700 px-2 py-0.5 shadow-sm border border-indigo-100">
+                                                                                            {contact.contactType ? contact.contactType.replace('_', ' ') : 'Note'}
+                                                                                        </Badge>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="relative z-10 text-[14.5px] bg-slate-50/80 rounded-xl p-4 text-slate-700 border border-slate-100/80 leading-relaxed font-medium">
+                                                                                    <span className="whitespace-pre-wrap block">
+                                                                                        {contact.summary || 'Legacy empty entry.'}
+                                                                                    </span>
+                                                                                    {contact.reminderEmail && (
+                                                                                        <div className="mt-3 text-xs text-amber-600 font-semibold bg-amber-50 p-2 rounded-md border border-amber-100 inline-block">
+                                                                                            Remind To: {contact.reminderEmail}
                                                                                         </div>
-                                                                                        <Button variant="outline" size="sm" className="w-full font-bold text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-700 group-hover:border-blue-200 transition-colors" onClick={() => router.push(`/dashboard/referrals/${ref.id}`)}>
-                                                                                            Open Record <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                                                                                    )}
+                                                                                </div>
+
+                                                                                <div className="relative z-10 mt-4 flex items-center justify-between text-[11px] sm:text-xs">
+                                                                                    <div className="flex items-center gap-2 text-slate-500 font-semibold tracking-wide uppercase">
+                                                                                        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                                                                                            <User className="h-3.5 w-3.5 opacity-60 text-slate-600" />
+                                                                                        </div>
+                                                                                        Logged by: {contact.createdByName || 'Staff Member'}
+                                                                                    </div>
+
+                                                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold px-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50" onClick={(e) => handleEditContact(e, source.id, contact)}>
+                                                                                            <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
+                                                                                        </Button>
+                                                                                        <Button size="sm" variant="ghost" className="h-7 text-xs font-bold px-2 text-slate-600 hover:text-red-600 hover:bg-red-50" onClick={(e) => handleArchiveContact(e, contact.id, !contact.isArchived, source.id)}>
+                                                                                            {contact.isArchived ? <><ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Restore</> : <><Archive className="h-3.5 w-3.5 mr-1" /> Archive</>}
                                                                                         </Button>
                                                                                     </div>
-                                                                                ))}
+                                                                                </div>
                                                                             </div>
-                                                                        )}
-                                                                    </div>
-                                                                </TabsContent>
-                                                            </Tabs>
-                                                        );
-                                                    })()}
-                                                </div>
+                                                                        </div>
+                                                                    );
 
-                                            </div>
+                                                                    return (
+                                                                        <Tabs defaultValue="contacts" className="w-full">
+                                                                            <TabsList className="mb-6 h-auto flex-wrap sm:flex-nowrap justify-start overflow-x-auto p-1 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                                                                <TabsTrigger value="contacts" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none">Active Notes ({activeContacts.length})</TabsTrigger>
+                                                                                <TabsTrigger value="archived" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-700 data-[state=active]:shadow-none">Archived ({archivedContacts.length})</TabsTrigger>
+                                                                                <TabsTrigger value="referrals" className="rounded-lg text-[13px] font-bold sm:text-sm flex-1 sm:flex-none uppercase tracking-wider px-6 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none">Associated Referrals</TabsTrigger>
+                                                                            </TabsList>
+
+                                                                            <TabsContent value="contacts" className="space-y-4">
+                                                                                <div className="flex justify-end items-center mb-0">
+                                                                                    <Button size="sm" variant="default" className="h-9 shadow-md bg-blue-600 hover:bg-blue-700 font-bold rounded-lg px-4" onClick={(e) => handleAddContact(e, source.id)}>
+                                                                                        <PlusCircle className="mr-2 h-4 w-4" /> Log Contact
+                                                                                    </Button>
+                                                                                </div>
+
+                                                                                <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
+                                                                                    {!expandedData[source.id] ? (
+                                                                                        <div className="text-center py-4 text-xs text-muted-foreground animate-pulse">Loading contacts...</div>
+                                                                                    ) : activeContacts.length === 0 ? (
+                                                                                        <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                                                            No active contact history recorded.
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="relative pl-10 sm:pl-12 space-y-6 mt-4">
+                                                                                            <div className="absolute left-[20px] sm:left-[24px] top-3 bottom-0 w-[2px] bg-gradient-to-b from-blue-300 via-slate-200 to-transparent" />
+                                                                                            {activeContacts.map((contact, index) => (
+                                                                                                <ContactCard key={contact.id} contact={contact} index={index} />
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </TabsContent>
+
+                                                                            <TabsContent value="archived" className="space-y-4">
+                                                                                <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
+                                                                                    {!expandedData[source.id] ? (
+                                                                                        <div className="text-center py-4 text-xs text-muted-foreground animate-pulse">Loading contacts...</div>
+                                                                                    ) : archivedContacts.length === 0 ? (
+                                                                                        <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                                                            No archived notes.
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="relative pl-10 sm:pl-12 space-y-6 mt-4 opacity-80">
+                                                                                            <div className="absolute left-[20px] sm:left-[24px] top-3 bottom-0 w-[2px] bg-gradient-to-b from-slate-300 via-slate-200 to-transparent" />
+                                                                                            {archivedContacts.map((contact, index) => (
+                                                                                                <ContactCard key={contact.id} contact={contact} index={index} />
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </TabsContent>
+
+                                                                            <TabsContent value="referrals" className="space-y-4">
+                                                                                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-slate-300">
+                                                                                    {source.metrics.recentReferrals.length === 0 ? (
+                                                                                        <div className="text-center py-6 text-sm text-muted-foreground italic bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                                                            No active referrals associated with this source.
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                            {source.metrics.recentReferrals.map(ref => (
+                                                                                                <div key={ref.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                                                                                                    <div className="flex justify-between items-start mb-3">
+                                                                                                        <div className="font-bold text-[15px] text-slate-900 capitalize tracking-tight">{ref.patientName}</div>
+                                                                                                        <StatusBadge status={ref.status} />
+                                                                                                    </div>
+                                                                                                    <div className="text-xs font-semibold text-slate-500 flex items-center gap-2 mb-4 bg-slate-50 w-fit px-2 py-1 rounded-md border border-slate-100">
+                                                                                                        <Calendar className="h-3 w-3" />
+                                                                                                        {formatDate(ref.createdAt, 'MMM d, yyyy')}
+                                                                                                    </div>
+                                                                                                    <Button variant="outline" size="sm" className="w-full font-bold text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-700 group-hover:border-blue-200 transition-colors" onClick={() => router.push(`/dashboard/referrals/${ref.id}`)}>
+                                                                                                        Open Record <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                                                                                                    </Button>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </TabsContent>
+                                                                        </Tabs>
+                                                                    );
+                                                                })()}
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
                                         </div>
-                                    )
-                                }
-                            </div>
-                        );
-                    })
-                )}
-            </div>
+                                    );
+                                })
+                            )}
+                        </TabsContent>
+                    );
+                })}
+            </Tabs>
 
             {
                 isSourceModalOpen && (

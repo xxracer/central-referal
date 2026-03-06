@@ -96,12 +96,12 @@ export default async function ArchivedReferralsPage() {
                         <Accordion type="single" collapsible className="w-full">
                             {referrals.map((referral) => (
                                 <AccordionItem value={referral.id} key={referral.id} className="border-b-primary/5">
-                                    <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md py-4">
-                                        <div className="flex items-center gap-4 text-sm w-full">
-                                            <div className="font-bold text-primary text-left min-w-[100px] font-mono">{referral.id}</div>
-                                            <div className="flex-1 text-left font-medium">{referral.patientName}</div>
-                                            <div className="hidden md:block text-muted-foreground text-left min-w-[120px]">{formatDate(referral.createdAt)}</div>
-                                            <div className="text-right pr-4"><StatusBadge status={referral.status} /></div>
+                                    <AccordionTrigger className="hover:no-underline px-4 rounded-md py-4 data-[state=open]:bg-muted/30">
+                                        <div className="flex flex-col sm:grid sm:grid-cols-12 gap-y-2 sm:gap-x-4 text-sm w-full items-start sm:items-center">
+                                            <div className="font-bold text-primary text-left font-mono sm:col-span-3 min-w-0"><span className="truncate">{referral.id.substring(0, 8)}...</span></div>
+                                            <div className="flex-1 text-left font-medium sm:col-span-4 min-w-0"><span className="truncate">{referral.patientName}</span></div>
+                                            <div className="hidden md:block text-muted-foreground text-left sm:col-span-3 min-w-0"><span className="truncate">{formatDate(referral.createdAt)}</span></div>
+                                            <div className="text-left sm:text-right sm:col-span-2 flex justify-start sm:justify-end mt-1 sm:mt-0"><StatusBadge status={referral.status} /></div>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="p-6 bg-muted/20 border-l-4 border-muted-foreground">

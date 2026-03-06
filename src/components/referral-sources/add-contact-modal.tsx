@@ -40,8 +40,27 @@ export default function AddContactModal({ isOpen, onClose, sourceId, contact }: 
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        setIsLoading(true);
         const formData = new FormData(e.currentTarget);
+
+        // Validation against past dates for new logs
+        if (!contact?.id) {
+            const dateStr = formData.get('contactDate') as string;
+            if (dateStr) {
+                const selectedDate = new Date(dateStr);
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - 5); // 5 minute grace period to allow filling forms without rushing
+                if (selectedDate < now) {
+                    toast({
+                        variant: "destructive",
+                        title: "Invalid Date",
+                        description: "You cannot log a contact for a time in the past.",
+                    });
+                    return;
+                }
+            }
+        }
+
+        setIsLoading(true);
 
         try {
             let result;
@@ -95,7 +114,8 @@ export default function AddContactModal({ isOpen, onClose, sourceId, contact }: 
                             name="contactDate"
                             type="datetime-local"
                             required
-                            defaultValue={defaultDateTime}
+                            defaultValue={contact?.contactDate ? formatForInput(contact.contactDate) : defaultDateTime}
+                            min={contact?.id ? undefined : defaultDateTime}
                         />
                     </div>
 
@@ -168,6 +188,7 @@ export default function AddContactModal({ isOpen, onClose, sourceId, contact }: 
                                         type="datetime-local"
                                         required={hasReminder}
                                         defaultValue={formatForInput(contact?.reminderDate)}
+                                        min={defaultDateTime}
                                         className="bg-white"
                                     />
                                 </div>

@@ -64,6 +64,20 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
 
     const [phone, setPhone] = useState('');
     const [dob, setDob] = useState('');
+    const [patientPhone, setPatientPhone] = useState('');
+
+    const handlePatientPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 10) value = value.slice(0, 10);
+
+        let formatted = value;
+        if (value.length > 3 && value.length <= 6) {
+            formatted = `${value.slice(0, 3)}-${value.slice(3)}`;
+        } else if (value.length > 6) {
+            formatted = `${value.slice(0, 3)}-${value.slice(3, 6)}-${value.slice(6)}`;
+        }
+        setPatientPhone(formatted);
+    };
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let value = e.target.value.replace(/\D/g, '');
@@ -138,10 +152,12 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
             setProgressNotes([]);
             setPhone('');
             setDob('');
+            setPatientPhone('');
         } else if (formState.fields) {
             // Re-populate controlled fields if they exist in returned state
             if (formState.fields.phone) setPhone(formState.fields.phone);
             if (formState.fields.patientDOB) setDob(formState.fields.patientDOB);
+            if (formState.fields.patientContact) setPatientPhone(formState.fields.patientContact);
 
             // Re-populate select if possible (might need key change to force re-render or controlled value)
             if (formState.fields.primaryInsurance) setSelectedInsurance(formState.fields.primaryInsurance);
@@ -239,6 +255,18 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                         className="bg-blue-50 text-blue-900 border-blue-200"
                                     />
                                     {formState.errors?.patientDOB && <p className="text-sm text-destructive">{formState.errors.patientDOB[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="patientContact">Patient Phone Number (Optional)</Label>
+                                    <Input
+                                        id="patientContact"
+                                        name="patientContact"
+                                        placeholder="XXX-XXX-XXXX"
+                                        value={patientPhone}
+                                        onChange={handlePatientPhoneChange}
+                                        className="bg-blue-50 text-blue-900 border-blue-200"
+                                    />
+                                    {formState.errors?.patientContact && <p className="text-sm text-destructive">{formState.errors.patientContact[0]}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="patientZipCode">Patient ZIP Code <span className="text-destructive">*</span></Label>

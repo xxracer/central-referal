@@ -77,6 +77,11 @@ export async function signOut(): Promise<void> {
     const { auth } = initializeFirebase();
     try {
         await firebaseSignOut(auth);
+
+        // Also clear server-side session cookie to prevent ghost sessions
+        await fetch('/api/auth/logout', { method: 'POST' }).catch(err => {
+            console.error("Failed to clear server session:", err);
+        });
     } catch (error) {
         console.error("Error signing out:", error);
         throw error;

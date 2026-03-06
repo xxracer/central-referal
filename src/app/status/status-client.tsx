@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Search, Info, CheckCircle, History, Clock, Send, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Search, Info, CheckCircle, History, Clock, Send, ArrowLeft, Paperclip, File as FileIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import SiteHeader from '@/components/layout/site-header';
-import { checkStatus, type FormState } from '@/lib/actions';
+import { checkStatus, uploadAdditionalDocument, type FormState } from '@/lib/actions';
 import { getAgencyPresence } from '@/lib/data';
 import { cn, formatDate } from '@/lib/utils';
 import StatusBadge from '@/components/referrals/status-badge';
 import { useFormStatus } from 'react-dom';
 import { type AgencySettings } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 import { useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -118,7 +119,35 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
         };
     }, [showResults, displayData?.agencyId]);
 
+    const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !formState.data?.id) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const result = await uploadAdditionalDocument(formState.data.id, formData, 'PUBLIC');
+            if (result.success) {
+                toast({ title: "Document Uploaded", description: "Your document was securely attached." });
+            } else {
+                toast({ title: "Upload Failed", description: result.message, variant: "destructive" });
+            }
+        } catch (e) {
+            toast({ title: "Upload Failed", description: "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     // Format presence status
+
     const getPresenceStatus = (date: Date) => {
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
@@ -209,6 +238,14 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                     </div>
                                 </form>
                             </CardContent>
+                            <CardFooter className="flex flex-col border-t bg-muted/20 px-6 py-4">
+                                <div className="text-sm text-center text-muted-foreground">
+                                    Don't have a Referral ID?
+                                </div>
+                                <Button variant="link" asChild className="text-primary hover:text-primary/80">
+                                    <a href="/status/lookup">Use Public Lookup</a>
+                                </Button>
+                            </CardFooter>
                         </Card>
 
                         {formState.message && !formState.success && (
@@ -235,6 +272,19 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                 <div className="text-sm font-mono text-muted-foreground md:ml-2 bg-slate-200/50 px-2 py-0.5 rounded-md border border-slate-200 w-fit shrink-0">
                                                     ID: {referralId}
                                                 </div>
+                                                {displayData?.patientName && (
+                                                    <div className="text-sm font-medium text-slate-700 md:ml-2 bg-blue-100/50 px-2 py-0.5 rounded-md border border-blue-200 w-fit shrink-0">
+                                                        Patient: {(() => {
+                                                            const name = displayData.patientName;
+                                                            if (!name) return 'Unknown';
+                                                            const parts = name.trim().split(/\s+/);
+                                                            return parts.map((part: string) => {
+                                                                if (part.length <= 2) return part;
+                                                                return part.substring(0, 2) + '*'.repeat(Math.max(2, part.length - 2));
+                                                            }).join(' ');
+                                                        })()}
+                                                    </div>
+                                                )}
                                             </CardTitle>
                                             {lastSeen && (() => {
                                                 const presence = getPresenceStatus(lastSeen);
@@ -371,16 +421,36 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                         <input type="hidden" name="referralId" value={referralId} />
                                         <div className="flex flex-col p-4 w-full">
                                             <div className="flex gap-2 items-end w-full">
-                                                <Textarea
-                                                    id="optionalNote"
-                                                    name="optionalNote"
-                                                    placeholder="Type a message..."
-                                                    className="min-h-[60px] max-h-[120px] resize-none border-primary/20 focus-visible:ring-primary/30"
-                                                    key={`note-${formState.data?.updatedAt}`} // Reset field when update happens
-                                                />
+                                                <div className="flex-1 relative">
+                                                    <Textarea
+                                                        id="optionalNote"
+                                                        name="optionalNote"
+                                                        placeholder="Type a message..."
+                                                        className="min-h-[60px] max-h-[120px] resize-none pr-12 border-primary/20 focus-visible:ring-primary/30"
+                                                        key={`note-${formState.data?.updatedAt}`} // Reset field when update happens
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        className="hidden"
+                                                        onChange={handleFileUpload}
+                                                        accept=".pdf,.png,.jpg,.jpeg"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        disabled={isUploading}
+                                                        className="absolute right-2 bottom-2 h-10 w-10 text-muted-foreground hover:text-primary rounded-full transition-colors"
+                                                    >
+                                                        {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                                                    </Button>
+                                                </div>
                                                 <Button
                                                     type="submit"
                                                     size="icon"
+                                                    disabled={isUploading}
                                                     className="h-[60px] w-[60px] rounded-xl shrink-0 bg-blue-600 hover:bg-blue-700 shadow-md"
                                                 >
                                                     <Send className="h-5 w-5 ml-1" />

@@ -20,6 +20,7 @@ export const referralSchema = z.object({
   // Patient Info
   patientFullName: z.string().min(1, "Patient Name is required."),
   patientDOB: z.string().optional(),
+  patientContact: z.string().optional(),
   patientZipCode: z.string().min(5, "Patient ZIP Code is required."),
   isFaxingPaperwork: z.boolean().optional(),
 

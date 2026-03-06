@@ -16,6 +16,8 @@ export default function StatusBadge({ status, className, size = 'md' }: StatusBa
     REJECTED: "bg-red-100 text-red-800 border-red-200",
     NEED_MORE_INFO: "bg-orange-100 text-orange-800 border-orange-200",
     COMPLETED: "bg-purple-100 text-purple-800 border-purple-200",
+    ADMITTED: "bg-teal-100 text-teal-800 border-teal-200",
+    DISCHARGED: "bg-gray-100 text-gray-800 border-gray-200",
   };
 
   const sizeStyles = {
@@ -28,7 +30,7 @@ export default function StatusBadge({ status, className, size = 'md' }: StatusBa
       className={cn("capitalize font-semibold", statusStyles[status], sizeStyles[size], className)}
       variant="outline"
     >
-      {status.replace("_", " ").toLowerCase()}
+      {status === 'COMPLETED' ? 'intake completed' : status.replace("_", " ").toLowerCase()}
     </Badge>
   );
 }

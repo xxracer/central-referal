@@ -1,6 +1,6 @@
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { verifySession } from '@/lib/auth-actions';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type {
@@ -642,5 +642,87 @@ export async function syncLegacyReferralSources(agencyId: string): Promise<{ suc
     } catch (e) {
         console.error("Sync error:", e);
         return { success: false, created: 0 };
+    }
+}
+
+export async function archiveReferralSource(agencyId: string, sourceId: string, isArchived: boolean): Promise<{ success: boolean; error?: string }> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
+    try {
+        const docRef = adminDb.collection('referral_sources').doc(sourceId);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists || docSnap.data()?.agencyId !== agencyId) {
+            return { success: false, error: 'Referral source not found.' };
+        }
+
+        await docRef.update({ isArchived, updatedAt: FieldValue.serverTimestamp() });
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error archiving referral source:', error);
+        return { success: false, error: 'Failed to archive referral source.' };
+    }
+}
+
+export async function deleteReferralSourceCascade(agencyId: string, sourceId: string): Promise<{ success: boolean; error?: string }> {
+    const user = await verifySession();
+    if (!user) throw new Error('Unauthorized');
+
+    try {
+        const sourceRef = adminDb.collection('referral_sources').doc(sourceId);
+        const sourceSnap = await sourceRef.get();
+
+        if (!sourceSnap.exists || sourceSnap.data()?.agencyId !== agencyId) {
+            return { success: false, error: 'Referral source not found.' };
+        }
+
+        const bucket = adminStorage.bucket();
+        const deletePromises: Promise<any>[] = [];
+
+        // 1. Find all referrals corresponding to this source
+        const referralsSnap = await adminDb.collection('referrals')
+            .where('agencyId', '==', agencyId)
+            .where('referralSourceId', '==', sourceId)
+            .get();
+
+        for (const doc of referralsSnap.docs) {
+            const data = doc.data();
+
+            // Delete associated documents in storage
+            if (data.documents && Array.isArray(data.documents)) {
+                for (const file of data.documents) {
+                    if (file.path) {
+                        try {
+                            await bucket.file(file.path).delete();
+                        } catch (e) {
+                            console.error(`Failed to delete file ${file.path}:`, e);
+                        }
+                    }
+                }
+            }
+            deletePromises.push(doc.ref.delete());
+        }
+
+        // 2. Find all contacts for this source
+        const contactsSnap = await adminDb.collection('referral_source_contacts')
+            .where('agencyId', '==', agencyId)
+            .where('referralSourceId', '==', sourceId)
+            .get();
+
+        for (const doc of contactsSnap.docs) {
+            deletePromises.push(doc.ref.delete());
+        }
+
+        // 3. Execute all cascaded deletions
+        await Promise.all(deletePromises);
+
+        // 4. Delete the source itself
+        await sourceRef.delete();
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error permanently deleting referral source:', error);
+        return { success: false, error: 'Failed to delete referral source and its data.' };
     }
 }
