@@ -44,6 +44,8 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
 
     const profile = settings.companyProfile;
 
+    const autoSubmitRef = useRef<HTMLButtonElement>(null);
+
     const handleReset = () => {
         setReferralId('');
         // We can't easily reset useActionState without a page refresh or a hack 
@@ -53,7 +55,15 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
 
     useEffect(() => {
         setReferralId(initialReferralId);
-    }, [initialReferralId]);
+        // Auto-submit if there's an initial ID and we haven't succeeded yet
+        if (initialReferralId && !formState.success && !formState.message) {
+            // Slight delay to ensure the form DOM is ready and the action state is bound
+            const timer = setTimeout(() => {
+                autoSubmitRef.current?.click();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [initialReferralId, formState.success, formState.message]);
 
     // Real-time listener for Status Page
     const [realtimeData, setRealtimeData] = useState<any>(null);
@@ -235,6 +245,8 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                 <Search className="h-4 w-4" /> Check Status
                                             </div>
                                         </SubmitButton>
+                                        {/* Hidden button for auto-submission */}
+                                        <button type="submit" ref={autoSubmitRef} className="hidden" aria-hidden="true" />
                                     </div>
                                 </form>
                             </CardContent>

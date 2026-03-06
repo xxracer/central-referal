@@ -20,6 +20,7 @@ export type LookupState = {
     message: string;
     success: boolean;
     data?: {
+        id: string;
         maskedName: string;
         status: ReferralStatus;
         createdAt: string;
@@ -33,8 +34,9 @@ export async function lookupReferralAction(prevState: LookupState, formData: For
     const lastName = formData.get('lastName') as string;
     const dob = formData.get('dob') as string;
     const email = formData.get('email') as string;
-    if (!lastName || !dob || !email) {
-        return { success: false, message: 'All fields are required.' };
+
+    if (!lastName || !dob) {
+        return { success: false, message: 'Patient Name and Date of Birth are required.' };
     }
 
     // 1. Rate Limiting (20 requests per hour per IP)
@@ -45,25 +47,23 @@ export async function lookupReferralAction(prevState: LookupState, formData: For
 
     // 2. Query Firestore
     try {
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = email ? email.toLowerCase().trim() : null;
         const normalizedLastName = lastName.toLowerCase().trim();
 
         // Audit log entry
         adminDb.collection('lookup_logs').add({
             ip: ip,
-            email: normalizedEmail,
+            email: normalizedEmail || 'not-provided',
             lastNameSearch: normalizedLastName,
             timestamp: new Date()
         }).catch(e => console.error("Failed to write lookup_logs:", e));
 
-        // Note: Firestore doesn't easily do partial/fuzzy on encrypted fields.
-        // The user types 'patientDOB' as "YYYY-MM-DD" usually, matching the input.
-        // Let's do a composite-like lookup. 
-        // We will fetch by referrerEmail and dob to narrow down, then check last name in memory.
-        const snapshot = await adminDb.collection('referrals')
-            .where('referrerEmail', '==', normalizedEmail)
-            .where('patientDOB', '==', dob)
-            .get();
+        let query: FirebaseFirestore.Query = adminDb.collection('referrals').where('patientDOB', '==', dob);
+
+        if (normalizedEmail) {
+            query = query.where('referrerEmail', '==', normalizedEmail);
+        }
+        const snapshot = await query.get();
 
         if (snapshot.empty) {
             return { success: false, message: 'No matching referral found.' };
@@ -73,10 +73,8 @@ export async function lookupReferralAction(prevState: LookupState, formData: For
         for (const doc of snapshot.docs) {
             const data = doc.data();
             const fullNormalizedName = normalizeName(data.patientName || '');
-            // Check if the last part of the normalized name matches the last name provided
-            const nameParts = fullNormalizedName.split(' ');
-            if (nameParts.length > 0 && nameParts[nameParts.length - 1] === normalizedLastName) {
-                // Also could just check if full string includes the last name. 
+            // User can input first or last name, check if any part contains the search string
+            if (fullNormalizedName.includes(normalizedLastName)) {
                 matchedReferral = data;
                 break;
             }
@@ -96,6 +94,7 @@ export async function lookupReferralAction(prevState: LookupState, formData: For
             success: true,
             message: 'Referral found.',
             data: {
+                id: matchedReferral.id,
                 maskedName: maskName(matchedReferral.patientName),
                 status: matchedReferral.status,
                 createdAt: createdStr

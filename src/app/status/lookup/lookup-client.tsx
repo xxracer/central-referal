@@ -12,6 +12,8 @@ import { lookupReferralAction, type LookupState } from '@/lib/lookup-actions';
 import { useFormStatus } from 'react-dom';
 import type { AgencySettings } from '@/lib/types';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
     const { pending } = useFormStatus();
@@ -25,6 +27,28 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 export default function LookupClient({ settings }: { settings: AgencySettings }) {
     const initialState: LookupState = { message: '', success: false };
     const [formState, dispatch] = useActionState(lookupReferralAction, initialState);
+    const router = useRouter();
+
+    const [dob, setDob] = useState('');
+    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 8) value = value.slice(0, 8);
+
+        // Format: MM/DD/YYYY
+        let formatted = value;
+        if (value.length > 2 && value.length <= 4) {
+            formatted = `${value.slice(0, 2)}/${value.slice(2)}`;
+        } else if (value.length > 4) {
+            formatted = `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`;
+        }
+        setDob(formatted);
+    };
+
+    useEffect(() => {
+        if (formState.success && formState.data?.id) {
+            router.push(`/status?id=${formState.data.id}`);
+        }
+    }, [formState.success, formState.data?.id, router]);
 
     const profile = settings.companyProfile;
 
@@ -72,21 +96,16 @@ export default function LookupClient({ settings }: { settings: AgencySettings })
 
                         <CardContent className="pt-8 px-6 sm:px-8">
                             {!formState.success ? (
-                                <form action={dispatch} className="space-y-6" onSubmit={() => {
-                                    if (recaptchaRef.current && !recaptchaRef.current.getValue()) {
-                                        // Ensure recaptcha is checked before actually submitting natively if possible, 
-                                        // but standard form validation via Action is fine.
-                                    }
-                                }}>
+                                <form action={dispatch} className="space-y-6">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="lastName" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                                <User className="w-4 h-4 text-slate-400" /> Patient Last Name
+                                                <User className="w-4 h-4 text-slate-400" /> Patient Name (First or Last)
                                             </Label>
                                             <Input
                                                 id="lastName"
                                                 name="lastName"
-                                                placeholder="e.g. Smith"
+                                                placeholder="e.g. John or Smith"
                                                 required
                                                 className="h-12 bg-slate-50/50 border-slate-200 focus:bg-white transition-colors text-base"
                                             />
@@ -98,22 +117,24 @@ export default function LookupClient({ settings }: { settings: AgencySettings })
                                             <Input
                                                 id="dob"
                                                 name="dob"
-                                                type="date"
+                                                type="text"
+                                                value={dob}
+                                                onChange={handleDobChange}
+                                                placeholder="MM/DD/YYYY"
                                                 required
-                                                max={new Date().toISOString().split('T')[0]}
+                                                maxLength={10}
                                                 className="h-12 bg-slate-50/50 border-slate-200 focus:bg-white transition-colors text-base"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                                <Mail className="w-4 h-4 text-slate-400" /> Your Email (Referrer)
+                                                <Mail className="w-4 h-4 text-slate-400" /> Your Email (Optional)
                                             </Label>
                                             <Input
                                                 id="email"
                                                 name="email"
                                                 type="email"
-                                                placeholder="you@hospital.com"
-                                                required
+                                                placeholder="you@hospital.com (Optional)"
                                                 className="h-12 bg-slate-50/50 border-slate-200 focus:bg-white transition-colors text-base"
                                             />
                                         </div>
