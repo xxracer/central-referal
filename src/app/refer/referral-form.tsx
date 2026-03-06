@@ -22,7 +22,7 @@ import { SourceTypeahead } from '@/components/forms/source-typeahead';
 
 // Hardcoded fallback removed, now using settings.configuration.offeredServices
 
-const MAX_SIZE_MB = 5;
+const MAX_SIZE_MB = 25;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 interface FileListProps {
@@ -65,6 +65,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
     const [phone, setPhone] = useState('');
     const [dob, setDob] = useState('');
     const [patientPhone, setPatientPhone] = useState('');
+    const [isFaxing, setIsFaxing] = useState(false);
 
     const handlePatientPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let value = e.target.value.replace(/\D/g, '');
@@ -363,33 +364,54 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="referralDocuments">Referral Documents</Label>
-                                    <Input id="referralDocuments" type="file" multiple ref={referralDocsRef} onChange={(e) => handleFileChange(e, setReferralDocs)} className="hidden" />
-                                    <Button type="button" variant="outline" className="w-full" onClick={() => referralDocsRef.current?.click()}>
-                                        <UploadCloud className="mr-2" /> Choose Files
-                                    </Button>
-                                    <FileList files={referralDocs} onRemove={removeReferralDoc} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="progressNotes">Progress Notes</Label>
-                                    <Input id="progressNotes" type="file" multiple ref={progressNotesRef} onChange={(e) => handleFileChange(e, setProgressNotes)} className="hidden" />
-                                    <Button type="button" variant="outline" className="w-full" onClick={() => progressNotesRef.current?.click()}>
-                                        <UploadCloud className="mr-2" /> Choose Files
-                                    </Button>
-                                    <FileList files={progressNotes} onRemove={removeProgressNote} />
-                                </div>
+                                {!isFaxing && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="referralDocuments">Referral Documents</Label>
+                                            <Input id="referralDocuments" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" type="file" multiple ref={referralDocsRef} onChange={(e) => handleFileChange(e, setReferralDocs)} className="hidden" />
+                                            <Button type="button" variant="outline" className="w-full" onClick={() => referralDocsRef.current?.click()}>
+                                                <UploadCloud className="mr-2" /> Choose Files
+                                            </Button>
+                                            <FileList files={referralDocs} onRemove={removeReferralDoc} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="progressNotes">Progress Notes</Label>
+                                            <Input id="progressNotes" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" type="file" multiple ref={progressNotesRef} onChange={(e) => handleFileChange(e, setProgressNotes)} className="hidden" />
+                                            <Button type="button" variant="outline" className="w-full" onClick={() => progressNotesRef.current?.click()}>
+                                                <UploadCloud className="mr-2" /> Choose Files
+                                            </Button>
+                                            <FileList files={progressNotes} onRemove={removeProgressNote} />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Security Block Warning */}
+                                {!isFaxing && (
+                                    <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-4 flex gap-3 items-start animate-in fade-in duration-300 mb-2">
+                                        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                        <div className="space-y-1.5">
+                                            <p className="text-sm font-semibold text-amber-900">Facility Network Blocking Uploads?</p>
+                                            <p className="text-xs text-amber-700/90 leading-relaxed">
+                                                If your screen says <strong>"Protected Storage is empty"</strong> or your upload fails, your facility's strict security protocols may be restricting local file access.
+                                                You can securely <strong>fax or email</strong> the documents to us instead. Click below to skip the upload process for now.
+                                            </p>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsFaxing(true)} className="mt-1 h-8 bg-white hover:bg-amber-100/50 text-amber-800 border-amber-300 transition-colors">
+                                                Will Fax/Email Instead / Skip Uploads
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="flex items-center space-x-2 py-2">
-                                    <Checkbox id="isFaxingPaperwork" name="isFaxingPaperwork" />
+                                    <Checkbox id="isFaxingPaperwork" name="isFaxingPaperwork" checked={isFaxing} onCheckedChange={(checked) => setIsFaxing(!!checked)} />
                                     <Label htmlFor="isFaxingPaperwork" className="font-normal cursor-pointer">
                                         I will be faxing information to {profile.fax || '713-378-5289'} (Office is notified to expect fax)
                                     </Label>
                                 </div>
 
-                                <p className="text-sm text-muted-foreground">Uploading documents allows us to confirm insurance and respond faster. You can additionally fax it to {profile.fax || '713-378-5289'}. Max total size: 5MB.</p>
+                                <p className="text-sm text-muted-foreground">Uploading documents allows us to confirm insurance and respond faster. You can additionally fax it to {profile.fax || '713-378-5289'}. Max total size: {MAX_SIZE_MB}MB.</p>
 
-                                {(referralDocs.length > 0 || progressNotes.length > 0) && (
+                                {(!isFaxing && (referralDocs.length > 0 || progressNotes.length > 0)) && (
                                     <div className="space-y-2 pt-2">
                                         <div className="flex justify-between items-center text-sm">
                                             <p className="font-medium">Total selected size</p>
@@ -403,7 +425,7 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                         )}
                                     </div>
                                 )}
-                                {formState.errors?.referralDocuments && <p className="text-sm text-destructive">{formState.errors.referralDocuments[0]}</p>}
+                                {!isFaxing && formState.errors?.referralDocuments && <p className="text-sm text-destructive">{formState.errors.referralDocuments[0]}</p>}
                             </CardContent>
                         </Card>
 

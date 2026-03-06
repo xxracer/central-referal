@@ -137,6 +137,12 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
         const file = e.target.files?.[0];
         if (!file || !formState.data?.id) return;
 
+        if (file.size > 25 * 1024 * 1024) {
+            toast({ title: "File too large", description: "The maximum allowed file size is 25MB.", variant: "destructive" });
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
