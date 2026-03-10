@@ -225,14 +225,10 @@ export default function ReferralDetailClient({ referral: initialReferral }: Refe
         if (!content.trim()) return;
 
         const authorName = user?.displayName || user?.email || 'Staff'; // Automate author
-        const formData = new FormData();
-        formData.append('note', content);
-        formData.append('authorName', authorName);
-
         const action = isExternal ? addExternalNote : addInternalNote;
 
         startTransition(async () => {
-            const result = await action(referral.id, { message: '', success: false }, formData);
+            const result = await action(referral.id, null, undefined, content);
             if (result.success) {
                 toast({ title: "Success", description: isExternal ? "Message sent" : "Internal note added" });
                 // Local update for immediate feedback (simplified)

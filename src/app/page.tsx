@@ -195,7 +195,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                 <div className="flex gap-6 text-sm font-medium text-foreground/70">
                     <Link href="https://referralflow.health/contact" className="hover:text-primary transition-colors">Contact Us</Link>
                 </div>
-                <p className="text-sm text-foreground/50 tracking-wide">&copy; {new Date().getFullYear()} {profile.name || "ReferralFlow Central"}. Excellence in care coordination.</p>
+                <p className="text-sm text-foreground/50 tracking-wide">&copy; 2026 {profile.name || "ReferralFlow Central"}. Excellence in care coordination.</p>
             </footer>
         </div>
     );

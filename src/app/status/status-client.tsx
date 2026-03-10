@@ -280,18 +280,19 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
                             <Card className="shadow-2xl border-primary/20 bg-card/95 flex flex-col overflow-hidden">
                                 <CardHeader className="border-b bg-muted/30 pb-4">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="flex flex-col">
-                                            <CardTitle className="flex flex-col gap-2 md:flex-row md:items-center font-headline text-xl">
-                                                <div className="flex items-center gap-2">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                        <div className="flex flex-col min-w-0">
+                                            <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-2 font-headline text-lg sm:text-xl">
+                                                <div className="flex items-center gap-2 shrink-0">
                                                     <Info className="w-5 h-5 text-primary" />
-                                                    Referral Status: <StatusBadge status={displayData?.status} />
+                                                    <span className="whitespace-nowrap">Referral Status:</span>
+                                                    <StatusBadge status={displayData?.status} />
                                                 </div>
-                                                <div className="text-sm font-mono text-muted-foreground md:ml-2 bg-slate-200/50 px-2 py-0.5 rounded-md border border-slate-200 w-fit shrink-0">
+                                                <div className="text-xs font-mono text-muted-foreground bg-slate-200/50 px-2 py-0.5 rounded-md border border-slate-200 whitespace-nowrap">
                                                     ID: {referralId}
                                                 </div>
                                                 {displayData?.patientName && (
-                                                    <div className="text-sm font-medium text-slate-700 md:ml-2 bg-blue-100/50 px-2 py-0.5 rounded-md border border-blue-200 w-fit shrink-0">
+                                                    <div className="text-xs font-medium text-slate-700 bg-blue-100/50 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
                                                         Patient: {(() => {
                                                             const name = displayData.patientName;
                                                             if (!name) return 'Unknown';
@@ -307,12 +308,12 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                             {lastSeen && (() => {
                                                 const presence = getPresenceStatus(lastSeen);
                                                 return (
-                                                    <div className="text-xs mt-1 ml-7 flex items-center gap-1.5">
+                                                    <div className="text-[10px] sm:text-xs mt-1 lg:ml-7 flex items-center gap-1.5">
                                                         {presence.isOnline ? (
                                                             <>
-                                                                <span className="relative flex h-2.5 w-2.5">
+                                                                <span className="relative flex h-2 w-2">
                                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                                                 </span>
                                                                 <span className="text-green-600 font-medium tracking-wide">{presence.text}</span>
                                                             </>
@@ -326,9 +327,9 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                 );
                                             })()}
                                         </div>
-                                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                            <History className="w-4 h-4" />
-                                            Last Update: {formatDate(displayData?.updatedAt, "PPp")}
+                                        <div className="text-xs text-muted-foreground flex items-center gap-2 lg:shrink-0">
+                                            <History className="w-3.5 h-3.5" />
+                                            <span className="whitespace-nowrap">Updated: {formatDate(displayData?.updatedAt, "MMM d, p")}</span>
                                         </div>
                                     </div>
 
@@ -474,11 +475,14 @@ function StatusPageComponent({ settings }: { settings: AgencySettings }) {
                                                     <Send className="h-5 w-5 ml-1" />
                                                 </Button>
                                             </div>
-                                            <div className="mt-3 flex items-start gap-2 bg-orange-100 text-orange-900 border border-orange-300 rounded-lg p-3 w-full shadow-inner">
+                                            <div className="mt-3 flex items-start gap-3 bg-orange-50 text-orange-900 border border-orange-200 rounded-xl p-3.5 w-full shadow-sm">
                                                 <AlertCircle className="h-5 w-5 shrink-0 text-orange-600 mt-0.5" />
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-sm tracking-wide text-red-700">CRITICAL WARNING</span>
-                                                    <span className="text-xs sm:text-sm font-medium">Do not include any PHI (Personal Health Information) in this chat.</span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-bold text-xs uppercase tracking-widest text-orange-800">Important Notice</span>
+                                                    <p className="text-xs sm:text-[13px] leading-relaxed font-medium">
+                                                        Please do not include any PHI (Personal Health Information) in this chat.
+                                                        To securely send patient information or documents, use the paperclip icon for our <span className="font-bold text-orange-950">HIPAA-Compliant Encrypted Upload</span>.
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

@@ -80,7 +80,7 @@ export type AgencySettings = {
     authorizedEmails: string[];
   };
   subscription: {
-    plan: 'FREE' | 'BASIC' | 'PRO';
+    plan: 'FREE' | 'BASIC_ANNUAL' | 'BASIC_MONTHLY' | 'PRO_REFERRAL';
     status: 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'SUSPENDED';
     startDate?: Date;
     endDate?: Date;
@@ -91,6 +91,8 @@ export type AgencySettings = {
     agreed: boolean;
     ip: string;
     timestamp: Date;
+    termsContent?: string;
+    termsVersion?: string;
   };
 
   exists?: boolean;
@@ -170,6 +172,8 @@ export type Referral = {
     agreed: boolean;
     ip: string;
     timestamp: Date;
+    termsContent?: string;
+    termsVersion?: string;
   };
 };
 
@@ -232,8 +236,11 @@ export interface ReferralSourceMetrics {
   referralsMtd: number; // Referrals this month
   referralsLast90Days: number;
   lastReferralDate: Date | null;
-  totalAdmittedAllTime: number; // For conversion rate denominator
   totalReferralsAllTime: number; // For conversion rate numerator
+  totalReceivedAllTime: number; // New: Raw count of received
+  totalAcceptedAllTime: number; // New: Count of specifically accepted
+  totalAdmittedAllTime: number; // For conversion rate denominator
+  totalDischargedAllTime: number; // New: Count of discharged
   recentReferrals: ReferralSummary[];
   insuranceStats: Record<string, number>; // Map of insurance name to referral count
 };

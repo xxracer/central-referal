@@ -47,6 +47,8 @@ export async function POST(request: Request) {
         let priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
         if (planType === 'annual') {
             priceId = process.env.STRIPE_PRICE_ID_ANNUAL;
+        } else if (planType === 'referral_pro') {
+            priceId = process.env.STRIPE_PRICE_ID_PRO;
         }
 
         if (!priceId) {

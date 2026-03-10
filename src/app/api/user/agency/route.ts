@@ -17,7 +17,8 @@ export async function GET(request: Request) {
             // Return the first agency name
             return NextResponse.json({
                 agencyName: agencies[0].companyProfile.name,
-                agencyId: agencies[0].id
+                agencyId: agencies[0].id,
+                subscriptionPlan: agencies[0].subscription?.plan || 'BASIC_MONTHLY'
             });
         }
 

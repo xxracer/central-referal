@@ -14,12 +14,13 @@ const WARNING_MS = 10 * 1000; // 10 seconds warning before timeout
  */
 export function GlobalActivityTracker() {
     useEffect(() => {
-        const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'input', 'change'];
         let lastUpdate = 0;
 
         const handleActivity = () => {
-            // Only track if on a protected route to prevent public pages from keeping staff sessions alive
-            if (!window.location.pathname.startsWith('/dashboard') && !window.location.pathname.startsWith('/status')) {
+            // Only track if on a protected route (Dashboard)
+            // Public pages like /status for visitors should NOT have staff timeout logic applied.
+            if (!window.location.pathname.startsWith('/dashboard')) {
                 return;
             }
 
@@ -27,11 +28,9 @@ export function GlobalActivityTracker() {
             const lastActivityStr = localStorage.getItem('rf_last_activity');
             const lastActivity = lastActivityStr ? parseInt(lastActivityStr, 10) : now;
 
-            // If the session has officially expired (meaning at least TIMEOUT_MS has passed since last activity),
-            // moving the mouse shouldn't bring it back from the dead. Let SessionTimeout kill it.
-            if (now - lastActivity >= TIMEOUT_MS) {
-                return;
-            }
+            // Track activity regardless of calculated timeout state. 
+            // If the user is physically interacting, they are active.
+            // The actual session expiration is ultimately governed by the server cookie.
 
             // Throttle localStorage writes to max once per second
             if (now - lastUpdate > 1000) {

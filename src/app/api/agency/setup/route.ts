@@ -9,6 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 import { headers } from 'next/headers';
+import { CURRENT_TERMS_TEXT, CURRENT_TERMS_VERSION } from '@/lib/legal-constants';
 
 export async function POST(request: Request) {
     try {
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
                 homeInsurances: []
             },
             subscription: {
-                plan: 'PRO',
+                plan: 'PRO_REFERRAL',
                 status: 'ACTIVE'
             },
             notifications: {
@@ -138,7 +139,9 @@ export async function POST(request: Request) {
             legalConsent: {
                 agreed: true,
                 ip: ip,
-                timestamp: new Date()
+                timestamp: new Date(),
+                termsContent: CURRENT_TERMS_TEXT,
+                termsVersion: CURRENT_TERMS_VERSION
             }
         });
 

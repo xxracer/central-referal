@@ -253,7 +253,7 @@ const LandingPage = () => {
                     <div className="container">
                         <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                                <span>© {new Date().getFullYear()} ReferralFlow.Health</span>
+                                <span>© 2026 ReferralFlow.Health</span>
                                 <Link href="https://referralflow.health/contact" style={{ fontSize: '12px', opacity: 0.8, color: 'inherit' }}>Contact Us</Link>
                             </div>
                             <span style={{ fontSize: '11px', opacity: 0.8 }}>

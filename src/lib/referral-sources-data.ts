@@ -190,7 +190,10 @@ async function computeMetricsForSources(agencyId: string, sourceIds: string[]): 
             referralsLast90Days: 0,
             lastReferralDate: null,
             totalReferralsAllTime: 0,
+            totalReceivedAllTime: 0,
+            totalAcceptedAllTime: 0,
             totalAdmittedAllTime: 0,
+            totalDischargedAllTime: 0,
             recentReferrals: [],
             insuranceStats: {}
         });
@@ -227,11 +230,15 @@ async function computeMetricsForSources(agencyId: string, sourceIds: string[]): 
             const metrics = metricsMap.get(rSourceId)!;
             const status = data.status;
 
-            // All-Time
+            // All-Time Aggregations
             metrics.totalReferralsAllTime++;
-            if (status === 'ACCEPTED' || status === 'COMPLETED') {
+
+            if (status === 'RECEIVED') metrics.totalReceivedAllTime++;
+            if (status === 'ACCEPTED') metrics.totalAcceptedAllTime++;
+            if (status === 'ADMITTED' || status === 'COMPLETED') {
                 metrics.totalAdmittedAllTime++;
             }
+            if (status === 'DISCHARGED') metrics.totalDischargedAllTime++;
 
             // Last Referral Date
             if (!metrics.lastReferralDate || rCreatedAt > metrics.lastReferralDate) {
@@ -346,7 +353,21 @@ export async function getReferralSourcesWithMetrics(
 
         return sources.map(source => ({
             ...source,
-            metrics: metricsMap.get(source.id) || { lastContactDate: null, latestNote: undefined, totalNotes: 0, referralsMtd: 0, referralsLast90Days: 0, lastReferralDate: null, totalReferralsAllTime: 0, totalAdmittedAllTime: 0, recentReferrals: [], insuranceStats: {} }
+            metrics: metricsMap.get(source.id) || {
+                lastContactDate: null,
+                latestNote: undefined,
+                totalNotes: 0,
+                referralsMtd: 0,
+                referralsLast90Days: 0,
+                lastReferralDate: null,
+                totalReferralsAllTime: 0,
+                totalReceivedAllTime: 0,
+                totalAcceptedAllTime: 0,
+                totalAdmittedAllTime: 0,
+                totalDischargedAllTime: 0,
+                recentReferrals: [],
+                insuranceStats: {}
+            }
         }));
     } catch (e) {
         console.error('Error fetching referral sources:', e);

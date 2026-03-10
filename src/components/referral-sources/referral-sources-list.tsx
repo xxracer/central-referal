@@ -188,18 +188,34 @@ export default function ReferralSourcesList({ initialSources, agencyId }: { init
                                 </div>
                                 <TabsContent value="performance" className="mt-0">
                                     <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-                                                <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Sources</div>
-                                                <div className="text-4xl font-black text-slate-800">{sources.length}</div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                            <div className="relative overflow-hidden bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group hover:border-blue-200 transition-all">
+                                                <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full blur-2xl group-hover:bg-blue-100 transition-colors" />
+                                                <div className="relative z-10">
+                                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Received</div>
+                                                    <div className="text-4xl font-black text-slate-800">{sources.reduce((sum, s) => sum + s.metrics.totalReceivedAllTime, 0)}</div>
+                                                </div>
                                             </div>
-                                            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-                                                <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Referrals</div>
-                                                <div className="text-4xl font-black text-blue-600">{sources.reduce((sum, s) => sum + s.metrics.totalReferralsAllTime, 0)}</div>
+                                            <div className="relative overflow-hidden bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group hover:border-indigo-200 transition-all">
+                                                <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-colors" />
+                                                <div className="relative z-10">
+                                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Accepted</div>
+                                                    <div className="text-4xl font-black text-indigo-600">{sources.reduce((sum, s) => sum + s.metrics.totalAcceptedAllTime, 0)}</div>
+                                                </div>
                                             </div>
-                                            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-                                                <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Total Admitted</div>
-                                                <div className="text-4xl font-black text-emerald-500">{sources.reduce((sum, s) => sum + s.metrics.totalAdmittedAllTime, 0)}</div>
+                                            <div className="relative overflow-hidden bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group hover:border-emerald-200 transition-all">
+                                                <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors" />
+                                                <div className="relative z-10">
+                                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Admitted</div>
+                                                    <div className="text-4xl font-black text-emerald-500">{sources.reduce((sum, s) => sum + s.metrics.totalAdmittedAllTime, 0)}</div>
+                                                </div>
+                                            </div>
+                                            <div className="relative overflow-hidden bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group hover:border-purple-200 transition-all">
+                                                <div className="absolute -right-4 -top-4 w-16 h-16 bg-purple-50 rounded-full blur-2xl group-hover:bg-purple-100 transition-colors" />
+                                                <div className="relative z-10">
+                                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Discharged</div>
+                                                    <div className="text-4xl font-black text-purple-600">{sources.reduce((sum, s) => sum + s.metrics.totalDischargedAllTime, 0)}</div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -218,8 +234,10 @@ export default function ReferralSourcesList({ initialSources, agencyId }: { init
                                                             labelStyle={{ fontWeight: 800, color: '#0f172a', marginBottom: '8px', fontSize: '15px' }}
                                                         />
                                                         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                                                        <Bar name="Total Referrals Received" dataKey="metrics.totalReferralsAllTime" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                                                        <Bar name="Successfully Admitted" dataKey="metrics.totalAdmittedAllTime" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                                                        <Bar name="Received" dataKey="metrics.totalReceivedAllTime" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                                                        <Bar name="Accepted" dataKey="metrics.totalAcceptedAllTime" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                                                        <Bar name="Admitted" dataKey="metrics.totalAdmittedAllTime" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                                                        <Bar name="Discharged" dataKey="metrics.totalDischargedAllTime" fill="#a855f7" radius={[6, 6, 0, 0]} maxBarSize={30} />
                                                     </BarChart>
                                                 </ResponsiveContainer>
                                             </div>

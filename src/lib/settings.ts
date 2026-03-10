@@ -52,7 +52,7 @@ const DEFAULT_SETTINGS: AgencySettings = {
         authorizedEmails: [],
     },
     subscription: {
-        plan: 'FREE',
+        plan: 'BASIC_MONTHLY',
         status: process.env.NODE_ENV === 'development' ? 'ACTIVE' : 'SUSPENDED',
     }
 };

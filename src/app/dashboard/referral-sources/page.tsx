@@ -13,10 +13,30 @@ type PageProps = {
     searchParams: Promise<{ search?: string; status?: string; type?: string }>;
 };
 
+import { getAgencySettings } from '@/lib/settings';
+
 async function ReferralSourcesDataLoader({ searchParams }: PageProps) {
     const headersList = await headers();
     const agencyId = headersList.get('x-agency-id') || 'default';
     const params = await searchParams;
+
+    const settings = await getAgencySettings(agencyId);
+    const plan = settings.subscription?.plan || 'BASIC_MONTHLY';
+
+    if (plan === 'BASIC_MONTHLY' || plan === 'FREE') {
+        return (
+            <div className="flex flex-col items-center justify-center h-[400px] border-2 border-dashed rounded-3xl bg-white/50 space-y-4 text-center p-8">
+                <div className="bg-blue-50 p-4 rounded-full">
+                    <Loader2 className="h-10 w-10 text-blue-500" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Referral Sources is a Premium Feature</h3>
+                <p className="text-slate-500 max-w-md">Upgrade to the Annual Plan or Pro Monthly Plan to track metrics and manage your referral partners.</p>
+                <div className="flex gap-4">
+                    <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">View Plans</button>
+                </div>
+            </div>
+        );
+    }
 
     const sources = await getReferralSourcesWithMetrics(agencyId, {
         search: params.search,

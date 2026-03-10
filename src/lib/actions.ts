@@ -13,6 +13,7 @@ import { categorizeReferral } from '@/ai/flows/smart-categorization';
 import { generateReferralPdf } from '@/ai/flows/generate-referral-pdf';
 import { sendReferralNotification } from './email';
 import { adminAuth } from '@/lib/firebase-admin';
+import { CURRENT_TERMS_TEXT, CURRENT_TERMS_VERSION } from './legal-constants';
 
 export async function provisionStaffUser(agencyId: string, email: string, tempPassword?: string, name?: string): Promise<{ success: boolean; message: string }> {
     try {
@@ -392,7 +393,9 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
             legalConsent: {
                 agreed: true,
                 ip: ip,
-                timestamp: new Date()
+                timestamp: new Date(),
+                termsContent: CURRENT_TERMS_TEXT,
+                termsVersion: CURRENT_TERMS_VERSION
             }
         };
         await saveReferral(newReferral, true);
@@ -494,7 +497,7 @@ export async function checkStatus(prevState: FormState, formData: FormData): Pro
     };
 }
 
-export async function addInternalNote(referralId: string, prevState: FormState, formData: FormData): Promise<FormState> {
+export async function addInternalNote(referralId: string, prevState: FormState | null, formData?: FormData, directNote?: string): Promise<FormState> {
     const { verifySession } = await import('./auth-actions');
     const session = await verifySession();
     if (!session || !session.email) {
@@ -506,8 +509,8 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
         return { message: 'Referral not found.', success: false };
     }
 
-    const noteContent = formData.get('note') as string;
-    const authorName = formData.get('authorName') as string || 'Staff'; // Or use session.email/name
+    const noteContent = directNote || (formData?.get('note') as string);
+    const authorName = (formData?.get('authorName') as string) || 'Staff'; // Or use session.email/name
     if (!noteContent) {
         return { message: 'Note cannot be empty.', success: false };
     }
@@ -538,7 +541,7 @@ export async function addInternalNote(referralId: string, prevState: FormState, 
     return { message: 'Internal note added.', success: true };
 }
 
-export async function addExternalNote(referralId: string, prevState: FormState, formData: FormData): Promise<FormState> {
+export async function addExternalNote(referralId: string, prevState: FormState | null, formData?: FormData, directNote?: string): Promise<FormState> {
     const { verifySession } = await import('./auth-actions');
     const session = await verifySession();
     if (!session || !session.email) {
@@ -550,8 +553,9 @@ export async function addExternalNote(referralId: string, prevState: FormState, 
         return { message: 'Referral not found.', success: false };
     }
 
-    const noteContent = formData.get('note') as string;
-    const authorName = formData.get('authorName') as string || 'Office';
+    const noteContent = directNote || (formData?.get('note') as string);
+    const authorName = (formData?.get('authorName') as string) || 'Office';
+
     if (!noteContent) {
         return { message: 'Message cannot be empty.', success: false };
     }

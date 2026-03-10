@@ -100,9 +100,10 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
 
     const getPlanLabel = (plan: string) => {
         switch (plan) {
-            case 'FREE': return 'Phase 1 (Basic)';
-            case 'BASIC': return 'Phase 2 (Standard)';
-            case 'PRO': return 'Phase 3 (Premium)';
+            case 'FREE': return 'Legacy Free';
+            case 'BASIC_ANNUAL': return '$149.99 Yearly (w/ Referral)';
+            case 'BASIC_MONTHLY': return '$179.99 Monthly (Basic)';
+            case 'PRO_REFERRAL': return '$199.99 Monthly (w/ Referral)';
             default: return plan;
         }
     };
@@ -304,9 +305,10 @@ export default function SuperAdminClient({ initialAgencies }: { initialAgencies:
                                                 <SelectValue placeholder="Select Phase" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="FREE">Phase 1 (Basic)</SelectItem>
-                                                <SelectItem value="BASIC">Phase 2 (Standard)</SelectItem>
-                                                <SelectItem value="PRO">Phase 3 (Premium)</SelectItem>
+                                                <SelectItem value="FREE">Legacy Free</SelectItem>
+                                                <SelectItem value="BASIC_ANNUAL">Annual w/ Referral ($149.99/yr)</SelectItem>
+                                                <SelectItem value="BASIC_MONTHLY">Monthly ($179.99/mo)</SelectItem>
+                                                <SelectItem value="PRO_REFERRAL">Pro w/ Referral ($199.99/mo)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

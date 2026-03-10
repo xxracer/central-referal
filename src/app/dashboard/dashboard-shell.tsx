@@ -29,7 +29,7 @@ import Logo from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser } from '@/firebase/auth/use-user';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { signOut } from '@/firebase/auth/client';
 import { Loader2 } from 'lucide-react';
 
@@ -60,20 +60,34 @@ export default function DashboardShell({
     const { user, loading } = useUser();
     const router = useRouter();
 
+    const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+
     useEffect(() => {
+        let redirectTimeout: NodeJS.Timeout;
+
         if (!loading && !user) {
-            router.push('/login');
+            // Add a small delay for Firebase Auth to fully sync if session cookie exists
+            redirectTimeout = setTimeout(() => {
+                router.push('/login');
+            }, 2000);
         } else if (user?.email) {
-            // Fetch agency name for title
+            // Fetch agency info for title and billing
             fetch(`/api/user/agency?email=${user.email}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.agencyName) {
                         document.title = `ReferralFlow ${data.agencyName}`;
                     }
+                    if (data.subscriptionPlan) {
+                        setSubscriptionPlan(data.subscriptionPlan);
+                    }
                 })
-                .catch(err => console.error("Failed to fetch agency for title:", err));
+                .catch(err => console.error("Failed to fetch agency info:", err));
         }
+
+        return () => {
+            if (redirectTimeout) clearTimeout(redirectTimeout);
+        };
     }, [user, loading, router]);
 
     if (loading) {
@@ -130,14 +144,16 @@ export default function DashboardShell({
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Referral Sources">
-                                <Link href="/dashboard/referral-sources">
-                                    <Users />
-                                    <span>Referral Sources</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {(subscriptionPlan === 'PRO_REFERRAL' || subscriptionPlan === 'BASIC_ANNUAL') && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Referral Sources">
+                                    <Link href="/dashboard/referral-sources">
+                                        <Users />
+                                        <span>Referral Sources</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild tooltip="Referral Portal (Public)">
                                 <Link href="/?portal=true" target="_blank" rel="noopener noreferrer">
