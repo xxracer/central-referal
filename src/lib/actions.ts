@@ -1,4 +1,4 @@
-﻿
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -344,6 +344,10 @@ export async function submitReferral(prevState: FormState, formData: FormData): 
                 status: 'prospect', // Default status for auto-created
                 createdFrom: 'referral_submission',
                 notes: 'Auto-created during referral submission.',
+                address: rest.organizationAddress || null,
+                phone: phone || null,
+                email: email || null,
+                contactName: contactName || null,
             }, true); // skipAuthCheck = true because this is a public form submission
 
             if (result.success && result.data) {

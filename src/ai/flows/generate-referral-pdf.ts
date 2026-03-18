@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFName, PDFString, degrees } from 'pdf-lib';
 
 // We need a schema that matches the form data, excluding files.
 const PdfInputSchema = z.object({
@@ -16,16 +16,13 @@ const PdfInputSchema = z.object({
   patientDOB: z.string(),
   patientAddress: z.string().optional(),
   patientZipCode: z.string(),
+  patientContact: z.string().optional(),
   memberId: z.string(),
   primaryInsurance: z.string(),
   insuranceType: z.string().optional(),
   planName: z.string().optional(),
   planNumber: z.string().optional(),
   groupNumber: z.string().optional(),
-  pcpName: z.string().optional(),
-  pcpPhone: z.string().optional(),
-  surgeryDate: z.string().optional(),
-  covidStatus: z.string().optional(),
   servicesNeeded: z.array(z.string()),
   diagnosis: z.string(),
   // Referrer info also needed for context
@@ -59,12 +56,9 @@ const summaryPrompt = ai.definePrompt({
     Here is the data:
     - patientFullName: {{{patientFullName}}}
     - patientDOB: {{{patientDOB}}}
+    - patientContact (Phone): {{{patientContact}}}
     - patientZipCode: {{{patientZipCode}}}
     - patientAddress: {{{patientAddress}}}
-    - pcpName: {{{pcpName}}}
-    - pcpPhone: {{{pcpPhone}}}
-    - surgeryDate: {{{surgeryDate}}}
-    - covidStatus: {{{covidStatus}}}
     - memberId: {{{memberId}}}
     - insuranceType: {{{insuranceType}}}
     - primaryInsurance: {{{primaryInsurance}}}
@@ -99,6 +93,17 @@ const generateReferralPdfFlow = ai.defineFlow(
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Add giant faint watermark
+    page.drawText('ReferralFlow', {
+      x: 80,
+      y: height / 2 - 50,
+      size: 80,
+      font: boldFont,
+      color: rgb(0.9, 0.9, 0.95),
+      rotate: degrees(45),
+      opacity: 0.25,
+    });
 
     const margin = 50;
     let y = height - margin;
@@ -151,6 +156,39 @@ const generateReferralPdfFlow = ai.defineFlow(
         y -= 15;
       }
     }
+
+    // Add Clickable Link and branding in the corner
+    const urlText = "www.referralflow.health";
+    const textWidth = font.widthOfTextAtSize(urlText, 10);
+    const linkX = width - margin - textWidth;
+    const linkY = 30;
+
+    page.drawText(urlText, {
+      x: linkX,
+      y: linkY,
+      font: boldFont,
+      size: 10,
+      color: rgb(0.1, 0.3, 0.8), // Blue link
+    });
+
+    const linkAnnotation = pdfDoc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [linkX, linkY - 2, linkX + textWidth, linkY + 10],
+      Border: [0, 0, 0],
+      A: {
+        Type: 'Action',
+        S: 'URI',
+        URI: PDFString.of('https://referralflow.health'),
+      },
+    });
+    
+    let annots = page.node.Annots();
+    if (!annots) {
+      annots = pdfDoc.context.obj([]);
+      page.node.set(PDFName.of('Annots'), annots);
+    }
+    annots.push(linkAnnotation);
 
     // 3. Save the PDF to a byte array
     const pdfBytes = await pdfDoc.save();

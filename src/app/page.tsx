@@ -9,7 +9,7 @@ import { getAgencySettings } from '@/lib/settings';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import LandingPage from '@/components/landing/landing-page';
-
+import { LiveClock } from '@/components/live-clock';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +19,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
     const settings = await getAgencySettings(agencyId);
     const profile = settings.companyProfile;
     const subscription = settings.subscription;
+
+    const forwardedFor = headersList.get('x-forwarded-for');
+    const ip = forwardedFor ? forwardedFor.split(',')[0] : 'UNKNOWN_IP';
+    try {
+        const { adminDb } = await import('@/lib/firebase-admin');
+        await adminDb.collection('accessLogs').add({
+            agencyId,
+            ip,
+            userAgent: headersList.get('user-agent') || 'UNKNOWN',
+            path: '/',
+            timestamp: new Date()
+        });
+    } catch(e) {
+        console.error("IP Logging failed", e);
+    }
 
     const resolvedParams = await searchParams;
     const showPortal = resolvedParams.portal === 'true' && process.env.NODE_ENV === 'development';
@@ -99,6 +114,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ [
                                             Track Status
                                         </Link>
                                     </Button>
+                                </div>
+                                
+                                <div className="mt-8 flex justify-start w-full">
+                                    <LiveClock />
                                 </div>
                             </div>
                             <div className="relative group">

@@ -212,6 +212,11 @@ export default function ReferralForm({ settings }: { settings: AgencySettings })
                                     />
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="organizationAddress">Facility Address (Optional)</Label>
+                                    <Input id="organizationAddress" name="organizationAddress" placeholder="e.g., 123 Main St, Houston, TX" className="bg-blue-50 text-blue-900 border-blue-200" defaultValue={formState.fields?.organizationAddress} />
+                                    {formState.errors?.organizationAddress && <p className="text-sm text-destructive">{formState.errors.organizationAddress[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="contactName">Contact Name</Label>
                                     <Input id="contactName" name="contactName" placeholder="e.g., Maria Lopez" className="bg-blue-50 text-blue-900 border-blue-200" defaultValue={formState.fields?.contactName} />
                                     {formState.errors?.contactName && <p className="text-sm text-destructive">{formState.errors.contactName[0]}</p>}

@@ -192,6 +192,8 @@ export type ReferralSource = {
   status: ReferralSourceStatus;
   phone?: string | null;
   address?: string | null;
+  contactName?: string | null;
+  email?: string | null;
   notes?: string | null;
   createdFrom: ReferralSourceCreatedFrom;
   createdByUserId?: string | null;

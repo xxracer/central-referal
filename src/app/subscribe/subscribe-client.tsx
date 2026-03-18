@@ -12,9 +12,15 @@ interface SubscribeClientProps {
     companyName?: string;
 }
 
+interface PriceData {
+    monthly: { amount: number; currency: string };
+    annual: { amount: number; monthlyEquivalent: number; currency: string };
+}
+
 export default function SubscribePageClient({ logoUrl, companyName }: SubscribeClientProps) {
     const [year, setYear] = useState(new Date().getFullYear());
     const [loading, setLoading] = useState(false);
+    const [prices, setPrices] = useState<PriceData | null>(null);
     const [formData, setFormData] = useState({
         name: '',
         email: ''
@@ -22,6 +28,12 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
 
     useEffect(() => {
         setYear(new Date().getFullYear());
+
+        // Fetch live prices from Stripe
+        fetch('/api/prices')
+            .then(r => r.json())
+            .then(data => { if (!data.error) setPrices(data); })
+            .catch(err => console.error('Failed to load prices:', err));
 
         try {
             const saved = localStorage.getItem("rf_signup_lead");
@@ -46,6 +58,15 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
 
         return () => observer.disconnect();
     }, []);
+
+    // Helpers
+    const fmt = (n: number) => `$${n.toFixed(2)}`;
+    const monthlyDisplay  = prices ? fmt(prices.monthly.amount)          : '...';
+    const annualMonthly   = prices ? fmt(prices.annual.monthlyEquivalent): '...';
+    const annualTotal     = prices ? fmt(prices.annual.amount)           : '...';
+    const annualSavePct   = prices
+        ? Math.round((1 - prices.annual.monthlyEquivalent / prices.monthly.amount) * 100)
+        : 13;
 
     const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -165,7 +186,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                             className={`px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 flex items-center gap-2 ${selectedPlan === 'annual' ? 'bg-white text-gray-900 shadow-md ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
                                             Annual
-                                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">-13%</span>
+                                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">-{annualSavePct}%</span>
                                         </button>
                                     </div>
                                 </div>
@@ -177,13 +198,13 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                                             <div className="now animated-price">
-                                                {selectedPlan === 'annual' ? '$129.99' : '$149.99'}
+                                                {selectedPlan === 'annual' ? annualMonthly : monthlyDisplay}
                                             </div>
                                             <div className="per">/ month</div>
                                         </div>
                                         {selectedPlan === 'annual' && (
                                             <div className="text-sm text-muted-foreground mt-1">
-                                                Billed $1,559.88 annually
+                                                Billed {annualTotal} annually
                                             </div>
                                         )}
                                         {selectedPlan === 'monthly' && (
@@ -222,7 +243,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                 <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3 tracking-wider">Order Summary</h4>
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="font-medium text-sm">ReferralFlow {selectedPlan === 'annual' ? 'Annual' : 'Monthly'}</span>
-                                    <span className="font-bold text-sm">{selectedPlan === 'annual' ? '$1,559.88' : '$149.99'}</span>
+                                    <span className="font-bold text-sm">{selectedPlan === 'annual' ? annualTotal : monthlyDisplay}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-slate-200 pt-2 mt-2">
                                     <span>Billing cycle</span>

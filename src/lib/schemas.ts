@@ -13,6 +13,7 @@ const fileArraySchema = z.array(fileSchema).optional();
 export const referralSchema = z.object({
   // Referrer Info
   organizationName: z.string().min(1, "Organization / Facility Name is required."),
+  organizationAddress: z.string().optional(),
   contactName: z.string().optional(),
   phone: z.string().min(10, "Phone Number is required."),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
