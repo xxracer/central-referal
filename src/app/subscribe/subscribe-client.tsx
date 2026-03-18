@@ -177,7 +177,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                                             <div className="now animated-price">
-                                                {selectedPlan === 'annual' ? '$199.99' : '$149.99'}
+                                                {selectedPlan === 'annual' ? '$149.99' : '$199.99'}
                                             </div>
                                             <div className="per">/ month</div>
                                         </div>
