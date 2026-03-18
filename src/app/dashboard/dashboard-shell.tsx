@@ -144,16 +144,22 @@ export default function DashboardShell({
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                        {(subscriptionPlan === 'PRO_REFERRAL' || subscriptionPlan === 'BASIC_ANNUAL') && (
-                            <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Referral Sources">
-                                    <Link href="/dashboard/referral-sources">
-                                        <Users />
-                                        <span>Referral Sources</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        )}
+                        {(() => {
+                            const plan = (subscriptionPlan || '').toLowerCase();
+                            const isPremium = plan === 'pro_referral' || plan === 'basic_annual' || plan === 'annual' || plan === 'pro';
+                            const isAdmin = user?.email?.toLowerCase() === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'maijelcancines2@gmail.com').toLowerCase();
+                            return (isPremium || isAdmin) && (
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild tooltip="Referral Sources">
+                                        <Link href="/dashboard/referral-sources">
+                                            <Users />
+                                            <span>Referral Sources</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            );
+                        })()}
+
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild tooltip="Referral Portal (Public)">
                                 <Link href="/?portal=true" target="_blank" rel="noopener noreferrer">
