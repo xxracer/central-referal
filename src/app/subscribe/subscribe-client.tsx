@@ -222,7 +222,7 @@ export default function SubscribePageClient({ logoUrl, companyName }: SubscribeC
                                 <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3 tracking-wider">Order Summary</h4>
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="font-medium text-sm">ReferralFlow {selectedPlan === 'annual' ? 'Annual' : 'Monthly'}</span>
-                                    <span className="font-bold text-sm">{selectedPlan === 'annual' ? '$1,799.88' : '$149.99'}</span>
+                                    <span className="font-bold text-sm">{selectedPlan === 'annual' ? '$1,799.88' : '$199.99'}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-slate-200 pt-2 mt-2">
                                     <span>Billing cycle</span>
